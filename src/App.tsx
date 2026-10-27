@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useGame } from "./game/store";
 import { useMembership, useSettings } from "./game/settings";
 import { hideSplash, initNative } from "./lib/native";
@@ -8,6 +8,7 @@ import { startLive, useLive } from "./lib/live";
 import { startNotifications } from "./lib/notify";
 import { startPurchases } from "./lib/purchases";
 import { startAi } from "./lib/ai";
+import { OPEN_PATHS, WEB_BASE, refreshSite, useSite } from "./lib/site";
 import { ConflictModal } from "./components/CloudUI";
 import Login, { AuthCallback, ResetPassword } from "./pages/Login";
 import Layout from "./components/Layout";
@@ -49,6 +50,9 @@ const Admin = lazy(() => import("./admin/Admin"));
 export default function App() {
   const ready = useHydrated();
   const nav = useNavigate();
+  const location = useLocation();
+  const site = useSite();
+  const isAdmin = useCloud((s) => s.isAdmin);
 
   useEffect(() => {
     if (!ready) return;
@@ -58,6 +62,7 @@ export default function App() {
     startNotifications();
     startPurchases();
     startAi();
+    void refreshSite();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
   useEffect(() => {
@@ -71,6 +76,9 @@ export default function App() {
   }, []);
 
   if (!ready) return <div className="min-h-screen bg-bg" />;
+  if (WEB_BASE && !OPEN_PATHS.some((p) => location.pathname.startsWith(p)) && !site.webPublic && !isAdmin) {
+    return site.loaded ? <ComingSoon /> : <div className="min-h-screen bg-bg" />;
+  }
   return (
     <>
       <Routes>
@@ -102,5 +110,17 @@ export default function App() {
       <ConfirmHost />
       <ConflictModal />
     </>
+  );
+}
+
+/** Shown on the web while the game is hidden. The team can still sign in. */
+function ComingSoon() {
+  return (
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center text-center px-6 gap-5">
+      <img src="/brand/tourstar-logo.webp" alt="TourStar" className="w-64 max-w-full" />
+      <p className="text-sm text-muted-fg max-w-xs">The game isn't open yet. Join the waitlist for early access.</p>
+      <a href="/#join" className="btn btn-pink">Get early access</a>
+      <Link to="/login" className="text-[11px] text-muted-fg underline">Team sign in</Link>
+    </div>
   );
 }

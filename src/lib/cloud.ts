@@ -78,7 +78,7 @@ export const useCloud = create<CloudState>()(
   ),
 );
 
-const redirectTo = (path: string) => (isNative ? `${NATIVE_SCHEME}://${path}` : `${window.location.origin}/${path}`);
+const redirectTo = (path: string) => (isNative ? `${NATIVE_SCHEME}://${path}` : `${window.location.origin}${import.meta.env.VITE_ROUTER === "memory" ? "" : "/play"}/${path}`);
 
 function friendly(msg: string) {
   if (/invalid login/i.test(msg)) return "That email and password don't match. Check them, or reset your password.";

@@ -14,6 +14,7 @@ import { RafflesTab, RewardsTab } from "./RewardsAdmin";
 import { BetaSignupsTab } from "./WaitlistAdmin";
 import { IntegrationsTab } from "./IntegrationsAdmin";
 import { AiTab } from "./AiAdmin";
+import { refreshSite, useSite } from "../lib/site";
 
 type Tab = "insights" | "beta" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "integrations" | "admins";
 const TABS: { id: Tab; label: string }[] = [
@@ -647,6 +648,8 @@ function Admins() {
   }, { yes: "Remove", danger: true });
 
   return (
+    <>
+    <WebsiteSwitch />
     <Section title="Admins" sub="Admins can see every player's save and change live game settings. Invites only work for someone who signs in with that exact email and confirms it.">
       <div className="flex gap-2 mb-5 max-w-md">
         <input className={input} type="email" placeholder="name@please.co" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && email && void add()} />
@@ -662,6 +665,31 @@ function Admins() {
           </li>
         ))}
       </ul>
+    </Section>
+    </>
+  );
+}
+
+// ================================================================= website
+
+function WebsiteSwitch() {
+  const { webPublic, loaded } = useSite();
+  const set = (on: boolean) => askConfirm(on
+    ? "Open the game to everyone at tourstarapp.com/play? Anyone with the link can play."
+    : "Hide the game on the website? Visitors see a coming-soon screen; admins can still play.", async () => {
+    const { error } = await supabase!.from("app_public_config").upsert({ key: "web_app_public", value: String(on), updated_at: new Date().toISOString() });
+    if (error) return fail(error);
+    await refreshSite();
+    toast({ ok: true, message: on ? "The game is open on the website." : "The game is hidden on the website." });
+  }, { yes: on ? "Open it" : "Hide it", danger: on });
+  return (
+    <Section title="Website" sub="tourstarapp.com shows the splash page and waitlist. The game lives at tourstarapp.com/play. While it's hidden, visitors see a coming-soon screen and only admins can play. The iPhone and Android apps aren't affected.">
+      {!loaded ? <p className="text-xs text-muted-fg">Checking…</p> : (
+        <div className="flex items-center gap-4">
+          <span className={`text-[10px] px-2 py-0.5 rounded border ${webPublic ? "text-success border-success" : "text-gold border-gold"}`}>{webPublic ? "● GAME OPEN" : "○ GAME HIDDEN"}</span>
+          <button className={`btn ${webPublic ? "btn-ghost" : "btn-pink"} text-xs`} onClick={() => set(!webPublic)}>{webPublic ? "Hide the game" : "Open the game to everyone"}</button>
+        </div>
+      )}
     </Section>
   );
 }
