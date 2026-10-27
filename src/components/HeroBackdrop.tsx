@@ -67,11 +67,18 @@ export function HeroBackdrop({ dim = false }: { dim?: boolean }) {
   );
 }
 
-export function Logo({ size = "lg" }: { size?: "lg" | "sm" }) {
-  const cls = size === "lg" ? "text-6xl" : "text-2xl";
+/** The TourStar wordmark (public/brand/tourstar-logo.webp). */
+export function Logo({ size = "lg", className = "" }: { size?: "lg" | "sm" | "xs"; className?: string }) {
+  const w = size === "lg" ? "w-[300px] max-w-[82vw]" : size === "sm" ? "w-[190px]" : "w-[120px]";
   return (
-    <div className={`font-logo ${cls} -rotate-3 select-none leading-none text-white`} style={{ textShadow: "0 0 18px rgba(255,79,216,.6), 3px 3px 0 #2a0b46" }}>
-      TOURST<span style={{ color: "var(--gold)", textShadow: "0 0 18px var(--gold)" }}>★</span>R
-    </div>
+    <img
+      src="/brand/tourstar-logo.webp"
+      alt="TourStar"
+      width={671}
+      height={204}
+      draggable={false}
+      className={`${w} h-auto select-none ${className}`}
+      style={{ filter: "drop-shadow(0 0 18px rgba(255,79,216,.45)) drop-shadow(3px 3px 0 #2a0b46)" }}
+    />
   );
 }
