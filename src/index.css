@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(13% 0.03 270);
+  --foreground: oklch(98% 0.01 270);
+  --card: oklch(18% 0.04 270);
+  --muted: oklch(22% 0.03 270);
+  --muted-foreground: oklch(70% 0.03 270);
+  --border: oklch(28% 0.04 270);
+  --primary: oklch(70% 0.22 260);
+  --accent: oklch(70% 0.27 340);
+  --neon-pink: oklch(72% 0.27 340);
+  --electric: oklch(70% 0.22 250);
+  --gold: oklch(82% 0.17 90);
+  --navy: oklch(18% 0.06 270);
+  --success: oklch(75% 0.18 150);
+  --danger: oklch(65% 0.25 25);
+  --gradient-hero: linear-gradient(135deg, oklch(13% 0.03 270) 0%, oklch(18% 0.08 280) 50%, oklch(13% 0.03 320) 100%);
+  --glow-pink: 0 0 30px oklch(72% 0.27 340 / 0.4);
+  --glow-blue: 0 0 24px oklch(70% 0.22 250 / 0.45);
+  color-scheme: dark;
+}
+
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--gradient-hero);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+.font-pixel { font-family: "Press Start 2P", monospace; letter-spacing: 0.02em; }
+
+/* .scanlines needs a positioned parent: add `relative`, `absolute` or `fixed` */
+.scanlines::after {
+  content: ""; pointer-events: none; position: absolute; inset: 0; z-index: 5;
+  mix-blend-mode: multiply; opacity: 0.45;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0px, rgba(0,0,0,.35) 1px, transparent 1px, transparent 3px);
+}
+
+.panel {
+  background: color-mix(in oklch, var(--card) 85%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px oklch(0% 0 0 / 0.5);
+}
+
+.btn {
+  @apply font-pixel text-[10px] uppercase px-4 py-3 rounded-md border transition active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100;
+}
+.btn-primary { background: oklch(10% 0.02 270); border-color: var(--electric); box-shadow: var(--glow-blue); color: var(--foreground); }
+.btn-pink { background: oklch(10% 0.02 270); border-color: var(--neon-pink); box-shadow: var(--glow-pink); color: var(--foreground); }
+.btn-gold { background: var(--gold); border-color: var(--gold); color: oklch(15% 0.03 270); }
+.btn-ghost { background: transparent; border-color: var(--border); color: var(--muted-foreground); }
+.btn-danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+
+.text-glow-pink { text-shadow: 0 0 12px oklch(72% 0.27 340 / 0.8); }
+.text-glow-blue { text-shadow: 0 0 12px oklch(70% 0.22 250 / 0.8); }
+.text-glow-gold { text-shadow: 0 0 12px oklch(82% 0.17 90 / 0.8); }
+
+@keyframes pressStartFlicker { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.15; } }
+.animate-press-start { animation: pressStartFlicker 1.6s step-end infinite; }
+
+@keyframes crt-flicker { 0%,100% { opacity: 1; } 92% { opacity: 1; } 93% { opacity: .85; } 94% { opacity: 1; } 97% { opacity: .9; } }
+.crt-flicker { animation: crt-flicker 3s ease infinite; }
+
+@keyframes pulse-glow { 0%,100% { filter: drop-shadow(0 0 6px oklch(72% .27 340 / .5)); } 50% { filter: drop-shadow(0 0 18px oklch(72% .27 340 / .9)); } }
+.animate-pulse-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
+
+@keyframes flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+.animate-flash { animation: flash 450ms ease-out forwards; }
+
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.animate-ticker { animation: ticker 40s linear infinite; }
+
+@keyframes fall { 0% { transform: translateY(-10vh) rotate(0); } 100% { transform: translateY(110vh) rotate(540deg); } }
+.confetti { position: absolute; top: 0; width: 6px; height: 10px; animation: fall linear infinite; opacity: .8; }
+
+@keyframes pop-in { 0% { transform: scale(.7); opacity: 0; } 70% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); } }
+.animate-pop { animation: pop-in 350ms cubic-bezier(.2,.9,.3,1.3) both; }
+
+@keyframes slide-up { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.animate-slide-up { animation: slide-up 250ms ease-out both; }
+
+.hud-corner { position: absolute; width: 18px; height: 18px; border-color: var(--electric); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+input[type="range"] { accent-color: var(--neon-pink); }
+
+/* Native-app feel: no text selection or long-press callouts outside inputs. */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, select { -webkit-user-select: text; user-select: text; }

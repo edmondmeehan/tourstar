@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TourStar</string>
+    <string name="title_activity_main">TourStar</string>
+    <string name="package_name">co.please.tourstar</string>
+    <string name="custom_url_scheme">co.please.tourstar</string>
+</resources>
