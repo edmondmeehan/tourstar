@@ -4,9 +4,45 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/", "has": [{ "type": "host", "value": "tourstarapp.com" }], "destination": "/landing.html" },
-    { "source": "/", "has": [{ "type": "host", "value": "www.tourstarapp.com" }], "destination": "/landing.html" },
-    { "source": "/landing", "destination": "/landing.html" },
-    { "source": "/((?!assets/|landing/).*)", "destination": "/index.html" }
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "tourstarapp.com"
+        }
+      ],
+      "destination": "/landing.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.tourstarapp.com"
+        }
+      ],
+      "destination": "/landing.html"
+    },
+    {
+      "source": "/landing",
+      "destination": "/landing.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/support",
+      "destination": "/support.html"
+    },
+    {
+      "source": "/((?!assets/|landing/).*)",
+      "destination": "/index.html"
+    }
   ]
 }

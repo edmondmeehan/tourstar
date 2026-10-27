@@ -256,9 +256,9 @@ function Finance() {
         <div className="rounded border border-dashed border-line p-4 text-sm">
           <div className="font-semibold mb-2">To turn on real revenue</div>
           <ol className="list-decimal pl-5 space-y-1 text-muted-fg">
-            <li>Create the products in App Store Connect (Remove Timers $4.99, Premium Pass $9.99, VIP Badge $1.99, cash packs $2.99 / $9.99).</li>
-            <li>Create a RevenueCat project, add the iOS and Android apps, and send me the public SDK keys.</li>
-            <li>I'll swap the simulated Premium screen for real purchases and add a webhook so this tab shows live revenue, refunds and subscribers.</li>
+            <li>The app's Premium screen already uses real App Store / Google Play purchases through RevenueCat.</li>
+            <li>Create the products in App Store Connect with IDs <code>co.please.tourstar.remove_timers</code>, <code>.premium_pass</code>, <code>.vip_badge</code> (non-consumable) and <code>.cash_small</code>, <code>.cash_large</code> (consumable). See LAUNCH.md.</li>
+            <li>Add the RevenueCat public SDK keys to the app build (<code>VITE_REVENUECAT_IOS_KEY</code>, <code>VITE_REVENUECAT_ANDROID_KEY</code>). A RevenueCat webhook can then feed live revenue into this tab.</li>
           </ol>
         </div>
       </Section>

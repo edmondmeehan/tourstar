@@ -2,6 +2,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import App from "./App";
+import { Analytics } from "@vercel/analytics/react";
+import { Capacitor } from "@capacitor/core";
 import "@fontsource/press-start-2p/latin-400.css";
 import "@fontsource/permanent-marker/latin-400.css";
 import "./index.css";
@@ -14,5 +16,7 @@ createRoot(document.getElementById("root")!).render(
     <Router>
       <App />
     </Router>
+    {/* Vercel Web Analytics: web only (the iPhone/Android apps aren't served by Vercel). */}
+    {!Capacitor.isNativePlatform() && import.meta.env.VITE_ROUTER !== "memory" && <Analytics />}
   </StrictMode>,
 );

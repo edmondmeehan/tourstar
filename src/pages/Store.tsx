@@ -34,7 +34,8 @@ export default function Store() {
         <div className="font-logo text-2xl my-1" style={{ color: "var(--gold)" }}>Please &amp; Thank You</div>
         <div className="font-pixel text-[8px] text-muted-fg">STORE</div>
         <div className="mt-3 font-pixel text-[11px]" style={{ color: "var(--gold)" }}>⭐ {balance.toLocaleString()} POINTS</div>
-        <div className="text-[11px] text-muted-fg mt-1">Earn points from gigs, releases, daily rewards and level-ups.</div>
+        <div className="text-[11px] text-muted-fg mt-1">Earn points from gigs, releases, daily rewards, quests and level-ups.</div>
+        {!!points?.pending && <div className="text-[11px] mt-1" style={{ color: "var(--gold)" }}>+{points.pending.toLocaleString()} pending review · <a className="underline" href="https://tourstarapp.com/support">why?</a></div>}
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-4" role="tablist">
@@ -293,7 +294,7 @@ function RaffleCard({ r, level, mine, signedIn }: { r: Raffle; level: number; mi
         <div className="text-[11px] text-muted-fg mt-2 whitespace-pre-line leading-relaxed">
           {r.rules || "Open to registered TourStar players. Ends at the time shown. One winner is drawn at random from all tickets after the raffle ends and contacted by email."}
           {"\n\n"}Ends {new Date(r.ends_at).toLocaleString()}.{r.prize_value_usd ? ` Approximate prize value: $${r.prize_value_usd.toLocaleString()}.` : ""}
-          {"\n\n"}{RAFFLE_DISCLAIMER}
+          {"\n\n"}{RAFFLE_DISCLAIMER}{" "}<a className="underline" href="https://tourstarapp.com/terms">Full terms</a>
         </div>
       )}
     </Card>

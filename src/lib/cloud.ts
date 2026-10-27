@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { App as CapApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
+import { SignInWithApple } from "@capacitor-community/apple-sign-in";
 import { gameStorage, isNative } from "./native";
 import { useGame } from "../game/store";
 import { useMembership, useSettings } from "../game/settings";
@@ -115,10 +117,32 @@ export async function signInWithProvider(provider: "apple" | "google"): Promise<
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: redirectTo("auth/callback") } });
     return error ? { ok: false, message: friendly(error.message) } : { ok: true, message: "Redirecting…" };
   }
+  if (provider === "apple" && Capacitor.getPlatform() === "ios") return nativeAppleSignIn();
   const { data, error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: redirectTo("auth/callback"), skipBrowserRedirect: true } });
   if (error || !data.url) return { ok: false, message: friendly(error?.message ?? "Couldn't start sign-in.") };
   await Browser.open({ url: data.url, presentationStyle: "popover" });
   return { ok: true, message: "Finish signing in, then come back to TourStar." };
+}
+
+/** iPhone: Apple's own sign-in sheet (Face ID), then hand Apple's token to Supabase. */
+async function nativeAppleSignIn(): Promise<AuthResult> {
+  const raw = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("");
+  const hashed = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw))), (b) => b.toString(16).padStart(2, "0")).join("");
+  try {
+    const { response } = await SignInWithApple.authorize({
+      clientId: "co.please.tourstar",
+      redirectURI: "https://vtpgrxavyspadmubfwtb.supabase.co/auth/v1/callback",
+      scopes: "email name",
+      nonce: hashed,
+    });
+    const { error } = await supabase!.auth.signInWithIdToken({ provider: "apple", token: response.identityToken, nonce: raw });
+    if (error) return { ok: false, message: friendly(error.message) };
+    return { ok: true, message: "Signed in with Apple." };
+  } catch (e) {
+    const msg = String((e as Error)?.message ?? e);
+    if (/cancel|1001/i.test(msg)) return { ok: false, message: "Sign in cancelled." };
+    return { ok: false, message: "Apple sign-in didn't work. Try again or use email." };
+  }
 }
 
 export async function sendPasswordReset(email: string): Promise<AuthResult> {

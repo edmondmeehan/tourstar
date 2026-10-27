@@ -1,5 +1,6 @@
 // tourstarapp.com splash page. Vanilla TS (no React) so it loads fast; reuses the game's synth
 // so the demo plays a real TourStar song.
+import { inject } from "@vercel/analytics";
 import "@fontsource/press-start-2p/latin-400.css";
 import "@fontsource/permanent-marker/latin-400.css";
 import "./landing.css";
@@ -389,3 +390,6 @@ crowdCounter();
 waitlist();
 scrollFx();
 demo();
+
+// Vercel Web Analytics (page views; no cookies).
+inject();

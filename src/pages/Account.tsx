@@ -5,6 +5,9 @@ import { GENRES, PERSONAS } from "../game/data";
 import { Card, PageTitle, Tag, toast, askConfirm } from "../components/ui";
 import { sfx, vibrate } from "../lib/fx";
 import { Link } from "react-router-dom";
+import { restore } from "../lib/purchases";
+import { askNotificationPermission, scheduleReminders, useNotify } from "../lib/notify";
+import { isNative } from "../lib/native";
 import { cloudConfigured, deleteAccount, resendConfirmation, signOut, useCloud } from "../lib/cloud";
 
 function CloudCard() {
@@ -53,6 +56,29 @@ function CloudCard() {
   );
 }
 
+function RemindersCard() {
+  const { enabled, status, set } = useNotify();
+  const toggle = async (on: boolean) => {
+    set({ enabled: on });
+    if (on && status !== "granted") {
+      const ok = await askNotificationPermission();
+      if (!ok) toast({ ok: false, message: "Turn on notifications for TourStar in your phone's Settings." });
+    }
+    void scheduleReminders();
+  };
+  return (
+    <Card className="mb-4">
+      <label className="flex items-center justify-between text-sm gap-3">
+        <span>
+          <span className="font-pixel text-[8px] text-muted-fg block mb-1">REMINDERS</span>
+          Energy full, royalties ready, streak about to end, new quests
+        </span>
+        <input type="checkbox" checked={enabled && status === "granted"} onChange={(e) => void toggle(e.target.checked)} className="w-5 h-5 accent-[var(--neon-pink)] shrink-0" />
+      </label>
+    </Card>
+  );
+}
+
 export default function Account() {
   const c = useGame((s) => s.career)!;
   const retire = useGame((s) => s.retire);
@@ -85,11 +111,11 @@ export default function Account() {
         {m.purchases.length ? (
           <ul className="text-xs space-y-1 mb-3">
             {m.purchases.map((p) => (
-              <li key={p.id} className="flex justify-between"><span>{p.name}</span><span className="text-muted-fg">${p.price} · {new Date(p.at).toLocaleDateString()} · simulated</span></li>
+              <li key={p.id} className="flex justify-between"><span>{p.name}</span><span className="text-muted-fg">${p.price} · {new Date(p.at).toLocaleDateString()}{p.simulated ? " · test" : ""}</span></li>
             ))}
           </ul>
         ) : <p className="text-xs text-muted-fg mb-3">No purchases yet.</p>}
-        <button className="btn btn-ghost w-full" onClick={() => toast({ ok: true, message: `Restored ${m.restore()} purchase(s).` })}>Restore purchases</button>
+        <button className="btn btn-ghost w-full" onClick={async () => toast(await restore())}>Restore purchases</button>
       </Card>
 
       <Card className="mb-4 space-y-4">
@@ -111,6 +137,14 @@ export default function Account() {
           </div>
         </div>
       </Card>
+
+      {isNative && <RemindersCard />}
+
+      <div className="text-xs text-muted-fg text-center mb-4 space-x-3">
+        <a className="underline" href="https://tourstarapp.com/privacy">Privacy</a>
+        <a className="underline" href="https://tourstarapp.com/terms">Terms</a>
+        <a className="underline" href="https://tourstarapp.com/support">Support</a>
+      </div>
 
       <button className="btn btn-danger w-full mb-6" onClick={() => askConfirm("Reset your career? This can't be undone.", () => { retire(); nav("/create"); }, { yes: "Reset", danger: true })}>Reset career</button>
     </div>

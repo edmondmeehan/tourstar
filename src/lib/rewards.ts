@@ -49,7 +49,7 @@ export interface Redemption {
   created_at: string;
 }
 
-export interface Points { earned: number; spent: number; balance: number; level: number }
+export interface Points { earned: number; spent: number; balance: number; level: number; pending?: number }
 
 interface RewardsState {
   items: RewardItem[];

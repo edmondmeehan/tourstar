@@ -131,7 +131,7 @@ export interface Purchase {
   name: string;
   price: number;
   at: number;
-  simulated: true;
+  simulated: boolean;
 }
 
 export interface Membership {

@@ -109,7 +109,7 @@ function watchGameplay() {
     if (c.daily.streak !== o.daily.streak) track("daily_claim", { streak: c.daily.streak });
   });
   useMembership.subscribe((s, p) => {
-    if (s.purchases.length > p.purchases.length) track("premium_purchase", { sku: s.purchases[0].sku, price: s.purchases[0].price, simulated: true });
+    if (s.purchases.length > p.purchases.length) track("premium_purchase", { sku: s.purchases[0].sku, price: s.purchases[0].price, simulated: s.purchases[0].simulated });
   });
   useCloud.subscribe((s, p) => {
     if (s.session && !p.session) track("sign_in", { provider: s.session.user.app_metadata?.provider ?? "email" });

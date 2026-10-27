@@ -107,6 +107,8 @@ export function RewardsTab() {
         <Kpi label="How points work" value="Earned only" sub="Gigs, releases, daily rewards, level-ups. Tune the rate in Balance." />
       </div>
 
+      <PointsReview />
+
       <Section title="Store items" sub="Real goods players redeem with points. Hidden items aren't shown in the app. Level gates use the highest level the player has reached."
         right={<button className="btn btn-pink text-sm" onClick={() => setForm({ ...blankItem })}>+ New reward</button>}>
         {!items ? <p className="text-sm text-muted-fg">Loading…</p> : items.length === 0 ? <p className="text-sm text-muted-fg text-center py-6">No rewards yet. Add your first one.</p> : (
@@ -191,6 +193,49 @@ export function RewardsTab() {
         )}
       </Section>
     </>
+  );
+}
+
+// ================================================================= points review (anti-cheat)
+
+interface FlagRow { user_id: string; email: string | null; artist_name: string | null; raw_points: number; verified: number; withheld: number; adjust: number; spent: number; flagged_at: string; flag_reason: string | null; gigs: number; level: number }
+
+function PointsReview() {
+  const [rows, setRows] = useState<FlagRow[] | null>(null);
+  const load = useCallback(async () => {
+    const { data, error } = await supabase!.rpc("admin_flagged_players");
+    if (error) return fail(error);
+    setRows(data as FlagRow[]);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+  const resolve = (r: FlagRow, credit: boolean) => askConfirm(
+    credit ? `Credit ${r.withheld.toLocaleString()} held points to ${r.artist_name ?? r.email}? Do this if the activity looks legitimate.` : `Clear the flag on ${r.artist_name ?? r.email} without crediting the held points?`,
+    async () => {
+      const { error } = await supabase!.rpc("admin_resolve_flag", { p_user: r.user_id, p_credit_withheld: credit });
+      if (error) return fail(error);
+      void load();
+    }, { yes: credit ? "Credit points" : "Clear flag" });
+
+  return (
+    <Section title="Points review" sub="Points are earned on the device, so the server only credits what's realistic (500 an hour plus a 1,500 burst). Anything above that is held and the player shows up here. Players can only spend verified points.">
+      {!rows ? <p className="text-sm text-muted-fg">Loading…</p> : rows.length === 0 ? <p className="text-sm text-muted-fg text-center py-6">Nothing flagged. 👍</p> : (
+        <ul className="divide-y divide-line">
+          {rows.map((r) => (
+            <li key={r.user_id} className="py-3 flex flex-wrap items-start gap-3 text-sm">
+              <div className="flex-1 min-w-[240px]">
+                <div className="font-semibold">{r.artist_name ?? "—"} <span className="text-xs text-muted-fg font-normal">{r.email}</span></div>
+                <div className="text-xs text-muted-fg mt-0.5">{r.flag_reason} · {when(r.flagged_at)}</div>
+                <div className="text-xs mt-1">LV{r.level} · {r.gigs.toLocaleString()} gigs · device says {r.raw_points.toLocaleString()} pts · verified {(r.verified + r.adjust).toLocaleString()} · <b style={{ color: "var(--gold)" }}>{r.withheld.toLocaleString()} held</b> · spent {r.spent.toLocaleString()}</div>
+              </div>
+              <div className="flex gap-3 text-xs">
+                <button className="underline" style={{ color: "var(--success)" }} onClick={() => resolve(r, true)}>Credit held points</button>
+                <button className="underline text-muted-fg" onClick={() => resolve(r, false)}>Clear flag</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
   );
 }
 
