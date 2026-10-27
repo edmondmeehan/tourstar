@@ -133,4 +133,4 @@ export async function enterRaffle(r: Raffle, tickets: number, free: boolean) {
 /** Shown on every raffle (sweepstakes rules: free entry, sponsor, and Apple disclaimer). */
 export const RAFFLE_DISCLAIMER =
   "No purchase necessary. Tickets use reward points earned by playing; points can't be bought. A free entry is available every day. " +
-  "Sponsored by TourStar, LLC. Prizes fulfilled by Please and Thank You, LLC. Apple is not a sponsor of, and is not involved in, this raffle.";
+  "Sponsored by TourStar, LLC. Prizes fulfilled by Please and Thank You, Inc. Apple is not a sponsor of, and is not involved in, this raffle.";

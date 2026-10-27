@@ -85,7 +85,7 @@ Supabase → tourstar → Authentication:
 - **Tracking:** No (no ads, no cross-app tracking, so no ATT prompt needed).
 
 ### Notes for App Review (paste into "Notes")
-TourStar is a music career game. Reward points are earned only by playing and cannot be purchased. They can be redeemed for physical merchandise and experiences fulfilled by Please and Thank You, LLC, or used for raffle tickets. Each raffle also offers a free daily entry (no purchase necessary), shows official rules in the app, and states that Apple is not a sponsor (guideline 5.3). Demo account: (create one and put it here).
+TourStar is a music career game. Reward points are earned only by playing and cannot be purchased. They can be redeemed for physical merchandise and experiences fulfilled by Please and Thank You, Inc., or used for raffle tickets. Each raffle also offers a free daily entry (no purchase necessary), shows official rules in the app, and states that Apple is not a sponsor (guideline 5.3). Demo account: (create one and put it here).
 
 ## 7. Android (later)
 Google Play Console ($25 one-time) → new app `co.please.tourstar`, the same 5 products, a RevenueCat Play app, `VITE_REVENUECAT_ANDROID_KEY`, then `npm run android` and upload an AAB to internal testing.
