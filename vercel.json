@@ -1,22 +1,55 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:web",
   "outputDirectory": "dist",
   "redirects": [
-    { "source": "/admin", "destination": "/play/admin", "permanent": false },
-    { "source": "/landing", "destination": "/", "permanent": true }
+    {
+      "source": "/admin",
+      "destination": "/play/admin",
+      "permanent": false
+    },
+    {
+      "source": "/landing",
+      "destination": "/",
+      "permanent": true
+    }
   ],
   "rewrites": [
-    { "source": "/", "destination": "/landing.html" },
-    { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/terms", "destination": "/terms.html" },
-    { "source": "/support", "destination": "/support.html" },
-    { "source": "/play", "destination": "/index.html" },
-    { "source": "/play/:path*", "destination": "/index.html" },
-    { "source": "/((?!assets/|landing/|brand/).*)", "destination": "/landing.html" }
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/support",
+      "destination": "/support.html"
+    },
+    {
+      "source": "/play",
+      "destination": "/play.html"
+    },
+    {
+      "source": "/play/:path*",
+      "destination": "/play.html"
+    },
+    {
+      "source": "/((?!assets/|landing/|brand/).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
-    { "source": "/play(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
+    {
+      "source": "/play(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    }
   ]
 }
