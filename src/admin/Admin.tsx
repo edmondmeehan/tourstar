@@ -614,7 +614,7 @@ function Traffic() {
         </Section>
       </div>
       <Section title="Tag your links" sub="Add a source to any link you share so it shows up here by name.">
-        <code className="block text-xs bg-black/40 rounded p-3 overflow-x-auto">https://your-game-url/?utm_source=tiktok</code>
+        <code className="block text-xs bg-black/40 rounded p-3 overflow-x-auto">https://tourstarapp.com/?utm_source=tiktok</code>
         <p className="text-xs text-muted-fg mt-2">Use one name per channel: tiktok, instagram, newsletter, matchbox20-fanclub, and so on.</p>
       </Section>
     </>
