@@ -6,5 +6,8 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 export default defineConfig(({ mode }) => ({
   plugins: mode === "preview-single" ? [react(), viteSingleFile()] : [react()],
   // Phaser (~1MB) is lazy-loaded only when a concert starts.
-  build: mode === "preview-single" ? { outDir: "dist-preview", chunkSizeWarningLimit: 2000 } : { chunkSizeWarningLimit: 2000 },
+  // The normal build has two pages: the game (index.html) and the tourstarapp.com splash page (landing.html).
+  build: mode === "preview-single"
+    ? { outDir: "dist-preview", chunkSizeWarningLimit: 2000 }
+    : { chunkSizeWarningLimit: 2000, rollupOptions: { input: { main: "index.html", landing: "landing.html" } } },
 }));

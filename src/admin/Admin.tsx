@@ -10,6 +10,7 @@ import { toast, askConfirm } from "../components/ui";
 import { DayBars, RankBars } from "./charts";
 import { Kpi, Section, fail, input, when } from "./kit";
 import { RafflesTab, RewardsTab } from "./RewardsAdmin";
+import { WaitlistSection } from "./WaitlistAdmin";
 
 type Tab = "insights" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "admins";
 const TABS: { id: Tab; label: string }[] = [
@@ -314,6 +315,7 @@ function Marketing() {
 
   return (
     <>
+      <WaitlistSection />
       <Section title="New announcement" sub="Reaches every player the next time the app checks in (on launch and every 5 minutes). Banners sit under the header until dismissed; pop-ups show once.">
         <div className="grid md:grid-cols-2 gap-5">
           <div className="space-y-3">
