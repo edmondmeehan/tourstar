@@ -1,20 +1,19 @@
-import { PERSONAS, TOURS } from "../game/data";
+import { useState } from "react";
+import { PERSONAS, TOURS, type TourDef } from "../game/data";
 import { crewBonuses, fmtMoney, fmtNum, labelOf, levelFor } from "../game/engine";
 import { useGame } from "../game/store";
-import { Card, PageTitle, Tag, toast } from "../components/ui";
+import { Card, PageTitle, Tag } from "../components/ui";
+import SetlistSheet from "../components/SetlistSheet";
+import { SET_SLOTS } from "../game/setlist";
 import { useConcert } from "../concert/useConcert";
 import { useConfig } from "../game/config";
 
 export default function Tour() {
   const c = useGame((s) => s.career)!;
-  const playTour = useGame((s) => s.playTour);
   const payMultiplier = useConfig((s) => s.config.tourPayMultiplier);
-  const showConcert = useConcert((s) => s.show);
-  const book = (id: string) => {
-    const r = playTour(id);
-    if (r.ok && r.gig) showConcert(r);
-    else toast(r);
-  };
+  const resume = useConcert((s) => s.start);
+  const [booking, setBooking] = useState<TourDef | null>(null);
+  const pending = c.pendingShow;
   const lvl = levelFor(c.stats.fame).level;
   const b = crewBonuses(c);
   const label = labelOf(c);
@@ -22,6 +21,12 @@ export default function Tour() {
   return (
     <div>
       <PageTitle title="TOUR" sub="Bigger stages pay more — and cost more energy, health and time." />
+      {pending && (
+        <Card className="mb-4" glow="pink">
+          <div className="text-sm">🎤 You're mid-show at the <b>{TOURS.find((t) => t.id === pending.tourId)?.name}</b>. The crowd is still waiting.</div>
+          <button className="btn btn-pink w-full mt-3" onClick={() => resume(pending)}>Back on stage</button>
+        </Card>
+      )}
       <div className="space-y-3">
         {TOURS.map((t) => {
           const locked = lvl < t.level;
@@ -42,6 +47,7 @@ export default function Tour() {
                 {locked ? <Tag color="var(--gold)">LV{t.level}</Tag> : <Tag color="var(--success)">~{fmtMoney(Math.round(est))}</Tag>}
               </div>
               <div className="flex flex-wrap gap-1.5 mt-3 text-[11px]">
+                <span className="px-1.5 py-0.5 rounded bg-black/40">🎵 {SET_SLOTS[t.id]} songs</span>
                 <span className="px-1.5 py-0.5 rounded bg-black/40">⚡ -{energy}</span>
                 <span className="px-1.5 py-0.5 rounded bg-black/40">♥ -{Math.round(t.health * b.healthMult)}</span>
                 {t.cost > 0 && <span className="px-1.5 py-0.5 rounded bg-black/40">💸 {fmtMoney(t.cost)} costs</span>}
@@ -49,7 +55,7 @@ export default function Tour() {
                 <span className="px-1.5 py-0.5 rounded bg-black/40" style={{ color: "oklch(75% .2 300)" }}>♪ +{fmtNum(t.fans)}</span>
               </div>
               {!locked && (
-                <button className="btn btn-primary w-full mt-3" disabled={!can} onClick={() => book(t.id)}>
+                <button className="btn btn-primary w-full mt-3" disabled={!can || !!pending} onClick={() => setBooking(t)}>
                   {c.stats.energy < energy ? "Not enough energy" : c.stats.cash < t.cost ? "Can't cover costs" : "▶ Hit the road"}
                 </button>
               )}
@@ -57,7 +63,8 @@ export default function Tour() {
           );
         })}
       </div>
-      <p className="text-[11px] text-muted-fg text-center mt-4">Sellout odds rise with Hype, Fans and Pyro.</p>
+      <p className="text-[11px] text-muted-fg text-center mt-4">Sellout odds rise with Hype, Fans and Pyro. Pay and fame depend on how you play and your setlist.</p>
+      {booking && <SetlistSheet tour={booking} onClose={() => setBooking(null)} />}
     </div>
   );
 }

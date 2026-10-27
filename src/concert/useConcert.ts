@@ -1,9 +1,10 @@
 import { create } from "zustand";
-import type { ActionResult } from "../game/store";
+import type { PendingShow } from "../game/setlist";
 
-/** While a concert is on screen, event/celebration overlays wait their turn. */
-export const useConcert = create<{ result: ActionResult | null; show: (r: ActionResult) => void; close: () => void }>((set) => ({
-  result: null,
-  show: (result) => set({ result }),
-  close: () => set({ result: null }),
+/** While a concert is on screen (open), event/celebration overlays wait their turn. */
+export const useConcert = create<{ open: boolean; show: PendingShow | null; start: (s: PendingShow) => void; close: () => void }>((set) => ({
+  open: false,
+  show: null,
+  start: (show) => set({ open: true, show }),
+  close: () => set({ open: false, show: null }),
 }));

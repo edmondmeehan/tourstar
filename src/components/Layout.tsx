@@ -46,7 +46,7 @@ export default function Layout() {
   const vip = useMembership((s) => s.vipBadge);
   const [menu, setMenu] = useState(false);
   const loc = useLocation();
-  const concert = useConcert((s) => s.result);
+  const concert = useConcert((s) => s.open);
   useGameTick();
   useEffect(() => setMenu(false), [loc.pathname]);
   if (!career) return <Navigate to="/create" replace />;

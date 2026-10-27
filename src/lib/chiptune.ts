@@ -58,50 +58,50 @@ export interface PlayHandle {
   durationSec: number;
 }
 
-export function playSong(seed: number, genre: GenreId, onEnd?: () => void): PlayHandle {
-  const a = audio();
-  const p = makePattern(seed, genre);
-  const vol = masterVolume();
-  const out = a.createGain();
-  out.gain.value = 0.18 * vol;
-  out.connect(a.destination);
-  const t0 = a.currentTime + 0.05;
-  const nodes: OscillatorNode[] = [];
+type Voice = { note: (freq: number, t: number, len: number, wave: OscillatorType, level: number) => void; noise: (t: number, len: number, level: number) => void };
 
-  const note = (freq: number, t: number, len: number, wave: OscillatorType, level: number) => {
-    const o = a.createOscillator();
-    const g = a.createGain();
-    o.type = wave;
-    o.frequency.value = freq;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(level, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-    o.connect(g).connect(out);
-    o.start(t);
-    o.stop(t + len + 0.02);
-    nodes.push(o);
+function makeVoice(a: AudioContext, out: GainNode, nodes: OscillatorNode[]): Voice {
+  return {
+    note: (freq, t, len, wave, level) => {
+      const o = a.createOscillator();
+      const g = a.createGain();
+      o.type = wave;
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(level, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g).connect(out);
+      o.start(t);
+      o.stop(t + len + 0.02);
+      nodes.push(o);
+    },
+    noise: (t, len, level) => {
+      const buf = a.createBuffer(1, Math.floor(a.sampleRate * len), a.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = a.createBufferSource();
+      const g = a.createGain();
+      g.gain.value = level;
+      src.buffer = buf;
+      src.connect(g).connect(out);
+      src.start(t);
+    },
   };
+}
 
-  const noise = (t: number, len: number, level: number) => {
-    const buf = a.createBuffer(1, Math.floor(a.sampleRate * len), a.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
-    const s = a.createBufferSource();
-    const g = a.createGain();
-    g.gain.value = level;
-    s.buffer = buf;
-    s.connect(g).connect(out);
-    s.start(t);
-  };
+function scheduleSteps(v: Voice, p: Pattern, from: number, count: number, tStart: number) {
+  for (let k = 0; k < count; k++) {
+    const i = (from + k) % p.lead.length;
+    const t = tStart + k * p.stepSec;
+    const n = p.lead[i];
+    if (n !== null) v.note(midi(n), t, p.stepSec * 0.9, p.wave, 0.5);
+    if (i % 2 === 0) v.note(midi(p.bass[i]), t, p.stepSec * 1.8, "triangle", 0.7);
+    if (i % 4 === 2) v.noise(t, 0.06, 0.25);
+    if (i % 8 === 0) v.note(55, t, 0.12, "sine", 0.9);
+  }
+}
 
-  p.lead.forEach((n, i) => {
-    const t = t0 + i * p.stepSec;
-    if (n !== null) note(midi(n), t, p.stepSec * 0.9, p.wave, 0.5);
-    if (i % 2 === 0) note(midi(p.bass[i]), t, p.stepSec * 1.8, "triangle", 0.7);
-    if (i % 4 === 2) noise(t, 0.06, 0.25);
-    if (i % 8 === 0) note(55, t, 0.12, "sine", 0.9);
-  });
-
+function player(durationSec: number, out: GainNode, nodes: OscillatorNode[], a: AudioContext, onEnd?: () => void) {
   let done = false;
   const timer = window.setTimeout(() => {
     if (!done) {
@@ -109,19 +109,122 @@ export function playSong(seed: number, genre: GenreId, onEnd?: () => void): Play
       out.disconnect();
       onEnd?.();
     }
-  }, (p.durationSec + 0.15) * 1000);
+  }, (durationSec + 0.15) * 1000);
+  return () => {
+    if (done) return;
+    done = true;
+    window.clearTimeout(timer);
+    out.gain.setValueAtTime(0, a.currentTime);
+    nodes.forEach((n) => {
+      try { n.stop(); } catch { /* already stopped */ }
+    });
+    out.disconnect();
+  };
+}
 
+export function playSong(seed: number, genre: GenreId, onEnd?: () => void): PlayHandle {
+  const a = audio();
+  const p = makePattern(seed, genre);
+  const out = a.createGain();
+  out.gain.value = 0.18 * masterVolume();
+  out.connect(a.destination);
+  const nodes: OscillatorNode[] = [];
+  scheduleSteps(makeVoice(a, out, nodes), p, 0, p.lead.length, a.currentTime + 0.05);
+  return { durationSec: p.durationSec, stop: player(p.durationSec, out, nodes, a, onEnd) };
+}
+
+/* ---------- Live show medley + rhythm chart ---------- */
+
+export interface ChartNote { t: number; lane: 0 | 1 | 2; song: number }
+export interface Medley {
+  stepSec: number;
+  stepsPerSong: number;
+  durationSec: number;
+  /** Start of each song, in seconds from the top of the set. */
+  songStarts: number[];
+  notes: ChartNote[];
+}
+
+/** Steps per song so a set lasts roughly 16-25s whatever its length. */
+export function stepsPerSong(songs: number) {
+  return Math.max(16, Math.min(32, Math.round(64 / Math.max(1, songs) / 8) * 8));
+}
+
+/**
+ * The tap chart follows each song's melody. difficulty 0..1: easy charts use only
+ * on-beat notes; harder ones add off-beats. Lanes come from pitch, so the same melody
+ * always maps the same way.
+ */
+export function makeMedley(seeds: number[], genre: GenreId, difficulty: number, intro = 2): Medley {
+  const per = stepsPerSong(seeds.length);
+  const notes: ChartNote[] = [];
+  let stepSec = 0.25;
+  seeds.forEach((seed, si) => {
+    const p = makePattern(seed, genre);
+    stepSec = p.stepSec;
+    // Each song plays from a different spot so repeats in a medley still differ.
+    const from = (seed % 4) * 8;
+    let lastLane = -1;
+    for (let k = 0; k < per; k++) {
+      const i = (from + k) % p.lead.length;
+      const n = p.lead[i];
+      if (n === null) continue;
+      const offBeat = i % 2 === 1;
+      if (offBeat && ((i * 2654435761) >>> 0) % 100 >= difficulty * 70) continue;
+      let lane = (n % 3) as 0 | 1 | 2;
+      if (lane === lastLane && offBeat) lane = ((lane + 1) % 3) as 0 | 1 | 2;
+      lastLane = lane;
+      notes.push({ t: intro + (si * per + k) * stepSec, lane, song: si });
+    }
+  });
+  const songStarts = seeds.map((_, si) => intro + si * per * stepSec);
+  return { stepSec, stepsPerSong: per, durationSec: intro + seeds.length * per * stepSec, songStarts, notes };
+}
+
+export interface MedleyHandle {
+  stop: () => void;
+  /** Seconds since the top of the set, on the audio clock (falls back to wall clock). */
+  now: () => number;
+}
+
+export function playMedley(seeds: number[], genre: GenreId, m: Medley, intro = 2): MedleyHandle {
+  let a: AudioContext | null = null;
+  try { a = audio(); } catch { a = null; }
+  if (!a) {
+    const t0 = performance.now() / 1000 + 0.1;
+    return { stop: () => {}, now: () => performance.now() / 1000 - t0 };
+  }
+  const ctx = a;
+  const out = ctx.createGain();
+  out.gain.value = 0.18 * masterVolume();
+  out.connect(ctx.destination);
+  const nodes: OscillatorNode[] = [];
+  const v = makeVoice(ctx, out, nodes);
+  const t0 = ctx.currentTime + 0.1;
+  // Count-in: four sticks on the beat.
+  for (let i = 0; i < 4; i++) v.noise(t0 + intro - (4 - i) * m.stepSec * 2, 0.03, 0.35);
+  seeds.forEach((seed, si) => {
+    const p = makePattern(seed, genre);
+    scheduleSteps(v, p, (seed % 4) * 8, m.stepsPerSong, t0 + intro + si * m.stepsPerSong * m.stepSec);
+  });
+  const stop = player(m.durationSec + 0.2, out, nodes, ctx);
+  // Follow the audio clock so taps line up with the music. If audio never starts
+  // (blocked or unavailable), settle on the wall clock instead.
+  const wall0 = performance.now() / 1000 + 0.1;
+  let mode: "audio" | "wall" | null = null;
+  // ctx.currentTime moves in audio-buffer steps (often 10-40ms); smooth between steps
+  // with the wall clock so judging stays precise.
+  let lastCtx = -1, lastPerf = 0;
   return {
-    durationSec: p.durationSec,
-    stop: () => {
-      if (done) return;
-      done = true;
-      window.clearTimeout(timer);
-      out.gain.setValueAtTime(0, a.currentTime);
-      nodes.forEach((n) => {
-        try { n.stop(); } catch { /* already stopped */ }
-      });
-      out.disconnect();
+    stop,
+    now: () => {
+      const perf = performance.now() / 1000;
+      const wall = perf - wall0;
+      if (!mode && wall > 0.4) mode = ctx.state === "running" ? "audio" : "wall";
+      if (mode === "wall" || (!mode && ctx.state !== "running")) return wall;
+      const c = ctx.currentTime;
+      if (c !== lastCtx) { lastCtx = c; lastPerf = perf; }
+      return c - t0 + Math.min(perf - lastPerf, 0.1);
     },
   };
 }

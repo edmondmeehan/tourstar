@@ -33,7 +33,7 @@ export function SavePrompt() {
   const nav = useNavigate();
   const gigs = useGame((s) => s.career?.totals.gigs ?? 0);
   const busy = useGame((s) => s.celebrations.length > 0 || !!s.lastOutcome || !!s.career?.pendingEvent);
-  const concert = useConcert((s) => s.result);
+  const concert = useConcert((s) => s.open);
   const { sync, promptDismissed, set } = useCloud();
   const open = cloudConfigured && sync === "guest" && !promptDismissed && gigs >= 1 && !concert && !busy;
   return (
@@ -106,7 +106,7 @@ export function AnnouncementPopup() {
   const items = useLive((s) => s.announcements);
   const dismissed = useLive((s) => s.dismissedAnnouncements);
   const busy = useGame((s) => s.celebrations.length > 0 || !!s.lastOutcome || !!s.career?.pendingEvent);
-  const concert = useConcert((s) => s.result);
+  const concert = useConcert((s) => s.open);
   const a = items.find((x) => x.style === "popup" && !dismissed.includes(x.id));
   if (!a || busy || concert) return null;
   return (

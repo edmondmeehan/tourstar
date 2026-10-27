@@ -16,6 +16,9 @@ import type {
   Career, Celebration, CrewId, Delta, GenreId, LockoutKind, LogType, PersonaId, ReleaseKind, Song, Stats,
 } from "./types";
 import { songTitle } from "../lib/chiptune";
+import {
+  SET_SLOTS, debutChance, fanRequest, gradeFor, setlistScore, showScore, songPool, type EncoreChoice, type Grade, type PendingShow,
+} from "./setlist";
 
 export interface GigReport {
   tourId: string;
@@ -26,6 +29,13 @@ export interface GigReport {
   net: number;
   pyro: boolean;
   lighting: boolean;
+  grade: Grade;
+  performance: number;
+  setlist: number;
+  encore: EncoreChoice | null;
+  encoreLanded?: boolean;
+  debutTitle?: string;
+  playedRequest: boolean;
 }
 
 export interface ActionResult {
@@ -43,7 +53,10 @@ interface GameState {
 
   createCareer: (p: { name: string; genre: GenreId; persona: PersonaId; themeSeed?: number }) => void;
   tick: () => void;
-  playTour: (id: string) => ActionResult;
+  /** Spend energy and costs, lock in the crowd, and put the show on (the concert overlay plays it). */
+  startShow: (tourId: string, setlist: string[]) => ActionResult & { show?: PendingShow };
+  /** Pay out a started show. performance is 0..1 from the rhythm game. */
+  finishShow: (performance: number, encore: EncoreChoice | null) => ActionResult;
   release: (kind: ReleaseKind, title: string, withSong: boolean) => ActionResult;
   signLabel: (id: string) => ActionResult;
   leaveLabel: () => ActionResult;
@@ -198,11 +211,12 @@ export const useGame = create<GameState>()(
           if (changed) commit(c);
         },
 
-        playTour: (id) => {
+        startShow: (id, setlist) => {
           const c = draft();
           if (!c) return { ok: false, message: "No career." };
           if (isLocked(c)) return lockMsg(c);
           if (c.pendingEvent) return { ok: false, message: "Deal with the situation first." };
+          if (c.pendingShow) return { ok: false, message: "You're already mid-show." };
           const t = TOURS.find((x) => x.id === id)!;
           const lvl = levelFor(c.stats.fame).level;
           if (lvl < t.level) return { ok: false, message: `Unlocks at level ${t.level}.` };
@@ -210,34 +224,87 @@ export const useGame = create<GameState>()(
           const energy = Math.round(t.energy * b.tourEnergyMult * (PERSONAS[c.persona].tourEnergy ?? 1));
           if (c.stats.energy < energy) return { ok: false, message: `Need ${energy} energy.` };
           if (c.stats.cash < t.cost) return { ok: false, message: `Need $${t.cost.toLocaleString()} for production costs.` };
+          const pool = songPool(c);
+          const keys = setlist.filter((k, i) => pool.some((p) => p.key === k) && setlist.indexOf(k) === i).slice(0, SET_SLOTS[t.id] ?? 3);
+          if (!keys.length) return { ok: false, message: "Pick at least one song." };
 
-          const label = labelOf(c);
           const draw = Math.min(1, 0.35 + c.stats.hype / 160 + Math.log10(1 + c.stats.fans) / 12 + b.selloutBonus);
-          const sellout = Math.random() < draw * 0.7 && t.level <= lvl;
+          const sellout = Math.random() < draw * 0.7;
           const attendance = sellout ? 1 : 0.4 + Math.random() * 0.5 * draw;
+          c.stats = applyDelta(c.stats, { energy: -energy, cash: -t.cost });
+          const show: PendingShow = { tourId: t.id, setlist: keys, attendance, sellout, requestKey: fanRequest(c, pool), at: Date.now() };
+          c.pendingShow = show;
+          c.lastSetlist = keys;
+          commit(c);
+          return { ok: true, message: "Showtime!", show };
+        },
+
+        finishShow: (performance, encore) => {
+          const c = draft();
+          if (!c?.pendingShow) return { ok: false, message: "No show in progress." };
+          const show = c.pendingShow;
+          const t = TOURS.find((x) => x.id === show.tourId)!;
+          const b = crewBonuses(c);
+          const label = labelOf(c);
+          const perf = Math.max(0, Math.min(1, performance));
+          const pool = songPool(c);
+          const setQ = setlistScore(show.setlist, pool, show.requestKey, SET_SLOTS[t.id] ?? 3);
+          const score = showScore(perf, setQ);
+          const grade = gradeFor(score);
+          const { attendance, sellout } = show;
           const crowd = Math.round(t.capacity * attendance);
-          let gross = Math.round(t.pay * attendance * b.payMult * (1 + c.stats.hype / 200) * cfg().tourPayMultiplier);
+
+          let payM = 0.75 + 0.5 * score;
+          let fameM = (0.6 + 0.9 * score) * (grade === "S" ? 1.25 : 1);
+          let hypeBonus = Math.round((score - 0.5) * 12);
+          let healthBonus = 0;
+          let encoreLanded: boolean | undefined;
+          let debutTitle: string | undefined;
+          if (encore === "hit") { payM += 0.1; fameM += 0.1; }
+          if (encore === "walk") healthBonus = 4;
+          if (encore === "debut") {
+            encoreLanded = Math.random() < debutChance(perf);
+            if (encoreLanded) {
+              fameM += 0.3;
+              hypeBonus += 6;
+              const seed = Math.floor(Math.random() * 1e9);
+              debutTitle = songTitle(seed);
+              const song: Song = { id: uid(), title: debutTitle, seed, genre: c.genre, createdAt: Date.now(), source: "live", appeal: Math.round(55 + perf * 30) };
+              c.songs.push(song);
+              c.queue.push(song.id);
+            } else hypeBonus -= 4;
+          }
+
+          let gross = Math.round(t.pay * attendance * b.payMult * (1 + c.stats.hype / 200) * cfg().tourPayMultiplier * payM);
           if (label) gross = Math.round(gross * (1 + label.boost) * (1 - label.share));
           const net = gross - t.cost;
           const famex = (1 + c.stats.hype / 100) * b.tourFameMult * cfg().fameMultiplier;
+          const playedRequest = !!show.requestKey && show.setlist.includes(show.requestKey);
+          const energyUsed = Math.round(t.energy * b.tourEnergyMult * (PERSONAS[c.persona].tourEnergy ?? 1));
           const delta: Delta = {
-            cash: net,
-            energy: -energy,
-            health: -Math.round(t.health * b.healthMult),
-            fame: Math.round(t.fame * famex * (sellout ? 1.5 : 1)),
-            fans: Math.round(t.fans * attendance * (1 + (label?.boost ?? 0) * 0.5)),
-            hype: t.hype + b.pyroHype + (sellout ? 4 : 0),
-            credibility: t.credibility,
+            cash: gross,
+            fame: Math.round(t.fame * famex * (sellout ? 1.5 : 1) * fameM),
+            fans: Math.round(t.fans * attendance * (1 + (label?.boost ?? 0) * 0.5) * (0.7 + 0.6 * score)),
+            hype: t.hype + b.pyroHype + (sellout ? 4 : 0) + hypeBonus + (playedRequest ? 2 : 0),
+            credibility: t.credibility + (grade === "S" || grade === "A" ? 1 : grade === "D" ? -1 : 0),
+            health: -Math.round(t.health * b.healthMult) + healthBonus,
             relationships: -Math.min(8, t.weeks * 2),
           };
           const applied = gain(c, delta);
+          // Report the full cost of the show alongside the payout.
+          applied.cash = net;
+          applied.energy = -energyUsed;
+          const plays = { ...(c.setPlays ?? {}) };
+          show.setlist.forEach((k) => { plays[k] = (plays[k] ?? 0) + 1; });
+          c.setPlays = plays;
+          c.pendingShow = null;
           c.week += t.weeks;
           c.stats.hype = Math.max(0, c.stats.hype - t.weeks * 3); // buzz fades over time
           c.totals.gigs += 1;
           c.totals.earnings += Math.max(0, gross);
           if (sellout) c.totals.sellouts += 1;
-          // The concert scene's results card announces sellouts, so no separate celebration here.
-          newLog(c, "gig", `${t.name}: ${crowd.toLocaleString()} fans${sellout ? " (SOLD OUT)" : ""}, netted $${net.toLocaleString()}.`);
+          newLog(c, "gig", `${t.name}: ${crowd.toLocaleString()} fans${sellout ? " (SOLD OUT)" : ""}, grade ${grade}, netted $${net.toLocaleString()}.`);
+          if (debutTitle) newLog(c, "release", `Debuted "${debutTitle}" live. It's in your Locker and setlist.`);
           maybeEvent(c);
           commit(c);
           return {
@@ -245,7 +312,10 @@ export const useGame = create<GameState>()(
             title: sellout ? "SOLD OUT!" : `${t.name} done`,
             message: `${crowd.toLocaleString()} fans showed up.`,
             delta: applied,
-            gig: { tourId: t.id, tourName: t.name, crowd, capacity: t.capacity, sellout, net, pyro: !!c.crew.pyro, lighting: !!c.crew.lighting },
+            gig: {
+              tourId: t.id, tourName: t.name, crowd, capacity: t.capacity, sellout, net, pyro: !!c.crew.pyro, lighting: !!c.crew.lighting,
+              grade, performance: perf, setlist: setQ, encore, encoreLanded, debutTitle, playedRequest,
+            },
           };
         },
 

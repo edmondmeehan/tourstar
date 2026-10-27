@@ -46,8 +46,9 @@ export interface Song {
   seed: number;
   genre: GenreId;
   createdAt: number;
-  source: "theme" | "release";
+  source: "theme" | "release" | "live";
   releaseId?: string;
+  appeal?: number; // for songs without a release (theme, debuted live)
 }
 
 export interface Release {
@@ -97,6 +98,11 @@ export interface Career {
   unlockedTours: string[];
   rivals: { weekKey: string; points: number; cooldowns: Record<string, number>; lastPaidWeek: string | null };
   pendingEvent: string | null;
+  /** Times each setlist song has been played live (keys from game/setlist.ts). */
+  setPlays?: Record<string, number>;
+  lastSetlist?: string[];
+  /** A show that has started (energy spent) but not finished yet. */
+  pendingShow?: import("./setlist").PendingShow | null;
 }
 
 export interface Celebration {

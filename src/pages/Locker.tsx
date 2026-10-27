@@ -125,7 +125,7 @@ export default function Locker() {
               </button>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold truncate">{s.title}</div>
-                <div className="text-[11px] text-muted-fg">{GENRES[s.genre].emoji} {s.source === "theme" ? "Theme song" : "Release"} · 0:{String(dur).padStart(2, "0")}</div>
+                <div className="text-[11px] text-muted-fg">{GENRES[s.genre].emoji} {s.source === "theme" ? "Theme song" : s.source === "live" ? "Debuted live" : "Release"} · 0:{String(dur).padStart(2, "0")}</div>
               </div>
               <button className="text-muted-fg text-xs px-1" aria-label="Delete" onClick={() => askConfirm(`Delete "${s.title}" from your Locker?`, () => { if (current === id) stop(); removeSong(id); }, { yes: "Delete", danger: true })}>✕</button>
               <span className="text-xl text-muted-fg cursor-grab touch-none px-1" onPointerDown={(e) => onPointerDown(e, id)} aria-label="Drag to reorder">≡</span>

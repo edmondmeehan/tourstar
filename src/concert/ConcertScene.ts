@@ -34,6 +34,8 @@ function noise(x: number, y: number) {
 
 export class ConcertScene extends Phaser.Scene {
   progress = 0;
+  /** Crowd energy 0..1, driven by how well the set is going. */
+  energy = 0.6;
   private p!: ConcertParams;
   private g!: Phaser.GameObjects.Graphics;
   private t = 0;
@@ -99,7 +101,8 @@ export class ConcertScene extends Phaser.Scene {
     const beat = Math.max(0.2, p.beatSec);
     const beatPos = (t / beat) % 1;
     const pulse = 1 - beatPos;
-    const intensity = Phaser.Math.SmoothStep(Math.min(1, this.progress * 1.6), 0, 1) * 0.8 + 0.2;
+    const ramp = Phaser.Math.SmoothStep(Math.min(1, this.progress * 1.6), 0, 1);
+    const intensity = (ramp * 0.8 + 0.2) * (0.45 + 0.55 * this.energy);
     const accent = p.sellout ? PINK : BLUE;
     g.clear();
 
@@ -220,6 +223,7 @@ export function startConcert(parent: HTMLElement, params: ConcertParams) {
   game.scene.add("concert", scene, true, params);
   return {
     setProgress: (k: number) => { scene.progress = k; },
+    setEnergy: (e: number) => { scene.energy = Math.max(0, Math.min(1, e)); },
     destroy: () => game.destroy(true),
   };
 }

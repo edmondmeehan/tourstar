@@ -9,7 +9,7 @@ import { useConcert } from "../concert/useConcert";
 export function EventModal() {
   const id = useGame((s) => s.career?.pendingEvent);
   const resolve = useGame((s) => s.resolveEvent);
-  const concert = useConcert((s) => s.result);
+  const concert = useConcert((s) => s.open);
   const ev = concert ? undefined : EVENTS.find((e) => e.id === id);
   useEffect(() => {
     if (ev) { sfx("event"); vibrate([30, 60, 30]); }
@@ -37,7 +37,7 @@ export function EventModal() {
 export function OutcomeModal() {
   const o = useGame((s) => s.lastOutcome);
   const clear = useGame((s) => s.clearOutcome);
-  const concert = useConcert((s) => s.result);
+  const concert = useConcert((s) => s.open);
   if (!o || concert) return null;
   return (
     <Modal open onClose={clear}>
@@ -68,7 +68,7 @@ export function LockoutOverlay() {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-  const concert = useConcert((s) => s.result);
+  const concert = useConcert((s) => s.open);
   if (!lock || lock.until <= now || hidden === lock.until || concert) return null;
   const m = LOCK_META[lock.kind];
   const left = Math.max(0, Math.ceil((lock.until - now) / 1000));
@@ -93,7 +93,7 @@ export function LockoutOverlay() {
 }
 
 export function CelebrationOverlay() {
-  const concert = useConcert((s) => s.result);
+  const concert = useConcert((s) => s.open);
   const first = useGame((s) => s.celebrations[0]);
   const c = concert ? undefined : first;
   const dismiss = useGame((s) => s.dismissCelebration);

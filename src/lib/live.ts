@@ -101,7 +101,7 @@ function watchGameplay() {
     }
     if (c.totals.gigs > o.totals.gigs) {
       const last = c.log.find((l) => l.type === "gig");
-      track("gig", { level: c.peakLevel, sellout: !!last?.text.includes("SOLD OUT"), label: c.labelId });
+      track("gig", { level: c.peakLevel, sellout: !!last?.text.includes("SOLD OUT"), label: c.labelId, grade: last?.text.match(/grade (\w)/)?.[1] ?? null });
     }
     if (c.releases.length > o.releases.length) track("release", { kind: c.releases[0].kind, quality: c.releases[0].quality, song: !!c.releases[0].songId });
     if (c.peakLevel > o.peakLevel) track("level_up", { level: c.peakLevel, week: c.week });
