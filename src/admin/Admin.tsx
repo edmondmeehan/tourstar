@@ -10,11 +10,12 @@ import { toast, askConfirm } from "../components/ui";
 import { DayBars, RankBars } from "./charts";
 import { Kpi, Section, fail, input, when } from "./kit";
 import { RafflesTab, RewardsTab } from "./RewardsAdmin";
-import { WaitlistSection } from "./WaitlistAdmin";
+import { BetaSignupsTab } from "./WaitlistAdmin";
 
-type Tab = "insights" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "admins";
+type Tab = "insights" | "beta" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "admins";
 const TABS: { id: Tab; label: string }[] = [
   { id: "insights", label: "Insights" },
+  { id: "beta", label: "Beta signups" },
   { id: "players", label: "Players" },
   { id: "finance", label: "Finance" },
   { id: "marketing", label: "Marketing" },
@@ -72,6 +73,7 @@ export default function Admin() {
         </nav>
         <main className="flex-1 min-w-0">
           {tab === "insights" && <Insights />}
+          {tab === "beta" && <BetaSignupsTab />}
           {tab === "players" && <Players />}
           {tab === "finance" && <Finance />}
           {tab === "marketing" && <Marketing />}
@@ -315,7 +317,6 @@ function Marketing() {
 
   return (
     <>
-      <WaitlistSection />
       <Section title="New announcement" sub="Reaches every player the next time the app checks in (on launch and every 5 minutes). Banners sit under the header until dismissed; pop-ups show once.">
         <div className="grid md:grid-cols-2 gap-5">
           <div className="space-y-3">

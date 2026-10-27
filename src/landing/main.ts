@@ -154,7 +154,7 @@ async function rpc<T>(fn: string, body: Record<string, unknown>): Promise<T> {
 function showCount(n: number) {
   if (n < 100) return; // social proof only once it's meaningful
   const el = $<HTMLElement>(".fan-count");
-  el.innerHTML = `<b>${n.toLocaleString()}</b> fans on the list ·`;
+  el.innerHTML = `<b>${n.toLocaleString()}</b> fans already on the list`;
   el.hidden = false;
 }
 
