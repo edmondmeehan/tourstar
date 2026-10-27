@@ -15,7 +15,7 @@ What's already built is marked ✅. Everything else needs your accounts, in this
 > Have a lawyer review /privacy, /terms and each raffle's official rules before prizes go out. NY and FL require registration and a bond for sweepstakes with more than $5,000 in prizes.
 
 ## 1. Apple Developer account (1–2 days)
-1. Enroll at developer.apple.com/programs as an organization: Please & Thank You, Inc. ($99/yr). You'll need a D-U-N-S number (free, can take a few days).
+1. Enroll at developer.apple.com/programs as an organization: TourStar, LLC ($99/yr). The App Store will list this as the seller. You'll need a D-U-N-S number (free, can take a few days).
 2. In Certificates, IDs & Profiles → Identifiers, register the App ID `co.please.tourstar` with **Sign in with Apple** checked.
 3. Create a **Services ID** (e.g. `co.please.tourstar.web`) with Sign in with Apple, domain `vtpgrxavyspadmubfwtb.supabase.co`, return URL `https://vtpgrxavyspadmubfwtb.supabase.co/auth/v1/callback`.
 4. Keys → create a key with **Sign in with Apple**, download the `.p8` and note the Key ID and your Team ID.
@@ -85,7 +85,7 @@ Supabase → tourstar → Authentication:
 - **Tracking:** No (no ads, no cross-app tracking, so no ATT prompt needed).
 
 ### Notes for App Review (paste into "Notes")
-TourStar is a music career game. Reward points are earned only by playing and cannot be purchased. They can be redeemed for physical merchandise and experiences fulfilled by Please & Thank You, Inc., or used for raffle tickets. Each raffle also offers a free daily entry (no purchase necessary), shows official rules in the app, and states that Apple is not a sponsor (guideline 5.3). Demo account: (create one and put it here).
+TourStar is a music career game. Reward points are earned only by playing and cannot be purchased. They can be redeemed for physical merchandise and experiences fulfilled by Please and Thank You, LLC, or used for raffle tickets. Each raffle also offers a free daily entry (no purchase necessary), shows official rules in the app, and states that Apple is not a sponsor (guideline 5.3). Demo account: (create one and put it here).
 
 ## 7. Android (later)
 Google Play Console ($25 one-time) → new app `co.please.tourstar`, the same 5 products, a RevenueCat Play app, `VITE_REVENUECAT_ANDROID_KEY`, then `npm run android` and upload an AAB to internal testing.
