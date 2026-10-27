@@ -11,6 +11,7 @@ export interface GameConfig {
   dailyRewardMultiplier: number;
   renameCost: number;
   startingCashBonus: number;
+  pointsMultiplier: number;
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -22,6 +23,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   dailyRewardMultiplier: 1,
   renameCost: 50000,
   startingCashBonus: 0,
+  pointsMultiplier: 1,
 };
 
 /** Admin UI metadata: label, help text and safe bounds for each setting. */
@@ -33,6 +35,7 @@ export const CONFIG_FIELDS: { key: keyof GameConfig; label: string; help: string
   { key: "eventRateMultiplier", label: "Random event rate", help: "How often scandals, parties and offers pop up. 0 turns them off.", min: 0, max: 3, step: 0.05, unit: "×" },
   { key: "dailyRewardMultiplier", label: "Daily rewards", help: "Multiplies the daily login cash reward.", min: 0.25, max: 10, step: 0.25, unit: "×" },
   { key: "renameCost", label: "Rename cost", help: "Game cash to rename after the first free rename.", min: 0, max: 1000000, step: 1000, unit: "$" },
+  { key: "pointsMultiplier", label: "Reward points", help: "Multiplies the points players earn for rewards and raffles (gigs, releases, daily claims, level-ups).", min: 0, max: 5, step: 0.05, unit: "×" },
   { key: "startingCashBonus", label: "Starting cash bonus", help: "Extra game cash for brand-new careers.", min: 0, max: 100000, step: 100, unit: "$" },
 ];
 

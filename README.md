@@ -81,6 +81,8 @@ Every admin query is also enforced in the database (row-level security + admin-o
 | Marketing | Send banner or pop-up announcements with an optional button to any screen; turn off / delete |
 | Balance | Live tuning: energy speed, gig/release payouts, fame gains, event rate, daily rewards, rename cost, starting cash |
 | Events & gifts | Fire any random event, or gift stats (cash, energy, fame…) to all players, once each |
+| Rewards store | Add/edit real goods players redeem with points (cost, level gate, stock, per-player limit, sizes, shipping). Review redemptions and move them through Pending → Approved → Shipped → Delivered; Rejected refunds the points |
+| Raffles | Create raffles (ticket price in points, level gate, ticket cap, free daily entry, official rules), track entrants/tickets, close early, draw a weighted random winner |
 | Orders | Distribution orders (empty until Stripe checkout is on) |
 | Traffic | New players by source (`?utm_source=` tags, referrers, App/Play Store) and platform |
 | AI music | Status of the built-in synth, ElevenLabs and Replicate |
@@ -92,6 +94,17 @@ sign_in, premium_purchase) are batched from the app every 10s into `analytics_ev
 
 Code: `src/admin/*` (lazy-loaded, so players never download it), `src/lib/live.ts` (analytics + live-ops in the game),
 `src/game/config.ts` (balance defaults and limits). SQL: `supabase/migrations/`.
+
+## Points, rewards and raffles
+
+Players earn reward points by playing only (they can never be bought): gigs by grade (S 40, A 25, B 15, C 8, D 3, +5 sellout, +3 fan request),
+releases (10 + quality/10), daily claims (10 + 2 per streak day up to 7) and level-ups (100 × level). Admin → Balance → Reward points scales all of it.
+Points earned live in the save (`career.pointsEarned`); spending is recorded in Supabase (`reward_redemptions`, `raffle_entries`) through the
+`redeem_reward` and `enter_raffle` functions, which check level, stock, limits and balance and lock per player so points can't be spent twice.
+Store → Rewards / Raffles need an account; the Shop tab (game-cash boosts) works for guests.
+
+Raffles follow sweepstakes basics: points aren't purchasable, a free daily entry, official rules on every raffle, and "Apple is not a sponsor"
+(App Store guideline 5.3). Get legal review of the rules before running real prizes; NY and FL require registration and bonding over $5,000 in prizes.
 
 ## Hosted preview
 

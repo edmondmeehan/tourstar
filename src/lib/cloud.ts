@@ -186,6 +186,12 @@ async function push() {
   useCloud.getState().set(error ? { sync: navigator.onLine === false ? "offline" : "error" } : { sync: "synced", lastSyncedAt: Date.now() });
 }
 
+/** Upload the save right now (before spending points, so the server sees the latest earnings). */
+export async function syncNow() {
+  window.clearTimeout(pushTimer);
+  await push();
+}
+
 function schedulePush() {
   window.clearTimeout(pushTimer);
   pushTimer = window.setTimeout(() => void push(), 2000);

@@ -8,8 +8,10 @@ import { EVENTS } from "../game/events";
 import { GENRES, LEVELS, STAT_META } from "../game/data";
 import { toast, askConfirm } from "../components/ui";
 import { DayBars, RankBars } from "./charts";
+import { Kpi, Section, fail, input, when } from "./kit";
+import { RafflesTab, RewardsTab } from "./RewardsAdmin";
 
-type Tab = "insights" | "players" | "finance" | "marketing" | "balance" | "events" | "orders" | "traffic" | "music" | "admins";
+type Tab = "insights" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "admins";
 const TABS: { id: Tab; label: string }[] = [
   { id: "insights", label: "Insights" },
   { id: "players", label: "Players" },
@@ -17,43 +19,15 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "marketing", label: "Marketing" },
   { id: "balance", label: "Balance" },
   { id: "events", label: "Events & gifts" },
+  { id: "rewards", label: "Rewards store" },
+  { id: "raffles", label: "Raffles" },
   { id: "orders", label: "Orders" },
   { id: "traffic", label: "Traffic" },
   { id: "music", label: "AI music" },
   { id: "admins", label: "Admins" },
 ];
 
-const errMsg = (e: unknown) => (e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Something went wrong.");
-const fail = (e: unknown) => toast({ ok: false, message: errMsg(e) });
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 const levelName = (fame: number) => [...LEVELS].reverse().find((l) => fame >= l.fame)!;
-
-function Section({ title, sub, right, children }: { title: string; sub?: string; right?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="panel p-5 mb-5">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <h2 className="text-base font-bold">{title}</h2>
-          {sub && <p className="text-xs text-muted-fg mt-1 max-w-prose">{sub}</p>}
-        </div>
-        {right}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Kpi({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
-  return (
-    <div className="panel p-4">
-      <div className="text-[11px] uppercase tracking-wider text-muted-fg">{label}</div>
-      <div className="text-2xl font-bold tabular-nums mt-2">{typeof value === "number" ? value.toLocaleString() : value}</div>
-      {sub && <div className="text-xs text-muted-fg mt-1">{sub}</div>}
-    </div>
-  );
-}
-
-const input = "w-full px-3 py-2 rounded bg-black/40 border border-line outline-none focus:border-pink text-sm";
 
 // ================================================================= gate
 
@@ -102,6 +76,8 @@ export default function Admin() {
           {tab === "marketing" && <Marketing />}
           {tab === "balance" && <Balance />}
           {tab === "events" && <Broadcasts />}
+          {tab === "rewards" && <RewardsTab />}
+          {tab === "raffles" && <RafflesTab />}
           {tab === "orders" && <Orders />}
           {tab === "traffic" && <Traffic />}
           {tab === "music" && <Music />}

@@ -101,6 +101,8 @@ export interface Career {
   /** Times each setlist song has been played live (keys from game/setlist.ts). */
   setPlays?: Record<string, number>;
   lastSetlist?: string[];
+  /** Lifetime reward points earned by playing. Spending is tracked on the server. */
+  pointsEarned?: number;
   /** A show that has started (energy spent) but not finished yet. */
   pendingShow?: import("./setlist").PendingShow | null;
 }

@@ -44,6 +44,8 @@ export interface ActionResult {
   delta?: Delta;
   gig?: GigReport;
   title?: string;
+  /** Reward points earned by this action. */
+  points?: number;
 }
 
 interface GameState {
@@ -87,6 +89,14 @@ function newLog(c: Career, type: LogType, text: string) {
   c.log = [{ id: uid(), at: Date.now(), week: c.week, type, text }, ...c.log].slice(0, 400);
 }
 
+/** Reward points: earned only by playing, never bought. */
+export const GRADE_POINTS: Record<Grade, number> = { S: 40, A: 25, B: 15, C: 8, D: 3 };
+function award(c: Career, base: number) {
+  const n = Math.max(0, Math.round(base * cfg().pointsMultiplier));
+  c.pointsEarned = (c.pointsEarned ?? 0) + n;
+  return n;
+}
+
 export const useGame = create<GameState>()(
   persist(
     (set, get) => {
@@ -105,7 +115,8 @@ export const useGame = create<GameState>()(
         if (after.level > beforeLevel && after.level > c.peakLevel) {
           c.peakLevel = after.level;
           newLog(c, "milestone", `Leveled up to ${after.name}!`);
-          cel.push({ id: uid(), kind: "level", title: "LEVEL UP!", subtitle: `You're now a ${after.name}` });
+          const lp = award(c, 100 * after.level);
+          cel.push({ id: uid(), kind: "level", title: "LEVEL UP!", subtitle: `You're now a ${after.name} · +${lp} points` });
           TOURS.filter((t) => t.level === after.level && !c.unlockedTours.includes(t.id)).forEach((t) => {
             c.unlockedTours.push(t.id);
             newLog(c, "milestone", `Unlocked the ${t.name}.`);
@@ -294,6 +305,7 @@ export const useGame = create<GameState>()(
           // Report the full cost of the show alongside the payout.
           applied.cash = net;
           applied.energy = -energyUsed;
+          const points = award(c, GRADE_POINTS[grade] + (sellout ? 5 : 0) + (playedRequest ? 3 : 0));
           const plays = { ...(c.setPlays ?? {}) };
           show.setlist.forEach((k) => { plays[k] = (plays[k] ?? 0) + 1; });
           c.setPlays = plays;
@@ -312,6 +324,7 @@ export const useGame = create<GameState>()(
             title: sellout ? "SOLD OUT!" : `${t.name} done`,
             message: `${crowd.toLocaleString()} fans showed up.`,
             delta: applied,
+            points,
             gig: {
               tourId: t.id, tourName: t.name, crowd, capacity: t.capacity, sellout, net, pyro: !!c.crew.pyro, lighting: !!c.crew.lighting,
               grade, performance: perf, setlist: setQ, encore, encoreLanded, debutTitle, playedRequest,
@@ -360,10 +373,11 @@ export const useGame = create<GameState>()(
           c.week += r.weeks;
           c.stats.hype = Math.max(0, c.stats.hype - r.weeks * 2);
           c.totals.earnings += earnings;
+          const points = award(c, 10 + Math.floor(quality / 10));
           newLog(c, "release", `Released ${r.name} "${c.releases[0].title}" — quality ${quality}/100, ${streams.toLocaleString()} streams.`);
           maybeEvent(c, 0.15);
           commit(c);
-          return { ok: true, title: `${r.name} out now!`, message: `Quality ${quality}/100 · ${streams.toLocaleString()} streams`, delta: applied };
+          return { ok: true, title: `${r.name} out now!`, message: `Quality ${quality}/100 · ${streams.toLocaleString()} streams · +${points} points`, delta: applied, points };
         },
 
         signLabel: (id) => {
@@ -480,10 +494,11 @@ export const useGame = create<GameState>()(
           if (ms) reward = { ...reward, ...Object.fromEntries(Object.entries(ms.reward).map(([k, v]) => [k, (v ?? 0) + ((reward as Record<string, number>)[k] ?? 0)])) };
           const applied = gain(c, reward, { chart: false });
           c.daily = { lastClaim: today, streak, best: Math.max(c.daily.best, streak) };
-          newLog(c, "daily", `Claimed daily reward (day ${streak}).`);
+          const points = award(c, 10 + Math.min(streak, 7) * 2);
+          newLog(c, "daily", `Claimed daily reward (day ${streak}), +${points} points.`);
           if (ms) set((s) => ({ celebrations: [...s.celebrations, { id: uid(), kind: "daily", title: ms.label.toUpperCase(), subtitle: "Streak bonus unlocked!" }] }));
           commit(c);
-          return { ok: true, title: `Day ${streak} reward`, message: ms ? `${ms.label} bonus!` : "See you tomorrow.", delta: applied };
+          return { ok: true, title: `Day ${streak} reward`, message: `${ms ? `${ms.label} bonus! ` : ""}+${points} reward points.`, delta: applied, points };
         },
 
         rename: (name) => {
