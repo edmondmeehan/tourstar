@@ -2,7 +2,7 @@ import { PREMIUM_SKUS, useMembership, type Sku } from "../game/settings";
 import { useGame } from "../game/store";
 import { Card, PageTitle, Tag, toast } from "../components/ui";
 import { buy, isEntitlementSku, purchasesAvailable, restore, usePurchases } from "../lib/purchases";
-import { sfx, vibrate } from "../lib/fx";
+import { sfx } from "../lib/fx";
 import { useState } from "react";
 
 export default function Premium() {
@@ -29,7 +29,7 @@ export default function Premium() {
     setBusy(null);
     if (r.cancelled) return;
     toast(r);
-    if (r.ok) { sfx("levelup"); vibrate([40, 30, 80]); }
+    if (r.ok) sfx("levelup");
   };
 
   return (

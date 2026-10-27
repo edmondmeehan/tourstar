@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { EVENTS } from "../game/events";
 import { useGame } from "../game/store";
-import { sfx, vibrate } from "../lib/fx";
+import { sfx } from "../lib/fx";
 import { DeltaChips, Modal, toast } from "./ui";
 import { fmtMoney } from "../game/engine";
 import { useConcert } from "../concert/useConcert";
@@ -12,7 +12,7 @@ export function EventModal() {
   const concert = useConcert((s) => s.open);
   const ev = concert ? undefined : EVENTS.find((e) => e.id === id);
   useEffect(() => {
-    if (ev) { sfx("event"); vibrate([30, 60, 30]); }
+    if (ev) { sfx("event"); }
   }, [ev]);
   if (!ev) return null;
   return (
@@ -98,7 +98,7 @@ export function CelebrationOverlay() {
   const c = concert ? undefined : first;
   const dismiss = useGame((s) => s.dismissCelebration);
   useEffect(() => {
-    if (c) { sfx("levelup"); vibrate([60, 40, 60, 40, 120]); }
+    if (c) { sfx("levelup"); }
   }, [c]);
   if (!c) return null;
   const color = c.kind === "sellout" ? "var(--neon-pink)" : c.kind === "tour" ? "var(--electric)" : "var(--gold)";

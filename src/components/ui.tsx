@@ -4,7 +4,7 @@ import { STAT_META } from "../game/data";
 import { fmtMoney, fmtNum } from "../game/engine";
 import type { Delta, Stats } from "../game/types";
 import type { ActionResult } from "../game/store";
-import { sfx, vibrate } from "../lib/fx";
+import { sfx } from "../lib/fx";
 
 /* ---------- Toasts ---------- */
 interface Toast { id: number; title?: string; message: string; ok: boolean; delta?: Delta }
@@ -23,10 +23,8 @@ export function toast(r: ActionResult | string) {
   useToasts.getState().push({ ok: res.ok, title: res.title, message: res.message, delta: res.delta });
   if (res.ok) {
     sfx(res.delta?.cash && res.delta.cash > 0 ? "coin" : "click");
-    vibrate(25);
   } else {
     sfx("bad");
-    vibrate([40, 40, 40]);
   }
 }
 

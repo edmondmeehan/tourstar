@@ -3,7 +3,8 @@ import { useGame } from "../game/store";
 import { useMembership, useSettings } from "../game/settings";
 import { GENRES, PERSONAS } from "../game/data";
 import { Card, PageTitle, Tag, toast, askConfirm } from "../components/ui";
-import { sfx, vibrate } from "../lib/fx";
+import { sfx } from "../lib/fx";
+import { haptic } from "../lib/haptics";
 import { Link } from "react-router-dom";
 import { restore } from "../lib/purchases";
 import { askNotificationPermission, scheduleReminders, useNotify } from "../lib/notify";
@@ -132,7 +133,7 @@ export default function Account() {
           <div className="text-sm mb-2">Vibration</div>
           <div className="grid grid-cols-4 gap-2">
             {(["off", "low", "med", "high"] as const).map((v) => (
-              <button key={v} onClick={() => { s.set({ vibration: v }); setTimeout(() => vibrate(60), 0); }} className={`font-pixel text-[8px] py-2 rounded border ${s.vibration === v ? "border-pink text-pink" : "border-line text-muted-fg"}`}>{v.toUpperCase()}</button>
+              <button key={v} onClick={() => { s.set({ vibration: v }); setTimeout(() => haptic("combo"), 0); }} className={`font-pixel text-[8px] py-2 rounded border ${s.vibration === v ? "border-pink text-pink" : "border-line text-muted-fg"}`}>{v.toUpperCase()}</button>
             ))}
           </div>
         </div>

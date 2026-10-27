@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { GENRES } from "../game/data";
 import { useGame } from "../game/store";
 import { playSong, makePattern, type PlayHandle } from "../lib/chiptune";
-import { vibrate } from "../lib/fx";
+import { haptic } from "../lib/haptics";
 import { Card, Empty, PageTitle, askConfirm } from "../components/ui";
 
 export default function Locker() {
@@ -49,7 +49,7 @@ export default function Locker() {
   const startDrag = (id: string) => {
     setDragId(id);
     setOrder([...c.queue]);
-    vibrate(40);
+    haptic("pickup");
   };
 
   const onPointerDown = (e: React.PointerEvent, id: string) => {
@@ -81,7 +81,7 @@ export default function Locker() {
     next.splice(from, 1);
     next.splice(idx, 0, dragId);
     setOrder(next);
-    vibrate(10);
+    haptic("drag");
   };
 
   const onPointerUp = () => {

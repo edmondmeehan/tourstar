@@ -4,7 +4,7 @@ import { HeroBackdrop, Logo } from "../components/HeroBackdrop";
 import { Confetti } from "../components/Overlays";
 import { useGame } from "../game/store";
 import { levelFor } from "../game/engine";
-import { sfx, vibrate } from "../lib/fx";
+import { sfx } from "../lib/fx";
 
 export default function Title() {
   const career = useGame((s) => s.career);
@@ -15,7 +15,6 @@ export default function Title() {
     if (flash) return;
     setFlash(true);
     sfx("start");
-    vibrate([20, 30, 60]);
     setTimeout(() => nav(career ? "/dashboard" : "/create"), 450);
   }, [career, nav, flash]);
 

@@ -8,7 +8,7 @@ import type { GenreId, PersonaId, Stats } from "../game/types";
 import { HeroBackdrop, Logo } from "../components/HeroBackdrop";
 import { SongGenerator, type Generation } from "../components/SongGenerator";
 import { Card, StatBar, toast, askConfirm } from "../components/ui";
-import { sfx, vibrate } from "../lib/fx";
+import { sfx } from "../lib/fx";
 
 export default function Create() {
   const nav = useNavigate();
@@ -28,7 +28,6 @@ export default function Create() {
     const go = () => {
       createCareer({ name, genre, persona, themeSeed: theme?.seed });
       sfx("levelup");
-      vibrate([40, 30, 80]);
       nav("/dashboard");
     };
     if (existing) askConfirm(`This replaces ${existing.name}'s career. Continue?`, go, { yes: "Start over", danger: true });

@@ -1,5 +1,5 @@
 import { useSettings } from "../game/settings";
-import { nativeHaptic } from "./native";
+import { haptic, type HapticName, type Step } from "./haptics";
 
 let ctx: AudioContext | null = null;
 export function audio() {
@@ -27,7 +27,9 @@ const BLIPS: Record<Blip, { notes: number[]; wave: OscillatorType; step: number 
   event: { notes: [659, 880], wave: "triangle", step: 0.1 },
 };
 
-export function sfx(kind: Blip) {
+/** Play a sound and its matching haptic. Pass a different haptic name to override, or null for none. */
+export function sfx(kind: Blip, feel: HapticName | null = kind) {
+  if (feel) haptic(feel); // haptics play even when the sound is muted
   const vol = masterVolume();
   if (vol <= 0) return;
   try {
@@ -52,23 +54,22 @@ export function sfx(kind: Blip) {
   }
 }
 
-const STRENGTH = { off: 0, low: 0.5, med: 1, high: 1.8 } as const;
-
+/** Legacy: a raw on/off millisecond pattern, mapped onto haptic taps. Prefer haptic("name"). */
 export function vibrate(pattern: number | number[] = 30) {
-  const s = STRENGTH[useSettings.getState().vibration];
-  if (!s) return;
   const arr = Array.isArray(pattern) ? pattern : [pattern];
-  if (nativeHaptic(s, arr)) return;
-  if (!("vibrate" in navigator)) return;
-  try {
-    navigator.vibrate(arr.map((ms, i) => (i % 2 === 0 ? Math.round(ms * s) : ms)));
-  } catch {
-    /* ignore */
+  const steps: Step[] = [];
+  let t = 0;
+  for (let i = 0; i < arr.length; i += 2) {
+    const ms = arr[i];
+    steps.push({ at: t, tap: ms >= 50 ? "heavy" : ms >= 25 ? "medium" : "light" });
+    t += ms + (arr[i + 1] ?? 0);
   }
+  haptic(steps);
 }
 
 /** Crowd roar: filtered noise swell (~2s). */
 export function cheer() {
+  haptic("cheer");
   const vol = masterVolume();
   if (vol <= 0) return;
   try {

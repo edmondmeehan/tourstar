@@ -8,7 +8,7 @@ import { useMembership } from "../game/settings";
 import { Bar, Card, Modal, StatBar, toast } from "../components/ui";
 import type { Career, Stats } from "../game/types";
 import { ALL_QUESTS_BONUS, ROYALTY_CAP_HOURS, currentQuests, questEmoji, questLabel, royaltiesPending, royaltyRate } from "../game/quests";
-import { sfx, vibrate } from "../lib/fx";
+import { sfx } from "../lib/fx";
 
 function untilMidnight(now: number) {
   const d = new Date(now); d.setHours(24, 0, 0, 0);
@@ -41,7 +41,7 @@ function QuestsCard({ c, now }: { c: Career; now: number }) {
                 </div>
               </div>
               {ready ? (
-                <button className="btn btn-gold text-[9px] px-3 py-2 shrink-0" onClick={() => { const r = claimQuest(i); toast(r); if (r.ok) { sfx("coin"); vibrate(40); } }}>+{it.points} ⭐</button>
+                <button className="btn btn-gold text-[9px] px-3 py-2 shrink-0" onClick={() => { const r = claimQuest(i); toast(r); if (r.ok) sfx("coin", "success"); }}>+{it.points} ⭐</button>
               ) : (
                 <span className="font-pixel text-[8px] shrink-0" style={{ color: it.claimed ? "var(--success)" : "var(--gold)" }}>{it.claimed ? "DONE" : `+${it.points} ⭐`}</span>
               )}
@@ -70,7 +70,7 @@ function RoyaltiesCard({ c, now }: { c: Career; now: number }) {
           </div>
           <div className="h-1.5 rounded bg-black/40 overflow-hidden mt-2"><div className="h-full rounded" style={{ width: `${(p.hours / ROYALTY_CAP_HOURS) * 100}%`, background: "var(--success)" }} /></div>
         </div>
-        <button className="btn btn-gold shrink-0" disabled={p.cash < 1} onClick={() => { const r = collect(); toast(r); if (r.ok) { sfx("coin"); vibrate([30, 30, 60]); } }}>Collect</button>
+        <button className="btn btn-gold shrink-0" disabled={p.cash < 1} onClick={() => { const r = collect(); toast(r); if (r.ok) sfx("coin", "collect"); }}>Collect</button>
       </div>
     </Card>
   );

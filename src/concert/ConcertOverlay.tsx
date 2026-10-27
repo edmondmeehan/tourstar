@@ -4,7 +4,8 @@ import { fmtMoney } from "../game/engine";
 import { useGame, type ActionResult } from "../game/store";
 import { GRADE_LABEL, debutChance, songPool, type EncoreChoice } from "../game/setlist";
 import { makeMedley, playMedley, type MedleyHandle } from "../lib/chiptune";
-import { cheer, sfx, vibrate } from "../lib/fx";
+import { cheer, sfx } from "../lib/fx";
+import { haptic } from "../lib/haptics";
 import { DeltaChips, toast } from "../components/ui";
 import { startConcert } from "./ConcertScene";
 import { useConcert } from "./useConcert";
@@ -41,6 +42,7 @@ export default function ConcertOverlay() {
   const [hw, setHw] = useState<HighwayResult | null>(null);
   const [result, setResult] = useState<ActionResult | null>(null);
   const [clock, setClock] = useState<(() => number) | null>(null);
+  const musicStopped = useRef(false);
 
   useEffect(() => {
     musicRef.current = playMedley(songs.map((s) => s.seed), career.genre, medley);
@@ -51,7 +53,7 @@ export default function ConcertOverlay() {
       pyro: !!career.crew.pyro,
       lighting: !!career.crew.lighting,
       sellout: show.sellout,
-      onPyro: () => { sfx("coin"); vibrate(40); },
+      onPyro: () => sfx("coin", "pyro"),
     });
     sceneRef.current = scene;
     let cheered = false;
@@ -66,15 +68,31 @@ export default function ConcertOverlay() {
       if (!cheered && p > 0.6 && energy.current > 0.5) { cheered = true; cheer(); }
       if (p >= 1) window.clearInterval(timer);
     }, 80);
-    return () => { window.clearInterval(timer); scene.destroy(); musicRef.current?.stop(); };
+    // Feel the music: taps on the 4-count sticks, then a light tap on every kick drum (every 8 steps).
+    const INTRO = 2;
+    const beats: { t: number; feel: "select" | "kick" }[] = [];
+    for (let i = 0; i < 4; i++) beats.push({ t: INTRO - (4 - i) * medley.stepSec * 2, feel: "select" });
+    for (let t = INTRO; t < medley.durationSec - 0.05; t += medley.stepSec * 8) beats.push({ t, feel: "kick" });
+    let nextBeat = 0;
+    let raf = 0;
+    const feel = () => {
+      const t = musicRef.current?.now() ?? 0;
+      while (nextBeat < beats.length && beats[nextBeat].t <= t) {
+        if (t - beats[nextBeat].t < 0.12) haptic(beats[nextBeat].feel === "kick" ? "kick" : [{ at: 0, tap: "select" }]);
+        nextBeat++;
+      }
+      if (nextBeat < beats.length && !musicStopped.current) raf = requestAnimationFrame(feel);
+    };
+    raf = requestAnimationFrame(feel);
+    return () => { window.clearInterval(timer); cancelAnimationFrame(raf); scene.destroy(); musicRef.current?.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onJudge = (j: Judge, combo: number) => {
     energy.current = Math.max(0, Math.min(1, energy.current + (j === "perfect" ? 0.06 : j === "good" ? 0.03 : -0.09)));
     sceneRef.current?.setEnergy(energy.current);
-    if (j === "miss") vibrate(25);
-    else if (combo > 0 && combo % 10 === 0) { sfx("coin"); vibrate(30); }
+    if (combo > 0 && combo % 10 === 0) sfx("coin", "combo");
+    else haptic(j);
   };
 
   const onDone = (r: HighwayResult) => {
@@ -85,6 +103,7 @@ export default function ConcertOverlay() {
   };
 
   const autoPlay = () => {
+    musicStopped.current = true;
     musicRef.current?.stop();
     onDone({ perfect: 0, good: 0, miss: 0, total: 0, maxCombo: 0, accuracy: 0.5 });
   };
@@ -95,7 +114,7 @@ export default function ConcertOverlay() {
     setResult(r);
     setPhase("result");
     const g = r.gig.grade;
-    if (g === "S" || g === "A" || r.gig.sellout) { sfx("levelup"); vibrate([60, 40, 120]); cheer(); }
+    if (g === "S" || g === "A" || r.gig.sellout) { sfx("levelup"); window.setTimeout(cheer, 650); }
   };
 
   const e = Math.min(1, k * 1.4);
