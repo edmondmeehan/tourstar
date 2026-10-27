@@ -2,8 +2,8 @@
 // The key itself lives in Integrations (Supabase Vault); the app only ever sees these switches.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/cloud";
-import { lastVoiceError, moLineUrl, playClip, refreshAiFlags, type ClipHandle } from "../lib/ai";
-import { toast } from "../components/ui";
+import { clearMoCache, lastVoiceError, moLineUrl, playClip, refreshAiFlags, type ClipHandle } from "../lib/ai";
+import { askConfirm, toast } from "../components/ui";
 import { Kpi, Section, fail, input, when } from "./kit";
 
 interface Gen { id: string; kind: "song" | "intro" | "mo"; path: string | null; status: "ok" | "failed"; detail: string | null; created_at: string }
@@ -55,6 +55,21 @@ export function AiTab() {
     play("mo-preview", u);
   };
 
+  /** Delete recordings (row + audio file). Voice lines re-record (and cost credits) the next time they're needed. */
+  const remove = (rows: Gen[], label: string) => askConfirm(label, async () => {
+    playing.current?.stop(); setNowId(null);
+    const paths = rows.filter((r) => r.status === "ok" && r.path).map((r) => r.path!);
+    if (paths.length) {
+      const st = await supabase!.storage.from("ai-audio").remove(paths);
+      if (st.error) return fail(st.error);
+    }
+    const { error } = await supabase!.from("ai_generations").delete().in("id", rows.map((r) => r.id));
+    if (error) return fail(error);
+    if (rows.some((r) => r.kind === "mo")) clearMoCache();
+    toast({ ok: true, message: `Deleted ${rows.length} recording${rows.length === 1 ? "" : "s"}.` });
+    void load();
+  }, { yes: "Delete", danger: true });
+
   const ok = gens.filter((g) => g.status === "ok");
   const failed = gens.length - ok.length;
   const musicOn = cfg.ai_music_enabled === "true";
@@ -92,7 +107,8 @@ export function AiTab() {
         {voiceOn && <button className="btn btn-ghost text-xs mt-2 ml-14" onClick={previewMo}>{nowId === "mo-preview" ? "■ Stop" : "▶ Hear Mo's first line"}</button>}
       </Section>
 
-      <Section title="Recent recordings" sub="Last 30 days, newest first.">
+      <Section title="Recent recordings" sub="Last 30 days, newest first. Deleting a voice line means it's recorded again (and paid for again) the next time it's needed. Deleting a song removes it from that player's Locker."
+        right={failed > 0 ? <button className="btn btn-ghost text-xs whitespace-nowrap" onClick={() => remove(gens.filter((g) => g.status === "failed"), `Clear ${failed} failed attempt${failed === 1 ? "" : "s"}? These have no audio, so nothing is lost.`)}>Clear failed</button> : undefined}>
         {gens.length === 0 ? <p className="text-xs text-muted-fg">Nothing recorded yet.</p> : (
           <ul className="divide-y divide-line">
             {gens.slice(0, 40).map((g) => (
@@ -101,6 +117,8 @@ export function AiTab() {
                 <span className="w-32 shrink-0">{KIND_LABEL[g.kind]}</span>
                 <span className={`flex-1 min-w-0 truncate text-xs ${g.status === "failed" ? "text-danger" : "text-muted-fg"}`}>{g.status === "failed" ? `Failed: ${g.detail ?? ""}` : g.detail}</span>
                 <span className="text-[11px] text-muted-fg whitespace-nowrap">{when(g.created_at)}</span>
+                <button className="text-muted-fg text-xs px-1 hover:text-danger" aria-label="Delete"
+                  onClick={() => remove([g], g.status === "failed" ? "Delete this failed attempt?" : `Delete this ${KIND_LABEL[g.kind].replace(/^\S+ /, "").toLowerCase()} recording? This can't be undone.`)}>✕</button>
               </li>
             ))}
           </ul>

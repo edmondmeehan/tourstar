@@ -50,6 +50,7 @@ export async function recordAiSong(song: Song, kind: ReleaseKind, persona: strin
 // ---------------------------------------------------------------- voice
 
 const moCache = new Map<number, string>();
+export const clearMoCache = () => moCache.clear();
 /** Last error from the voice server, for the admin preview. */
 export let lastVoiceError = "";
 export async function moLineUrl(step: number, force = false) {
