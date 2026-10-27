@@ -4,8 +4,9 @@ import { supabase } from "../lib/cloud";
 import { askConfirm } from "../components/ui";
 import { Kpi, Section, fail, input, when } from "./kit";
 import { RankBars } from "./charts";
+import { WaitlistEmails } from "./WaitlistEmails";
 
-interface Row { id: string; email: string; source: string | null; referrer: string | null; created_at: string }
+interface Row { id: string; email: string; source: string | null; referrer: string | null; created_at: string; ref_code: string; referral_count: number; referred_by: string | null; welcome_sent_at: string | null; unsubscribed_at: string | null }
 
 /** "hero:instagram" → instagram; otherwise the referring site, otherwise direct. */
 function channel(r: Row) {
@@ -25,7 +26,7 @@ export function BetaSignupsTab() {
     const all: Row[] = [];
     // Page through in chunks of 1,000 (the API's per-request cap).
     for (let from = 0; ; from += 1000) {
-      const { data, error } = await supabase!.from("waitlist").select("id, email, source, referrer, created_at")
+      const { data, error } = await supabase!.from("waitlist").select("id, email, source, referrer, created_at, ref_code, referral_count, referred_by, welcome_sent_at, unsubscribed_at")
         .order("created_at", { ascending: false }).range(from, from + 999);
       if (error) return fail(error);
       all.push(...(data as Row[]));
@@ -46,11 +47,17 @@ export function BetaSignupsTab() {
     return acc;
   }, {})).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 8), [rows]);
 
+  const invited = (rows ?? []).filter((r) => r.referred_by).length;
+  const topReferrers = useMemo(() => [...(rows ?? [])].filter((r) => r.referral_count > 0)
+    .sort((a, b) => b.referral_count - a.referral_count).slice(0, 10)
+    .map((r) => ({ label: r.email, value: r.referral_count })), [rows]);
+  const audience = (rows ?? []).filter((r) => !r.unsubscribed_at).length;
+
   const since = (days: number) => (rows ?? []).filter((r) => Date.parse(r.created_at) > Date.now() - days * 864e5).length;
 
   const csv = () => {
     const esc = (v: string | null) => `"${(v ?? "").replace(/"/g, '""')}"`;
-    const body = ["email,channel,form,referrer,signed_up", ...filtered.map((r) => [r.email, channel(r), r.source?.split(":")[0] ?? "", r.referrer, r.created_at].map(esc).join(","))].join("\n");
+    const body = ["email,channel,form,referrer,signed_up,invite_code,invites,unsubscribed", ...filtered.map((r) => [r.email, channel(r), r.source?.split(":")[0] ?? "", r.referrer, r.created_at, r.ref_code, String(r.referral_count), r.unsubscribed_at ? "yes" : ""].map(esc).join(","))].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([body], { type: "text/csv" }));
     a.download = `tourstar-beta-signups-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -66,11 +73,18 @@ export function BetaSignupsTab() {
 
   return (
     <>
-      <div className="grid sm:grid-cols-3 gap-3 mb-5">
+      <div className="grid sm:grid-cols-4 gap-3 mb-5">
         <Kpi label="Beta signups" value={rows ? rows.length : "—"} />
         <Kpi label="Last 7 days" value={rows ? since(7) : "—"} />
         <Kpi label="Today" value={rows ? since(1) : "—"} />
+        <Kpi label="Joined via invites" value={rows ? invited : "—"} sub={rows?.length ? `${Math.round((invited / rows.length) * 100)}% of the list` : undefined} />
       </div>
+
+      <Section title="Top referrers" sub="People whose invite links brought the most friends. Rewards at launch: 1 friend = +500 ⭐, 3 = Founding Fan badge + 1,500 ⭐, 10 = 5 launch-raffle tickets.">
+        <RankBars rows={topReferrers} color="var(--gold)" empty="No referrals yet. Every new signup gets an invite link." />
+      </Section>
+
+      <WaitlistEmails audience={audience} />
 
       <Section title="Where they came from" sub="Tag the links you post with ?utm_source=instagram (or tiktok, email, newsletter…) to see which channels bring signups.">
         <RankBars rows={bySource} empty="No signups yet." />
@@ -86,16 +100,18 @@ export function BetaSignupsTab() {
         {!rows ? <p className="text-sm text-muted-fg">Loading…</p> : filtered.length === 0 ? <p className="text-sm text-muted-fg text-center py-8">{rows.length ? "No matches." : "No signups yet. Share tourstarapp.com to get the list going."}</p> : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[560px] [&_th]:px-3 [&_td]:px-3">
+              <table className="w-full text-sm min-w-[720px] [&_th]:px-3 [&_td]:px-3">
                 <thead className="text-[11px] uppercase tracking-wider text-muted-fg text-left">
-                  <tr className="border-b border-line"><th className="py-2 w-10">#</th><th>Email</th><th>Channel</th><th>Signed up</th><th /></tr>
+                  <tr className="border-b border-line"><th className="py-2 w-10">#</th><th>Email</th><th>Channel</th><th>Invites</th><th>Emails</th><th>Signed up</th><th /></tr>
                 </thead>
                 <tbody>
                   {filtered.slice(0, shown).map((r, i) => (
                     <tr key={r.id} className="border-b border-line/50">
                       <td className="py-2 text-muted-fg tabular-nums">{i + 1}</td>
                       <td><a className="hover:underline" href={`mailto:${r.email}`}>{r.email}</a></td>
-                      <td className="text-muted-fg">{channel(r)}</td>
+                      <td className="text-muted-fg">{r.referred_by ? "invite" : channel(r)}</td>
+                      <td className="tabular-nums">{r.referral_count || <span className="text-muted-fg">0</span>}</td>
+                      <td className="text-[11px] whitespace-nowrap">{r.unsubscribed_at ? <span className="text-danger">Unsubscribed</span> : r.welcome_sent_at ? <span className="text-success">Welcomed</span> : <span className="text-muted-fg">—</span>}</td>
                       <td className="text-muted-fg whitespace-nowrap">{when(r.created_at)}</td>
                       <td className="text-right"><button className="text-xs underline text-muted-fg hover:text-danger" onClick={() => remove(r)}>Remove</button></td>
                     </tr>

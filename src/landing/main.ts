@@ -159,25 +159,83 @@ function showCount(n: number) {
   el.hidden = false;
 }
 
+const store = {
+  get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+};
+
+/** Launch rewards for inviting friends. Keep in sync with supabase/functions/_shared/email.ts. */
+const TIERS = [
+  { friends: 1, reward: "+500 ⭐ reward points" },
+  { friends: 3, reward: "Founding Fan badge + 1,500 ⭐" },
+  { friends: 10, reward: "5 free tickets to the launch raffle" },
+];
+interface Status { code: string; position: number; referrals: number; total: number }
+const inviteUrl = (code: string) => `https://tourstarapp.com/?r=${code}`;
+const escHtml = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+
+async function joinWaitlist(body: Record<string, unknown>) {
+  if (!SUPABASE_URL || !KEY) throw new Error("Signups aren't connected in this preview.");
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/waitlist`, {
+    method: "POST",
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error((data && (data.error as string)) || "Something went wrong. Try again.");
+  return data as Partial<Status> & { existing?: boolean; emailed?: boolean; total: number };
+}
+
+function invitePanel(st: Status) {
+  const next = TIERS.find((t) => st.referrals < t.friends);
+  const tiers = TIERS.map((t) => `<li class="${st.referrals >= t.friends ? "got" : ""}"><span>${st.referrals >= t.friends ? "✓" : t.friends}</span><b>${t.friends} friend${t.friends > 1 ? "s" : ""}</b> ${escHtml(t.reward)}</li>`).join("");
+  return `<div class="joined invite" role="status">
+    <strong>YOU'RE #${st.position.toLocaleString()} ON THE LIST! 🎉</strong>
+    <p>Invite friends to move up. ${st.referrals ? `<b>${st.referrals}</b> friend${st.referrals > 1 ? "s have" : " has"} joined with your link.` : "Every friend who joins with your link moves you ahead."}${next ? ` ${next.friends - st.referrals} more to unlock <b>${escHtml(next.reward)}</b>.` : " You've unlocked every reward. Legend."}</p>
+    <div class="invite-link"><input readonly value="${inviteUrl(st.code).replace("https://", "")}" aria-label="Your invite link" /><button type="button" class="btn btn-gold btn-sm copy">Copy</button></div>
+    <div class="invite-share"><button type="button" class="btn btn-pink btn-sm share">Share</button>
+      <a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${encodeURIComponent("I'm on the list for TourStar, the music career game where you play every show 🎸")}&url=${encodeURIComponent(inviteUrl(st.code))}">Post on X</a>
+      <a class="btn btn-ghost btn-sm" href="sms:&body=${encodeURIComponent("Get on the TourStar list with me: " + inviteUrl(st.code))}">Text a friend</a></div>
+    <ol class="tiers">${tiers}</ol>
+    <p class="fine">Rewards are added at launch to the TourStar account you create with this email.</p>
+  </div>`;
+}
+
 function waitlist() {
   const params = new URLSearchParams(location.search);
-  const source = params.get("utm_source") || params.get("ref") || "";
-  const already = (() => { try { return localStorage.getItem("ts-waitlist"); } catch { return null; } })();
+  const source = params.get("utm_source") || (params.get("ref") ?? "") || (params.get("r") ? "invite" : "");
+  // A friend's invite code: remember it so it still counts if they join later in the visit.
+  const r = params.get("r");
+  if (r && /^[a-z0-9]{4,12}$/i.test(r)) store.set("ts-invited-by", r.toLowerCase());
 
-  const success = (form: HTMLFormElement) => {
+  const forms = $$<HTMLFormElement>("form.waitlist");
+  const showPanel = (st: Status) => forms.forEach((form) => {
     form.classList.add("done");
-    form.innerHTML = `<div class="joined" role="status"><strong>YOU'RE ON THE LIST! 🎉</strong>We'll email you when TourStar hits the App Store, with your launch-day bonus.<br /><button type="button" class="btn btn-ghost btn-sm share">Tell a friend</button></div>`;
+    form.innerHTML = invitePanel(st);
+    const url = inviteUrl(st.code);
+    $<HTMLButtonElement>(".copy", form).addEventListener("click", async (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      try { await navigator.clipboard.writeText(url); b.textContent = "Copied!"; } catch { $<HTMLInputElement>("input", form).select(); }
+      setTimeout(() => { b.textContent = "Copy"; }, 2000);
+    });
     $<HTMLButtonElement>(".share", form).addEventListener("click", async () => {
-      const data = { title: "TourStar", text: "The music career game where you play every show. Get early access:", url: "https://tourstarapp.com/?ref=share" };
+      const data = { title: "TourStar", text: "The music career game where you play every show. Get on the list with me:", url };
       try {
         if (navigator.share) await navigator.share(data);
-        else { await navigator.clipboard.writeText(data.url); ($<HTMLButtonElement>(".share", form)).textContent = "Link copied!"; }
+        else { await navigator.clipboard.writeText(url); ($<HTMLButtonElement>(".share", form)).textContent = "Link copied!"; }
       } catch { /* dismissed */ }
     });
-  };
+  });
+  const showExisting = (emailed: boolean) => forms.forEach((form) => {
+    form.classList.add("done");
+    form.innerHTML = `<div class="joined" role="status"><strong>YOU'RE ALREADY ON THE LIST! 🎉</strong>${emailed ? "We just emailed you your invite link." : "Check your inbox for your invite link (from hello@tourstarapp.com)."}</div>`;
+  });
 
-  for (const form of $$<HTMLFormElement>("form.waitlist")) {
-    if (already) { success(form); continue; }
+  // Already joined on this device: show their spot and invite link.
+  const myCode = store.get("ts-waitlist-code");
+  if (myCode) rpc<Status | null>("waitlist_status", { p_code: myCode }).then((st) => { if (st) showPanel(st); }).catch(() => {});
+
+  for (const form of forms) {
     const input = $<HTMLInputElement>("input", form);
     const note = $<HTMLElement>(".form-note", form);
     const button = $<HTMLButtonElement>("button", form);
@@ -195,10 +253,12 @@ function waitlist() {
       note.classList.remove("error");
       button.disabled = true; button.textContent = "Joining…";
       try {
-        const count = await rpc<number>("join_waitlist", { p_email: email, p_source: [form.dataset.source, source].filter(Boolean).join(":"), p_referrer: document.referrer || null });
-        try { localStorage.setItem("ts-waitlist", "1"); } catch { /* private mode */ }
-        $$<HTMLFormElement>("form.waitlist").forEach(success);
-        showCount(count);
+        const res = await joinWaitlist({ email, source: [form.dataset.source, source].filter(Boolean).join(":"), referrer: document.referrer || null, ref: store.get("ts-invited-by") });
+        if (res.code) {
+          store.set("ts-waitlist-code", res.code);
+          showPanel(res as Status);
+        } else showExisting(!!res.emailed);
+        showCount(res.total);
       } catch (err) {
         note.textContent = (err as Error).message;
         note.classList.add("error");
@@ -207,6 +267,21 @@ function waitlist() {
     });
   }
   rpc<number>("waitlist_count", {}).then(showCount).catch(() => {});
+}
+
+/** One-click unsubscribe from the waitlist emails (?unsubscribe=<token>). */
+function unsubscribe() {
+  const t = new URLSearchParams(location.search).get("unsubscribe");
+  if (!t) return;
+  const bar = document.createElement("div");
+  bar.className = "unsub-bar";
+  bar.setAttribute("role", "status");
+  bar.textContent = "Unsubscribing…";
+  document.body.prepend(bar);
+  rpc<boolean>("waitlist_unsubscribe", { p_token: t })
+    .then((ok) => { bar.textContent = ok ? "You're unsubscribed from TourStar emails. You're still on the list for early access." : "That unsubscribe link didn't work. Email help@please.co and we'll remove you."; })
+    .catch(() => { bar.textContent = "That unsubscribe link didn't work. Email help@please.co and we'll remove you."; });
+  history.replaceState(null, "", location.pathname);
 }
 
 // ================================================================= scroll effects
@@ -388,6 +463,7 @@ function demo() {
 heroStage();
 crowdCounter();
 waitlist();
+unsubscribe();
 scrollFx();
 demo();
 

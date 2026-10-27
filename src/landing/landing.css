@@ -240,3 +240,22 @@ section.split { margin: 0 auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .levels::after { transition: none; }
 }
+
+/* ---------- invite panel (after joining) ---------- */
+.joined.invite { border-color: var(--gold); background: #1d1a0899; text-align: left; }
+.joined.invite strong { color: var(--gold); }
+.joined.invite p { margin: 0 0 12px; font-size: 15px; line-height: 1.5; }
+.invite-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-bottom: 10px; }
+.invite-link input { min-width: 0; font-size: 15px; font-weight: 700; color: var(--gold); background: #0008; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.invite-share { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.invite-share .share { grid-column: 1 / -1; }
+.invite-share .btn { width: 100%; text-align: center; }
+.invite-share .btn, .joined.invite .copy { margin-top: 0; }
+.tiers { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.tiers li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+.tiers li span { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.tiers li b { color: var(--text, #fff); white-space: nowrap; }
+.tiers li.got { color: var(--success); }
+.tiers li.got span { background: var(--success); border-color: var(--success); color: #05040f; }
+.joined.invite .fine { font-size: 12px; color: var(--muted); margin: 0; }
+.unsub-bar { position: sticky; top: 0; z-index: 60; padding: 12px 16px; text-align: center; font-size: 14px; background: #16133a; border-bottom: 1px solid var(--line); }
