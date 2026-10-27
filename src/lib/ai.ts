@@ -50,10 +50,13 @@ export async function recordAiSong(song: Song, kind: ReleaseKind, persona: strin
 // ---------------------------------------------------------------- voice
 
 const moCache = new Map<number, string>();
-export async function moLineUrl(step: number) {
-  if (!useAiFlags.getState().voice) return null;
+/** Last error from the voice server, for the admin preview. */
+export let lastVoiceError = "";
+export async function moLineUrl(step: number, force = false) {
+  if (!force && !useAiFlags.getState().voice) return null;
   if (moCache.has(step)) return moCache.get(step)!;
   const r = await invoke<{ url: string }>("ai-voice", { kind: "mo", step });
+  lastVoiceError = r.error ?? "";
   if (r.data?.url) moCache.set(step, r.data.url);
   return r.data?.url ?? null;
 }

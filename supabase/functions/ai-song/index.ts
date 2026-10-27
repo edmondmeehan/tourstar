@@ -4,7 +4,6 @@
 // arbitrary prompts. Limits: on/off switch + daily cap per player (admin → AI music).
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { ElevenLabsClient } from "npm:@elevenlabs/elevenlabs-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -40,14 +39,18 @@ const LENGTH: Record<string, number> = { single: 30000, mixtape: 30000, ep: 3000
 /** Keep titles to plain words so they can't smuggle instructions into the prompt. */
 const cleanTitle = (t: unknown) => String(t ?? "").replace(/[^\p{L}\p{N} '&!?.-]/gu, "").replace(/\s+/g, " ").trim().slice(0, 40) || "Untitled";
 
-async function toBytes(audio: unknown): Promise<Uint8Array> {
-  if (audio && typeof (audio as ReadableStream).getReader === "function") return new Uint8Array(await new Response(audio as ReadableStream).arrayBuffer());
-  const chunks: Uint8Array[] = [];
-  for await (const c of audio as AsyncIterable<Uint8Array>) chunks.push(c);
-  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
-  let o = 0;
-  for (const c of chunks) { out.set(c, o); o += c.length; }
-  return out;
+/** Call ElevenLabs directly (the SDK is too heavy for an edge function's CPU budget). Returns the audio bytes. */
+async function eleven(path: string, apiKey: string, body: unknown): Promise<Uint8Array> {
+  const r = await fetch(`https://api.elevenlabs.io${path}`, {
+    method: "POST",
+    headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const text = await r.text().catch(() => "");
+    throw Object.assign(new Error(`ElevenLabs ${r.status}`), { statusCode: r.status, body: text.slice(0, 300) });
+  }
+  return new Uint8Array(await r.arrayBuffer());
 }
 
 Deno.serve(async (req) => {
@@ -81,13 +84,11 @@ Deno.serve(async (req) => {
   if (!key) return json({ error: "AI songs aren't connected yet." }, 503);
 
   try {
-    const client = new ElevenLabsClient({ apiKey: key as string });
-    const audio = await client.music.compose({
+    const bytes = await eleven("/v1/music?output_format=mp3_44100_128", key as string, {
       prompt: `A ${STYLES[genre].join(", ")} song called "${title}", ${mood}. Big singalong chorus that repeats the title.`,
-      musicLengthMs: LENGTH[kind],
-      modelId: "music_v2_5",
+      music_length_ms: LENGTH[kind],
+      model_id: "music_v2_5",
     });
-    const bytes = await toBytes(audio);
     const path = `songs/${user.id}/${songId}.mp3`;
     const up = await svc.storage.from("ai-audio").upload(path, bytes, { contentType: "audio/mpeg", upsert: true });
     if (up.error) throw up.error;

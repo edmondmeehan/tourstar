@@ -2,7 +2,7 @@
 // The key itself lives in Integrations (Supabase Vault); the app only ever sees these switches.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/cloud";
-import { moLineUrl, playClip, refreshAiFlags, type ClipHandle } from "../lib/ai";
+import { lastVoiceError, moLineUrl, playClip, refreshAiFlags, type ClipHandle } from "../lib/ai";
 import { toast } from "../components/ui";
 import { Kpi, Section, fail, input, when } from "./kit";
 
@@ -49,8 +49,9 @@ export function AiTab() {
     playing.current = playClip(u, { onEnd: () => setNowId(null) });
   };
   const previewMo = async () => {
-    const u = await moLineUrl(0);
-    if (!u) return toast({ ok: false, message: "Couldn't get Mo's line. Check that voices are on and the key works." });
+    toast({ ok: true, message: "Getting Mo's line… the first recording takes a few seconds." });
+    const u = await moLineUrl(0, true);
+    if (!u) return toast({ ok: false, message: `Couldn't get Mo's line: ${lastVoiceError || "unknown error"}` });
     play("mo-preview", u);
   };
 

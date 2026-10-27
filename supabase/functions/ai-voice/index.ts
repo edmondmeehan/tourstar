@@ -4,7 +4,6 @@
 // The ElevenLabs key comes from Supabase Vault and never leaves the server.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { ElevenLabsClient } from "npm:@elevenlabs/elevenlabs-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -35,14 +34,18 @@ async function sha(s: string) {
   const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
   return Array.from(d.slice(0, 12), (b) => b.toString(16).padStart(2, "0")).join("");
 }
-async function toBytes(audio: unknown): Promise<Uint8Array> {
-  if (audio && typeof (audio as ReadableStream).getReader === "function") return new Uint8Array(await new Response(audio as ReadableStream).arrayBuffer());
-  const chunks: Uint8Array[] = [];
-  for await (const c of audio as AsyncIterable<Uint8Array>) chunks.push(c);
-  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
-  let o = 0;
-  for (const c of chunks) { out.set(c, o); o += c.length; }
-  return out;
+/** Call ElevenLabs directly (the SDK is too heavy for an edge function's CPU budget). Returns the audio bytes. */
+async function eleven(path: string, apiKey: string, body: unknown): Promise<Uint8Array> {
+  const r = await fetch(`https://api.elevenlabs.io${path}`, {
+    method: "POST",
+    headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const text = await r.text().catch(() => "");
+    throw Object.assign(new Error(`ElevenLabs ${r.status}`), { statusCode: r.status, body: text.slice(0, 300) });
+  }
+  return new Uint8Array(await r.arrayBuffer());
 }
 
 Deno.serve(async (req) => {
@@ -93,21 +96,18 @@ Deno.serve(async (req) => {
   if (!key) return json({ error: "AI voices aren't connected yet." }, 503);
 
   try {
-    const client = new ElevenLabsClient({ apiKey: key as string });
-    const audio = await client.textToSpeech.convert(voice, {
+    const bytes = await eleven(`/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, key as string, {
       text,
-      modelId: "eleven_v4",
-      voiceSettings: kind === "intro" ? { stability: 0.35, similarityBoost: 0.8 } : { stability: 0.5, similarityBoost: 0.75 },
+      model_id: "eleven_v4",
+      voice_settings: kind === "intro" ? { stability: 0.35, similarity_boost: 0.8 } : { stability: 0.5, similarity_boost: 0.75 },
     });
-    const up = await svc.storage.from("ai-audio").upload(path, await toBytes(audio), { contentType: "audio/mpeg", upsert: true });
+    const up = await svc.storage.from("ai-audio").upload(path, bytes, { contentType: "audio/mpeg", upsert: true });
     if (up.error) throw up.error;
-    const ins = await svc.from("ai_generations").insert({ user_id: userId, kind, cache_key: cacheKey, path, detail: text.slice(0, 200) });
-    // Two players racing for the same line is fine: the second insert hits the unique key and we still return the file.
-    void ins;
+    await svc.from("ai_generations").insert({ user_id: userId, kind, cache_key: cacheKey, path, detail: text.slice(0, 200) });
     return json({ url: publicUrl(), cached: false });
   } catch (e) {
     const err = e as { statusCode?: number; body?: unknown; message?: string };
     await svc.from("ai_generations").insert({ user_id: userId, kind, status: "failed", detail: JSON.stringify(err.body ?? err.message ?? "").slice(0, 300) });
-    return json({ error: err.statusCode === 401 ? "The AI voice key isn't valid." : "Couldn't record that line right now." }, 502);
+    return json({ error: err.statusCode === 401 ? "The AI voice key isn't valid." : `Couldn't record that line right now (${err.statusCode ? `ElevenLabs ${err.statusCode}` : err.message ?? "error"}).` }, 502);
   }
 });
