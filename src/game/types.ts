@@ -103,6 +103,11 @@ export interface Career {
   lastSetlist?: string[];
   /** Lifetime reward points earned by playing. Spending is tracked on the server. */
   pointsEarned?: number;
+  /** When royalties were last collected (set by the first release). */
+  royaltiesAt?: number;
+  quests?: import("./quests").QuestDay;
+  /** First-time tutorial progress. Undefined/null = finished (or a career from before the tutorial). */
+  tutorial?: { step: number } | null;
   /** A show that has started (energy spent) but not finished yet. */
   pendingShow?: import("./setlist").PendingShow | null;
 }

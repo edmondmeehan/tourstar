@@ -6,7 +6,75 @@ import { fmtMoney, levelProgress, moodOf, todayKey } from "../game/engine";
 import { useGame } from "../game/store";
 import { useMembership } from "../game/settings";
 import { Bar, Card, Modal, StatBar, toast } from "../components/ui";
-import type { Stats } from "../game/types";
+import type { Career, Stats } from "../game/types";
+import { ALL_QUESTS_BONUS, ROYALTY_CAP_HOURS, currentQuests, questEmoji, questLabel, royaltiesPending, royaltyRate } from "../game/quests";
+import { sfx, vibrate } from "../lib/fx";
+
+function untilMidnight(now: number) {
+  const d = new Date(now); d.setHours(24, 0, 0, 0);
+  const ms = d.getTime() - now;
+  const h = Math.floor(ms / 36e5), m = Math.floor((ms % 36e5) / 6e4);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function QuestsCard({ c, now }: { c: Career; now: number }) {
+  const claimQuest = useGame((s) => s.claimQuest);
+  const q = currentQuests(c);
+  const done = q.list.filter((x) => x.claimed).length;
+  return (
+    <Card className="mb-4" glow={q.list.some((x) => !x.claimed && x.progress >= x.target) ? "gold" : undefined}>
+      <div className="flex items-baseline justify-between mb-3">
+        <div className="font-pixel text-[10px]" style={{ color: "var(--electric)" }}>TODAY'S QUESTS</div>
+        <div className="text-[11px] text-muted-fg">New in {untilMidnight(now)}</div>
+      </div>
+      <ul className="space-y-3">
+        {q.list.map((it, i) => {
+          const ready = !it.claimed && it.progress >= it.target;
+          return (
+            <li key={i} className="flex items-center gap-3">
+              <span className="text-xl w-7 text-center shrink-0">{it.claimed ? "✅" : questEmoji(it)}</span>
+              <div className="flex-1 min-w-0">
+                <div className={`text-sm ${it.claimed ? "line-through text-muted-fg" : ""}`}>{questLabel(it)}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="h-1.5 flex-1 rounded bg-black/40 overflow-hidden"><div className="h-full rounded" style={{ width: `${(it.progress / it.target) * 100}%`, background: it.claimed ? "var(--success)" : "var(--electric)" }} /></div>
+                  <span className="text-[10px] tabular-nums text-muted-fg shrink-0">{it.progress}/{it.target}</span>
+                </div>
+              </div>
+              {ready ? (
+                <button className="btn btn-gold text-[9px] px-3 py-2 shrink-0" onClick={() => { const r = claimQuest(i); toast(r); if (r.ok) { sfx("coin"); vibrate(40); } }}>+{it.points} ⭐</button>
+              ) : (
+                <span className="font-pixel text-[8px] shrink-0" style={{ color: it.claimed ? "var(--success)" : "var(--gold)" }}>{it.claimed ? "DONE" : `+${it.points} ⭐`}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="text-[11px] text-muted-fg mt-3">{done === 3 ? (q.bonusClaimed ? "All done today. Come back tomorrow for new quests." : "") : `Finish all three for +${ALL_QUESTS_BONUS} bonus points.`}</div>
+    </Card>
+  );
+}
+
+function RoyaltiesCard({ c, now }: { c: Career; now: number }) {
+  const collect = useGame((s) => s.collectRoyalties);
+  if (!c.releases.length) return null;
+  const p = royaltiesPending(c, now);
+  const perHour = Math.round(royaltyRate(c));
+  return (
+    <Card className="mb-4" glow={p.full ? "gold" : undefined}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-pixel text-[10px]" style={{ color: "var(--success)" }}>ROYALTIES</div>
+          <div className="font-pixel text-[13px] mt-2 tabular-nums" style={{ color: "var(--success)" }}>{fmtMoney(p.cash)}</div>
+          <div className="text-[11px] text-muted-fg mt-1">
+            {c.releases.length} release{c.releases.length === 1 ? "" : "s"} earning ~{fmtMoney(perHour)}/hr · {p.full ? `full (${ROYALTY_CAP_HOURS}h max). Collect to keep earning!` : `fills in ${Math.ceil(ROYALTY_CAP_HOURS - p.hours)}h`}
+          </div>
+          <div className="h-1.5 rounded bg-black/40 overflow-hidden mt-2"><div className="h-full rounded" style={{ width: `${(p.hours / ROYALTY_CAP_HOURS) * 100}%`, background: "var(--success)" }} /></div>
+        </div>
+        <button className="btn btn-gold shrink-0" disabled={p.cash < 1} onClick={() => { const r = collect(); toast(r); if (r.ok) { sfx("coin"); vibrate([30, 30, 60]); } }}>Collect</button>
+      </div>
+    </Card>
+  );
+}
 
 function NewsTicker({ name }: { name: string }) {
   const items = useMemo(() => {
@@ -74,6 +142,9 @@ export default function Dashboard() {
         </div>
         <p className="text-xs text-muted-fg mt-3 italic">{mood.tip}</p>
       </Card>
+
+      <QuestsCard c={c} now={now} />
+      <RoyaltiesCard c={c} now={now} />
 
       <div className="grid grid-cols-3 gap-2 mb-4">
         {[

@@ -67,7 +67,7 @@ export default function Album() {
               <input type="checkbox" checked={withSong} onChange={(e) => setWithSong(e.target.checked)} className="mt-1 accent-[var(--neon-pink)]" />
               <span>Generate a song for this release <span className="block text-xs text-muted-fg">Saved to your Locker. Uses {svc.label} ({svc.cost ? `$${svc.cost}` : "free"}).</span></span>
             </label>
-            {withSong && (
+            {withSong && svc.cost > 0 && (
               <>
                 <label className="text-xs text-muted-fg">Type <b className="text-fg">{svc.name}</b> to confirm the music service</label>
                 <input value={typed} onChange={(e) => setTyped(e.target.value)} className="w-full mt-1 mb-4 px-3 py-2 rounded bg-black/50 border border-line outline-none focus:border-pink" />
@@ -76,7 +76,7 @@ export default function Album() {
             <div className="text-xs text-muted-fg mb-4">Costs {def.cost ? fmtMoney(def.cost) : "nothing"} and {def.energy} energy. You have {fmtMoney(c.stats.cash)} / ⚡{c.stats.energy}.</div>
             <div className="flex gap-2">
               <button className="btn btn-ghost flex-1" onClick={() => setPick(null)}>Cancel</button>
-              <button className="btn btn-pink flex-1" disabled={withSong && typed.trim().toLowerCase() !== svc.name.toLowerCase()} onClick={go}>Release</button>
+              <button className="btn btn-pink flex-1" disabled={withSong && svc.cost > 0 && typed.trim().toLowerCase() !== svc.name.toLowerCase()} onClick={go}>Release</button>
             </div>
           </>
         )}

@@ -95,6 +95,15 @@ sign_in, premium_purchase) are batched from the app every 10s into `analytics_ev
 Code: `src/admin/*` (lazy-loaded, so players never download it), `src/lib/live.ts` (analytics + live-ops in the game),
 `src/game/config.ts` (balance defaults and limits). SQL: `supabase/migrations/`.
 
+## Tutorial, daily quests, royalties
+
+- **Tutorial** (`src/components/Coach.tsx`): new careers get Mo, their manager, who walks them through booking the Open Mic,
+  playing it, then releasing a first track (+25 points at the end; skippable). Careers from before the tutorial never see it.
+- **Daily quests** (`src/game/quests.ts`): 3 per day (always one "play shows" quest), picked per career and day, reset at local midnight.
+  Each pays points and a little cash; finishing all three pays +50 bonus points.
+- **Royalties**: every release earns cash per hour while the player is away (newer and better releases earn more),
+  capped at 12 hours so checking in twice a day pays. Collect on Home.
+
 ## Points, rewards and raffles
 
 Players earn reward points by playing only (they can never be bought): gigs by grade (S 40, A 25, B 15, C 8, D 3, +5 sellout, +3 fan request),

@@ -9,6 +9,7 @@ import { fmtMoney, levelFor } from "../game/engine";
 import { AnnouncementBanner, AnnouncementPopup, SavePrompt, SyncPill } from "./CloudUI";
 import { CelebrationOverlay, EventModal, LockoutOverlay, OutcomeModal } from "./Overlays";
 import { sfx } from "../lib/fx";
+import Coach, { coachTarget } from "./Coach";
 
 const NAV = [
   { to: "/dashboard", label: "Home", icon: "🏠" },
@@ -47,13 +48,14 @@ export default function Layout() {
   const [menu, setMenu] = useState(false);
   const loc = useLocation();
   const concert = useConcert((s) => s.open);
+  const coach = coachTarget(career?.tutorial?.step);
   useGameTick();
   useEffect(() => setMenu(false), [loc.pathname]);
   if (!career) return <Navigate to="/create" replace />;
   const lvl = levelFor(career.stats.fame);
 
   return (
-    <div className="min-h-screen max-w-md mx-auto relative pb-24">
+    <div className={`min-h-screen max-w-md mx-auto relative ${career.tutorial ? "pb-64" : "pb-24"}`}>
       <header style={{ paddingTop: "max(12px, env(safe-area-inset-top))" }} className="sticky top-0 z-40 backdrop-blur-md bg-[color-mix(in_oklch,var(--background)_80%,transparent)] border-b border-line px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <Link to="/dashboard" className="min-w-0">
@@ -88,10 +90,10 @@ export default function Layout() {
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-[color-mix(in_oklch,var(--background)_92%,transparent)] backdrop-blur-md border-t border-line" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="max-w-md mx-auto grid grid-cols-7">
           {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} onClick={() => sfx("click")} className={({ isActive }) => `flex flex-col items-center py-2 gap-1 ${isActive ? "text-pink" : "text-muted-fg"}`}>
+            <NavLink key={n.to} to={n.to} onClick={() => sfx("click")} className={({ isActive }) => `flex flex-col items-center py-2 gap-1 rounded-lg ${isActive ? "text-pink" : coach === n.to ? "text-gold ring-2 ring-[var(--gold)] bg-white/5" : "text-muted-fg"}`}>
               {({ isActive }) => (
                 <>
-                  <span className={`text-lg ${isActive ? "animate-pulse-glow" : "opacity-70"}`}>{n.icon}</span>
+                  <span className={`text-lg ${isActive ? "animate-pulse-glow" : coach === n.to ? "animate-bounce" : "opacity-70"}`}>{n.icon}</span>
                   <span className="font-pixel text-[7px]">{n.label}</span>
                 </>
               )}
@@ -100,6 +102,7 @@ export default function Layout() {
         </div>
       </nav>
 
+      <Coach />
       <EventModal />
       <OutcomeModal />
       <LockoutOverlay />

@@ -55,7 +55,7 @@ export default function Tour() {
                 <span className="px-1.5 py-0.5 rounded bg-black/40" style={{ color: "oklch(75% .2 300)" }}>♪ +{fmtNum(t.fans)}</span>
               </div>
               {!locked && (
-                <button className="btn btn-primary w-full mt-3" disabled={!can || !!pending} onClick={() => setBooking(t)}>
+                <button className={`btn btn-primary w-full mt-3 ${c.tutorial?.step === 2 && t.id === "open-mic" ? "ring-2 ring-[var(--gold)] animate-pulse" : ""}`} disabled={!can || !!pending} onClick={() => setBooking(t)}>
                   {c.stats.energy < energy ? "Not enough energy" : c.stats.cash < t.cost ? "Can't cover costs" : "▶ Hit the road"}
                 </button>
               )}

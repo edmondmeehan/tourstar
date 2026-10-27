@@ -19,6 +19,7 @@ import { songTitle } from "../lib/chiptune";
 import {
   SET_SLOTS, debutChance, fanRequest, gradeFor, setlistScore, showScore, songPool, type EncoreChoice, type Grade, type PendingShow,
 } from "./setlist";
+import { ALL_QUESTS_BONUS, currentQuests, questLabel, royaltiesPending, type QuestKind } from "./quests";
 
 export interface GigReport {
   tourId: string;
@@ -57,6 +58,10 @@ interface GameState {
   tick: () => void;
   /** Spend energy and costs, lock in the crowd, and put the show on (the concert overlay plays it). */
   startShow: (tourId: string, setlist: string[]) => ActionResult & { show?: PendingShow };
+  collectRoyalties: () => ActionResult;
+  claimQuest: (index: number) => ActionResult;
+  /** Tutorial: move to a step, or null to finish/skip. */
+  setTutorial: (step: number | null) => void;
   /** Pay out a started show. performance is 0..1 from the rhythm game. */
   finishShow: (performance: number, encore: EncoreChoice | null) => ActionResult;
   release: (kind: ReleaseKind, title: string, withSong: boolean) => ActionResult;
@@ -152,6 +157,19 @@ export const useGame = create<GameState>()(
         c.pendingEvent = pool[Math.floor(Math.random() * pool.length)].id;
       };
 
+      /** Count progress toward today's quests; celebrate any that just completed. */
+      const quest = (c: Career, kind: QuestKind, n = 1) => {
+        const q = structuredClone(currentQuests(c));
+        for (const it of q.list) {
+          if (it.kind !== kind || it.claimed || it.progress >= it.target) continue;
+          it.progress = Math.min(it.target, it.progress + n);
+          if (it.progress >= it.target) {
+            set((s) => ({ celebrations: [...s.celebrations, { id: uid(), kind: "daily", title: "QUEST COMPLETE", subtitle: `${questLabel(it)} · claim it on Home` }] }));
+          }
+        }
+        c.quests = q;
+      };
+
       const commit = (c: Career) => set({ career: { ...c } });
       const draft = () => {
         const c = get().career;
@@ -175,6 +193,7 @@ export const useGame = create<GameState>()(
             totals: { gigs: 0, earnings: 0, sellouts: 0, scandals: 0, collabs: 0, beefs: 0 },
             peakLevel: 1, unlockedTours: TOURS.filter((t) => t.level === 1).map((t) => t.id),
             rivals: { weekKey: weekKey(), points: 0, cooldowns: {}, lastPaidWeek: null }, pendingEvent: null,
+            tutorial: { step: 0 },
           };
           newLog(c, "system", `${c.name} starts out in Mom's basement — ${GENRES[genre].name}, ${PERSONAS[persona].name}.`);
           if (themeSeed !== undefined) {
@@ -201,6 +220,7 @@ export const useGame = create<GameState>()(
             c.lastEnergyTick += steps * interval;
             changed = true;
           }
+          if (c.releases.length && !c.royaltiesAt) { c.royaltiesAt = now; changed = true; }
           if (c.lockout && c.lockout.until <= now) {
             newLog(c, "system", `Back in action after ${c.lockout.kind}.`);
             c.lockout = null;
@@ -246,6 +266,7 @@ export const useGame = create<GameState>()(
           const show: PendingShow = { tourId: t.id, setlist: keys, attendance, sellout, requestKey: fanRequest(c, pool), at: Date.now() };
           c.pendingShow = show;
           c.lastSetlist = keys;
+          if (c.tutorial && c.tutorial.step <= 2) c.tutorial = { step: 3 };
           commit(c);
           return { ok: true, message: "Showtime!", show };
         },
@@ -306,6 +327,13 @@ export const useGame = create<GameState>()(
           applied.cash = net;
           applied.energy = -energyUsed;
           const points = award(c, GRADE_POINTS[grade] + (sellout ? 5 : 0) + (playedRequest ? 3 : 0));
+          quest(c, "gigs");
+          if (grade === "S" || grade === "A") quest(c, "gradeA");
+          if (grade === "S") quest(c, "gradeS");
+          if (sellout) quest(c, "sellout");
+          if (playedRequest) quest(c, "request");
+          if (encoreLanded) quest(c, "debut");
+          if (c.tutorial && c.tutorial.step === 3) c.tutorial = { step: 4 };
           const plays = { ...(c.setPlays ?? {}) };
           show.setlist.forEach((k) => { plays[k] = (plays[k] ?? 0) + 1; });
           c.setPlays = plays;
@@ -374,6 +402,9 @@ export const useGame = create<GameState>()(
           c.stats.hype = Math.max(0, c.stats.hype - r.weeks * 2);
           c.totals.earnings += earnings;
           const points = award(c, 10 + Math.floor(quality / 10));
+          if (!c.royaltiesAt) c.royaltiesAt = Date.now();
+          quest(c, "release");
+          if (c.tutorial && c.tutorial.step >= 4 && c.tutorial.step <= 5) c.tutorial = { step: 6 };
           newLog(c, "release", `Released ${r.name} "${c.releases[0].title}" — quality ${quality}/100, ${streams.toLocaleString()} streams.`);
           maybeEvent(c, 0.15);
           commit(c);
@@ -429,8 +460,55 @@ export const useGame = create<GameState>()(
           if (c.stats.cash < it.price) return { ok: false, message: `Need $${it.price.toLocaleString()}.` };
           const applied = gain(c, { ...it.effects, cash: (it.effects.cash ?? 0) - it.price });
           newLog(c, "store", `Bought ${it.name}.`);
+          quest(c, "shop");
           commit(c);
           return { ok: true, title: "Purchased", message: `${it.emoji} ${it.name}`, delta: applied };
+        },
+
+        collectRoyalties: () => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const { cash } = royaltiesPending(c);
+          if (cash < 1) return { ok: false, message: "Nothing to collect yet. Your songs are still earning." };
+          const applied = gain(c, { cash }, { chart: false });
+          c.royaltiesAt = Date.now();
+          c.totals.earnings += cash;
+          quest(c, "royalties");
+          newLog(c, "release", `Collected $${cash.toLocaleString()} in royalties.`);
+          commit(c);
+          return { ok: true, title: "Royalties collected", message: `Your catalog paid $${cash.toLocaleString()}.`, delta: applied };
+        },
+
+        claimQuest: (index) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const q = structuredClone(currentQuests(c));
+          const it = q.list[index];
+          if (!it || it.claimed) return { ok: false, message: "Already claimed." };
+          if (it.progress < it.target) return { ok: false, message: "Not done yet." };
+          it.claimed = true;
+          let points = award(c, it.points);
+          const applied = it.cash ? gain(c, { cash: it.cash }, { chart: false }) : {};
+          let bonus = "";
+          if (!q.bonusClaimed && q.list.every((x) => x.claimed)) {
+            q.bonusClaimed = true;
+            const b = award(c, ALL_QUESTS_BONUS);
+            points += b;
+            bonus = ` All three done: +${b} bonus points!`;
+            set((s) => ({ celebrations: [...s.celebrations, { id: uid(), kind: "daily", title: "ALL QUESTS DONE", subtitle: `+${b} bonus points · new quests tomorrow` }] }));
+          }
+          c.quests = q;
+          newLog(c, "daily", `Quest complete: ${questLabel(it)} (+${points} points).`);
+          commit(c);
+          return { ok: true, title: "Quest reward", message: `+${points} ⭐ points${it.cash ? ` and $${it.cash.toLocaleString()}` : ""}.${bonus}`, delta: applied, points };
+        },
+
+        setTutorial: (step) => {
+          const c = draft();
+          if (!c) return;
+          if (step === null && c.tutorial && c.tutorial.step >= 6) award(c, 25); // finished the tour
+          c.tutorial = step === null ? null : { step };
+          commit(c);
         },
 
         rest: () => {
