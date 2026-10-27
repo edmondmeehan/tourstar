@@ -7,6 +7,8 @@ import type { ReleaseKind } from "../game/types";
 import { Card, Modal, PageTitle, Tag, toast } from "../components/ui";
 import { MUSIC_SERVICES } from "../components/SongGenerator";
 import { songTitle } from "../lib/chiptune";
+import { aiSongsAvailable, recordAiSong, useAiFlags } from "../lib/ai";
+import { useCloud } from "../lib/cloud";
 
 export default function Album() {
   const c = useGame((s) => s.career)!;
@@ -16,6 +18,10 @@ export default function Album() {
   const [title, setTitle] = useState("");
   const [withSong, setWithSong] = useState(true);
   const [typed, setTyped] = useState("");
+  const [useAi, setUseAi] = useState(true);
+  const aiOn = useAiFlags((s) => s.music);
+  const signedIn = useCloud((s) => !!s.session);
+  const aiLimit = useAiFlags((s) => s.dailyLimit);
   const def = RELEASES.find((r) => r.kind === pick);
   const svc = MUSIC_SERVICES[0];
 
@@ -29,7 +35,17 @@ export default function Album() {
     if (!pick) return;
     const r = release(pick, title.trim(), withSong);
     toast(r);
-    if (r.ok) setPick(null);
+    if (!r.ok) return;
+    setPick(null);
+    if (withSong && useAi && aiSongsAvailable()) {
+      const after = useGame.getState().career;
+      const rel = after?.releases[0];
+      const song = after?.songs.find((x) => x.id === rel?.songId);
+      if (after && rel && song) {
+        toast({ ok: true, title: "In the AI studio", message: `Recording "${song.title}" for real. It lands in your Locker in about a minute.` });
+        void recordAiSong(song, rel.kind, after.persona).then((res) => toast({ ok: res.ok, message: res.message }));
+      }
+    }
   };
 
   return (
@@ -67,6 +83,12 @@ export default function Album() {
               <input type="checkbox" checked={withSong} onChange={(e) => setWithSong(e.target.checked)} className="mt-1 accent-[var(--neon-pink)]" />
               <span>Generate a song for this release <span className="block text-xs text-muted-fg">Saved to your Locker. Uses {svc.label} ({svc.cost ? `$${svc.cost}` : "free"}).</span></span>
             </label>
+            {withSong && aiOn && (
+              <label className="flex items-start gap-3 mb-3 text-sm">
+                <input type="checkbox" checked={useAi && signedIn} disabled={!signedIn} onChange={(e) => setUseAi(e.target.checked)} className="mt-1 accent-[var(--gold)]" />
+                <span>🎧 Record a real AI song <span className="block text-xs text-muted-fg">{signedIn ? `A real ~30s track in your genre, made by the AI studio. Up to ${aiLimit} a day.` : "Sign in to record real AI songs."}</span></span>
+              </label>
+            )}
             {withSong && svc.cost > 0 && (
               <>
                 <label className="text-xs text-muted-fg">Type <b className="text-fg">{svc.name}</b> to confirm the music service</label>

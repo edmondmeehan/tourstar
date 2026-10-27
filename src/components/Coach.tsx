@@ -1,5 +1,6 @@
 // First-time tutorial: "Mo", the player's manager, walks them through their first show and release.
 import { useEffect } from "react";
+import { moLineUrl, playClip, type ClipHandle } from "../lib/ai";
 import { useLocation } from "react-router-dom";
 import { useGame } from "../game/store";
 import { useConcert } from "../concert/useConcert";
@@ -25,7 +26,18 @@ export default function Coach() {
     if (step === 4 && pathname === "/album") setTutorial(5);
   }, [step, pathname, setTutorial]);
 
-  if (!c || step === undefined || c.tutorial === null || concert || pendingEvent || celebrating) return null;
+  const hidden = !c || step === undefined || c.tutorial === null || !!concert || !!pendingEvent || celebrating;
+
+  // Mo says each line out loud (AI voice) when voices are switched on.
+  useEffect(() => {
+    if (hidden || step === undefined) return;
+    let clip: ClipHandle | null = null;
+    let live = true;
+    void moLineUrl(Math.min(step, 6)).then((url) => { if (url && live) clip = playClip(url); });
+    return () => { live = false; clip?.stop(); };
+  }, [hidden, step]);
+
+  if (hidden) return null;
 
   const skip = () => setTutorial(null);
   const next = (n: number | null) => { sfx("click"); setTutorial(n); };

@@ -7,6 +7,7 @@ import { startCloud, useCloud } from "./lib/cloud";
 import { startLive, useLive } from "./lib/live";
 import { startNotifications } from "./lib/notify";
 import { startPurchases } from "./lib/purchases";
+import { startAi } from "./lib/ai";
 import { ConflictModal } from "./components/CloudUI";
 import Login, { AuthCallback, ResetPassword } from "./pages/Login";
 import Layout from "./components/Layout";
@@ -56,6 +57,7 @@ export default function App() {
     startLive();
     startNotifications();
     startPurchases();
+    startAi();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
   useEffect(() => {

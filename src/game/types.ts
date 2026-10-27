@@ -49,6 +49,9 @@ export interface Song {
   source: "theme" | "release" | "live";
   releaseId?: string;
   appeal?: number; // for songs without a release (theme, debuted live)
+  /** A real recording from the AI studio (ElevenLabs), when the player made one. */
+  audioUrl?: string;
+  ai?: "pending" | "failed";
 }
 
 export interface Release {
@@ -87,6 +90,9 @@ export interface Career {
   crew: Partial<Record<CrewId, boolean>>;
   releases: Release[];
   songs: Song[];
+  /** Stadium announcer clip (AI voice) and the name it says. */
+  announcerUrl?: string;
+  announcerFor?: string;
   queue: string[]; // song ids, locker order
   log: LogEntry[];
   lockout: Lockout | null;

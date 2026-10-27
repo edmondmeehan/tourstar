@@ -62,6 +62,9 @@ interface GameState {
   claimQuest: (index: number) => ActionResult;
   /** Tutorial: move to a step, or null to finish/skip. */
   setTutorial: (step: number | null) => void;
+  /** AI studio: attach a real recording (or its pending/failed state) to a song. */
+  setSongAudio: (id: string, patch: Pick<Song, "audioUrl" | "ai">) => void;
+  setAnnouncer: (url: string, name: string) => void;
   /** Pay out a started show. performance is 0..1 from the rhythm game. */
   finishShow: (performance: number, encore: EncoreChoice | null) => ActionResult;
   release: (kind: ReleaseKind, title: string, withSong: boolean) => ActionResult;
@@ -508,6 +511,23 @@ export const useGame = create<GameState>()(
           if (!c) return;
           if (step === null && c.tutorial && c.tutorial.step >= 6) award(c, 25); // finished the tour
           c.tutorial = step === null ? null : { step };
+          commit(c);
+        },
+
+        setSongAudio: (id, patch) => {
+          const c = draft();
+          const song = c?.songs.find((x) => x.id === id);
+          if (!c || !song) return;
+          Object.assign(song, patch);
+          if (!patch.ai) delete song.ai;
+          commit(c);
+        },
+
+        setAnnouncer: (url, name) => {
+          const c = draft();
+          if (!c) return;
+          c.announcerUrl = url;
+          c.announcerFor = name;
           commit(c);
         },
 

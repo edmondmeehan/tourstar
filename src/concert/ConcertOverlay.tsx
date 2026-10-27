@@ -4,8 +4,9 @@ import { fmtMoney } from "../game/engine";
 import { useGame, type ActionResult } from "../game/store";
 import { GRADE_LABEL, debutChance, songPool, type EncoreChoice } from "../game/setlist";
 import { makeMedley, playMedley, type MedleyHandle } from "../lib/chiptune";
-import { cheer, sfx } from "../lib/fx";
+import { cheer, masterVolume, sfx } from "../lib/fx";
 import { haptic } from "../lib/haptics";
+import { playClip, useAiFlags, type ClipHandle } from "../lib/ai";
 import { DeltaChips, toast } from "../components/ui";
 import { startConcert } from "./ConcertScene";
 import { useConcert } from "./useConcert";
@@ -43,10 +44,26 @@ export default function ConcertOverlay() {
   const [result, setResult] = useState<ActionResult | null>(null);
   const [clock, setClock] = useState<(() => number) | null>(null);
   const musicStopped = useRef(false);
+  const introRef = useRef<ClipHandle | null>(null);
+  const [announcing, setAnnouncing] = useState(false);
 
   useEffect(() => {
-    musicRef.current = playMedley(songs.map((s) => s.seed), career.genre, medley);
-    setClock(() => musicRef.current!.now);
+    let disposed = false;
+    const startMusic = () => {
+      if (disposed || musicStopped.current || musicRef.current) return;
+      setAnnouncing(false);
+      musicRef.current = playMedley(songs.map((s) => s.seed), career.genre, medley);
+      setClock(() => musicRef.current!.now);
+    };
+    // The stadium announcer (AI voice) introduces the artist, then the band kicks in.
+    const intro = career.announcerUrl && career.announcerFor === career.name && useAiFlags.getState().voice && masterVolume() > 0;
+    if (intro) {
+      setAnnouncing(true);
+      introRef.current = playClip(career.announcerUrl!, { gain: 1.2 });
+      cheer();
+      void introRef.current.done.then(startMusic);
+      window.setTimeout(startMusic, 9000); // never hold the show hostage to a slow clip
+    } else startMusic();
     const scene = startConcert(stageRef.current!, {
       attendance: show.attendance,
       beatSec: medley.stepSec * 2,
@@ -84,7 +101,7 @@ export default function ConcertOverlay() {
       if (nextBeat < beats.length && !musicStopped.current) raf = requestAnimationFrame(feel);
     };
     raf = requestAnimationFrame(feel);
-    return () => { window.clearInterval(timer); cancelAnimationFrame(raf); scene.destroy(); musicRef.current?.stop(); };
+    return () => { disposed = true; window.clearInterval(timer); cancelAnimationFrame(raf); scene.destroy(); introRef.current?.stop(); musicRef.current?.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -104,6 +121,7 @@ export default function ConcertOverlay() {
 
   const autoPlay = () => {
     musicStopped.current = true;
+    introRef.current?.stop();
     musicRef.current?.stop();
     onDone({ perfect: 0, good: 0, miss: 0, total: 0, maxCombo: 0, accuracy: 0.5 });
   };
@@ -140,6 +158,12 @@ export default function ConcertOverlay() {
 
         <div className="flex-1 min-h-0 relative overflow-hidden">
           <div ref={stageRef} className="absolute inset-0" />
+          {announcing && phase === "play" && (
+            <div className="absolute inset-x-0 top-[30%] text-center pointer-events-none animate-pop">
+              <div className="font-pixel text-[10px] text-muted-fg">PLEASE WELCOME TO THE STAGE</div>
+              <div className="font-pixel text-lg mt-2" style={{ color: "var(--gold)" }}>{career.name.toUpperCase()}</div>
+            </div>
+          )}
           {phase === "play" && clock && (
             <div className="absolute inset-x-0 bottom-0 h-[62%]">
               <NoteHighway medley={medley} now={clock} onJudge={onJudge} onDone={onDone} />

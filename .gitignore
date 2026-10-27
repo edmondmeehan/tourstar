@@ -27,3 +27,6 @@ dist-preview
 .vercel
 .env.local
 *.zip
+
+# ElevenLabs test clips
+elevenlabs-demo/

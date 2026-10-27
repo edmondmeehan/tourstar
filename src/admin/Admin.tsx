@@ -13,6 +13,7 @@ import { Kpi, Section, fail, input, when } from "./kit";
 import { RafflesTab, RewardsTab } from "./RewardsAdmin";
 import { BetaSignupsTab } from "./WaitlistAdmin";
 import { IntegrationsTab } from "./IntegrationsAdmin";
+import { AiTab } from "./AiAdmin";
 
 type Tab = "insights" | "beta" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "integrations" | "admins";
 const TABS: { id: Tab; label: string }[] = [
@@ -27,7 +28,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "raffles", label: "Raffles" },
   { id: "orders", label: "Orders" },
   { id: "traffic", label: "Traffic" },
-  { id: "music", label: "AI music" },
+  { id: "music", label: "AI audio" },
   { id: "integrations", label: "Integrations" },
   { id: "admins", label: "Admins" },
 ];
@@ -86,7 +87,7 @@ export default function Admin() {
           {tab === "raffles" && <RafflesTab />}
           {tab === "orders" && <Orders />}
           {tab === "traffic" && <Traffic />}
-          {tab === "music" && <Music />}
+          {tab === "music" && <AiTab />}
           {tab === "integrations" && <IntegrationsTab />}
           {tab === "admins" && <Admins />}
         </main>
@@ -614,35 +615,6 @@ function Traffic() {
       <Section title="Tag your links" sub="Add a source to any link you share so it shows up here by name.">
         <code className="block text-xs bg-black/40 rounded p-3 overflow-x-auto">https://your-game-url/?utm_source=tiktok</code>
         <p className="text-xs text-muted-fg mt-2">Use one name per channel: tiktok, instagram, newsletter, matchbox20-fanclub, and so on.</p>
-      </Section>
-    </>
-  );
-}
-
-// ================================================================= AI music
-
-function Music() {
-  const { data } = useInsights(30);
-  const services = [
-    { name: "TourStar Synth (built-in)", status: "Live", ok: true, note: "Generates every song on the device for free. Used for all songs today." },
-    { name: "ElevenLabs Music", status: "Not connected", ok: false, note: "Needs a paid ElevenLabs plan with music access. Add the API key as a Supabase secret (ELEVENLABS_API_KEY) and I'll wire the server function." },
-    { name: "Replicate (backup)", status: "Not connected", ok: false, note: "Backup when ElevenLabs refuses or is down. Needs a Replicate API token (REPLICATE_API_TOKEN)." },
-  ];
-  return (
-    <>
-      <div className="grid sm:grid-cols-2 gap-3 mb-5">
-        <Kpi label="Releases · 30d" value={data?.events?.release ?? 0} />
-        <Kpi label="Songs generated · 30d" value="Built-in synth" sub="Counted per release with a song" />
-      </div>
-      <Section title="Music services" sub="Which song generators are available to players.">
-        <ul className="divide-y divide-line">
-          {services.map((s) => (
-            <li key={s.name} className="py-3 flex gap-3 items-start">
-              <span className={`text-[10px] px-2 py-0.5 rounded border mt-0.5 whitespace-nowrap ${s.ok ? "text-success border-success" : "text-gold border-gold"}`}>{s.ok ? "● LIVE" : "○ " + s.status.toUpperCase()}</span>
-              <div><div className="text-sm font-semibold">{s.name}</div><div className="text-xs text-muted-fg mt-0.5">{s.note}</div></div>
-            </li>
-          ))}
-        </ul>
       </Section>
     </>
   );

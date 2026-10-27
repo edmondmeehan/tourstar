@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { GENRES } from "../game/data";
 import { useGame } from "../game/store";
-import { playSong, makePattern, type PlayHandle } from "../lib/chiptune";
+import { playSong, makePattern } from "../lib/chiptune";
+import { playClip } from "../lib/ai";
 import { haptic } from "../lib/haptics";
 import { Card, Empty, PageTitle, askConfirm } from "../components/ui";
 
@@ -13,7 +14,7 @@ export default function Locker() {
   const [current, setCurrent] = useState<string | null>(null);
   const [loop, setLoop] = useState(false);
   const [allMode, setAllMode] = useState(false);
-  const handle = useRef<PlayHandle | null>(null);
+  const handle = useRef<{ stop: () => void } | null>(null);
   const state = useRef({ loop, allMode, queue: c.queue });
   state.current = { loop, allMode, queue: c.queue };
 
@@ -28,13 +29,15 @@ export default function Locker() {
     const s = c.songs.find((x) => x.id === id);
     if (!s) return;
     setCurrent(id);
-    handle.current = playSong(s.seed, s.genre, () => {
+    const next = () => {
       const { loop, allMode, queue } = state.current;
       const i = queue.indexOf(id);
       if (allMode && i >= 0 && i < queue.length - 1) play(queue[i + 1]);
       else if (loop) play(allMode ? queue[0] : id);
       else { handle.current = null; setCurrent(null); }
-    });
+    };
+    // Real AI recording when there is one; otherwise the in-game synth version.
+    handle.current = s.audioUrl ? playClip(s.audioUrl, { onEnd: next }) : playSong(s.seed, s.genre, next);
   };
 
   useEffect(() => () => handle.current?.stop(), []);
@@ -125,7 +128,12 @@ export default function Locker() {
               </button>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold truncate">{s.title}</div>
-                <div className="text-[11px] text-muted-fg">{GENRES[s.genre].emoji} {s.source === "theme" ? "Theme song" : s.source === "live" ? "Debuted live" : "Release"} · 0:{String(dur).padStart(2, "0")}</div>
+                <div className="text-[11px] text-muted-fg">
+                  {GENRES[s.genre].emoji} {s.source === "theme" ? "Theme song" : s.source === "live" ? "Debuted live" : "Release"}
+                  {s.audioUrl ? <span className="ml-1" style={{ color: "var(--gold)" }}>· 🎧 AI studio</span>
+                    : s.ai === "pending" ? <span className="ml-1 animate-pulse" style={{ color: "var(--electric)" }}>· Recording…</span>
+                    : <> · 0:{String(dur).padStart(2, "0")}</>}
+                </div>
               </div>
               <button className="text-muted-fg text-xs px-1" aria-label="Delete" onClick={() => askConfirm(`Delete "${s.title}" from your Locker?`, () => { if (current === id) stop(); removeSong(id); }, { yes: "Delete", danger: true })}>✕</button>
               <span className="text-xl text-muted-fg cursor-grab touch-none px-1" onPointerDown={(e) => onPointerDown(e, id)} aria-label="Drag to reorder">≡</span>
