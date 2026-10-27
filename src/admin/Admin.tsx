@@ -12,8 +12,9 @@ import { Logo } from "../components/HeroBackdrop";
 import { Kpi, Section, fail, input, when } from "./kit";
 import { RafflesTab, RewardsTab } from "./RewardsAdmin";
 import { BetaSignupsTab } from "./WaitlistAdmin";
+import { IntegrationsTab } from "./IntegrationsAdmin";
 
-type Tab = "insights" | "beta" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "admins";
+type Tab = "insights" | "beta" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "integrations" | "admins";
 const TABS: { id: Tab; label: string }[] = [
   { id: "insights", label: "Insights" },
   { id: "beta", label: "Beta signups" },
@@ -27,6 +28,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "orders", label: "Orders" },
   { id: "traffic", label: "Traffic" },
   { id: "music", label: "AI music" },
+  { id: "integrations", label: "Integrations" },
   { id: "admins", label: "Admins" },
 ];
 
@@ -85,6 +87,7 @@ export default function Admin() {
           {tab === "orders" && <Orders />}
           {tab === "traffic" && <Traffic />}
           {tab === "music" && <Music />}
+          {tab === "integrations" && <IntegrationsTab />}
           {tab === "admins" && <Admins />}
         </main>
       </div>

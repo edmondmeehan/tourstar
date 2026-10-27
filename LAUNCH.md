@@ -9,6 +9,7 @@ What's already built is marked ✅. Everything else needs your accounts, in this
 - ✅ Reminder notifications on the device: energy full, royalties full, streak, new quests. Asked after the first show; toggle in Account.
 - ✅ tourstarapp.com/privacy, /terms, /support, linked from the splash page, Account, Premium and raffles.
 - ✅ Account deletion in the app (Apple requires this).
+- ✅ Admin → Integrations: paste API keys (RevenueCat public keys go to the app; Resend/Anthropic/ElevenLabs/Replicate/RevenueCat secret keys are encrypted in Supabase Vault, with a Test button). The RevenueCat iOS key is already saved there.
 - ✅ Vercel Web Analytics on the website. Turn it on in Vercel → tourstar → Analytics → Enable.
 
 > Have a lawyer review /privacy, /terms and each raffle's official rules before prizes go out. NY and FL require registration and a bond for sweepstakes with more than $5,000 in prizes.
@@ -45,7 +46,7 @@ Supabase → tourstar → Authentication:
 1. Sign up at revenuecat.com and create a project called **TourStar**. Add an **App Store** app with bundle ID `co.please.tourstar` and an App Store Connect API key (RevenueCat walks you through it).
 2. **Entitlements**: create `remove_timers`, `premium_pass`, `vip_badge` and attach the matching product to each.
 3. Products: import all 5 products. The cash packs need no entitlement.
-4. Copy the **public iOS SDK key** (starts with `appl_`) into `.env` as `VITE_REVENUECAT_IOS_KEY=…`, then `git push`.
+4. The public iOS SDK key (`appl_…`) is already saved in Admin → Integrations. If it changes, update it there; no rebuild needed.
 5. Optional: RevenueCat → Integrations → Webhooks, so the admin Finance tab can show revenue later.
 
 ## 5. Build and TestFlight (1 hour)

@@ -5,14 +5,32 @@
 import { create } from "zustand";
 import { Purchases, PRODUCT_CATEGORY, type CustomerInfo, type PurchasesStoreProduct } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
-import { isNative } from "./native";
+import { gameStorage, isNative } from "./native";
 import { PREMIUM_SKUS, useMembership, type Sku } from "../game/settings";
 import { useGame } from "../game/store";
-import { useCloud } from "./cloud";
+import { supabase, useCloud } from "./cloud";
 
-const KEY = Capacitor.getPlatform() === "android"
-  ? (import.meta.env.VITE_REVENUECAT_ANDROID_KEY as string | undefined)
-  : (import.meta.env.VITE_REVENUECAT_IOS_KEY as string | undefined);
+const IS_ANDROID = Capacitor.getPlatform() === "android";
+/** A key baked into the build wins; otherwise the one saved in Admin → Integrations is used. */
+const ENV_KEY = (IS_ANDROID ? import.meta.env.VITE_REVENUECAT_ANDROID_KEY : import.meta.env.VITE_REVENUECAT_IOS_KEY) as string | undefined;
+const CONFIG_KEY = IS_ANDROID ? "revenuecat_android_public" : "revenuecat_ios_public";
+const CACHE = `tourstar-${CONFIG_KEY}`;
+
+/** Find the RevenueCat key: build env → Admin setting (cached for offline launches). */
+async function resolveKey(): Promise<string | null> {
+  if (ENV_KEY) return ENV_KEY;
+  const cached = await Promise.resolve(gameStorage.getItem(CACHE)).catch(() => null);
+  try {
+    if (supabase) {
+      const { data } = await supabase.from("app_public_config").select("value").eq("key", CONFIG_KEY).maybeSingle();
+      const v = (data?.value as string | undefined)?.trim();
+      if (v) { void gameStorage.setItem(CACHE, v); return v; }
+      if (data === null) void gameStorage.removeItem(CACHE);
+    }
+  } catch { /* offline: fall back to cache */ }
+  return cached || null;
+}
+let KEY: string | null = ENV_KEY ?? null;
 
 /** Store product IDs: co.please.tourstar.<sku> (create these exactly in App Store Connect / Play Console). */
 export const productId = (sku: Sku) => `co.please.tourstar.${sku}`;
@@ -24,12 +42,12 @@ const CASH: Partial<Record<Sku, number>> = { cash_small: 100_000, cash_large: 1_
 
 export type StoreStatus = "unavailable" | "loading" | "ready" | "error";
 export const usePurchases = create<{ status: StoreStatus; products: Partial<Record<Sku, PurchasesStoreProduct>>; error: string | null }>(() => ({
-  status: isNative && KEY ? "loading" : "unavailable",
+  status: isNative ? "loading" : "unavailable",
   products: {},
   error: null,
 }));
 
-export const purchasesAvailable = () => isNative && !!KEY;
+export const purchasesAvailable = () => isNative && usePurchases.getState().status !== "unavailable";
 
 function applyEntitlements(info: CustomerInfo) {
   const active = info.entitlements.active;
@@ -42,8 +60,10 @@ function applyEntitlements(info: CustomerInfo) {
 
 let started = false;
 export async function startPurchases() {
-  if (started || !purchasesAvailable()) return;
+  if (started || !isNative) return;
   started = true;
+  KEY = await resolveKey();
+  if (!KEY) { usePurchases.setState({ status: "unavailable" }); return; }
   try {
     await Purchases.configure({ apiKey: KEY!, appUserID: useCloud.getState().session?.user.id ?? undefined });
     await Purchases.addCustomerInfoUpdateListener(applyEntitlements);

@@ -5,13 +5,13 @@
 -- Spending (rewards, raffles) uses the verified count, never the raw number from the device.
 
 alter table public.saves
-  add column points_verified int not null default 0,     -- credited points (lifetime)
-  add column points_seen int not null default 0,         -- last raw value seen from the device
-  add column points_checked_at timestamptz,              -- last time points were credited
-  add column points_withheld int not null default 0,     -- lifetime points held back
-  add column points_adjust int not null default 0,       -- admin correction (+/-)
-  add column flagged_at timestamptz,
-  add column flag_reason text;
+  add column if not exists points_verified int not null default 0,     -- credited points (lifetime)
+  add column if not exists points_seen int not null default 0,         -- last raw value seen from the device
+  add column if not exists points_checked_at timestamptz,              -- last time points were credited
+  add column if not exists points_withheld int not null default 0,     -- lifetime points held back
+  add column if not exists points_adjust int not null default 0,       -- admin correction (+/-)
+  add column if not exists flagged_at timestamptz,
+  add column if not exists flag_reason text;
 
 -- Allowance: 500 points/hour of real time plus a 1,500 burst (a level-up, quests and a hot streak),
 -- at most 6,000 a day. A strong honest player earns roughly 300-450 an hour.
@@ -83,8 +83,10 @@ end; $$;
 
 -- Existing saves: credit what they have today (pre-launch testers).
 update public.saves set points_verified = greatest(0, coalesce((career->>'pointsEarned')::int, 0)),
-  points_seen = greatest(0, coalesce((career->>'pointsEarned')::int, 0)), points_checked_at = now();
+  points_seen = greatest(0, coalesce((career->>'pointsEarned')::int, 0)), points_checked_at = now()
+where points_checked_at is null;
 
+drop trigger if exists saves_verify_points on public.saves;
 create trigger saves_verify_points before insert or update on public.saves
 for each row execute function public.verify_points();
 
