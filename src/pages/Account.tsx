@@ -1,3 +1,4 @@
+import { COPYRIGHT } from "../lib/site";
 import { useState } from "react";
 import { openTickets } from "../lib/presales";
 import { useNavigate } from "react-router-dom";
@@ -167,6 +168,7 @@ function MadeBy() {
       {logoOk
         ? <img src={PTY_LOGO} alt="Please and Thank You" className="h-10 mx-auto mt-3 object-contain" loading="lazy" onError={() => setLogoOk(false)} />
         : <div className="font-bold mt-2" style={{ color: "var(--gold)" }}>Please and Thank You</div>}
+      <div className="text-[10px] text-muted-fg mt-4">{COPYRIGHT}. Prizes fulfilled by Please and Thank You, Inc.</div>
     </a>
   );
 }

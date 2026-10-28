@@ -10,6 +10,7 @@ import { AnnouncementBanner, AnnouncementPopup, SavePrompt, SyncPill } from "./C
 import { CelebrationOverlay, EventModal, LockoutOverlay, OutcomeModal } from "./Overlays";
 import { sfx } from "../lib/fx";
 import { applySkin } from "../game/cosmetics";
+import { COPYRIGHT } from "../lib/site";
 import Coach, { coachTarget } from "./Coach";
 
 const NAV = [
@@ -113,7 +114,7 @@ export default function Layout() {
       <SavePrompt />
       <AnnouncementPopup />
       {concert && (
-        <Suspense fallback={<div className="fixed inset-0 z-[80] bg-black flex items-center justify-center font-pixel text-[10px] text-gold animate-press-start">LOADING SHOW…</div>}>
+        <Suspense fallback={<div className="fixed inset-0 z-[80] bg-black flex flex-col items-center justify-center gap-6"><span className="font-pixel text-[10px] text-gold animate-press-start">LOADING SHOW…</span><span className="absolute bottom-8 text-[10px] text-white/40">{COPYRIGHT}</span></div>}>
           <ConcertOverlay />
         </Suspense>
       )}

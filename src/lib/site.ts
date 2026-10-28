@@ -22,4 +22,7 @@ export async function refreshSite() {
 }
 
 /** Paths anyone can open while the web game is hidden (so the team can sign in). */
+/** Shown on loading screens, the title screen, account, sign-in and admin. */
+export const COPYRIGHT = "Copyright © 2026 TourStar, LLC";
+
 export const OPEN_PATHS = ["/login", "/auth/callback", "/reset-password", "/admin"];

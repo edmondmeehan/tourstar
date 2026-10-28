@@ -10,7 +10,7 @@ import { startPurchases } from "./lib/purchases";
 import { startAi } from "./lib/ai";
 import { startGold } from "./lib/gold";
 import { startPush } from "./lib/push";
-import { OPEN_PATHS, WEB_BASE, refreshSite, useSite } from "./lib/site";
+import { OPEN_PATHS, WEB_BASE, refreshSite, useSite, COPYRIGHT } from "./lib/site";
 import { ConflictModal } from "./components/CloudUI";
 import Login, { AuthCallback, ResetPassword } from "./pages/Login";
 import Layout from "./components/Layout";
@@ -90,7 +90,7 @@ export default function App() {
         <Route path="/" element={<Title />} />
         <Route path="/create" element={<Create />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen" />}><Admin /></Suspense>} />
+        <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen flex items-end justify-center pb-8 text-[10px] text-muted-fg">{COPYRIGHT}</div>}><Admin /></Suspense>} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<Layout />}>
@@ -127,6 +127,7 @@ function ComingSoon() {
       <p className="text-sm text-muted-fg max-w-xs">The game isn't open yet. Join the waitlist for early access.</p>
       <a href="/#join" className="btn btn-pink">Get early access</a>
       <Link to="/login" className="text-[11px] text-muted-fg underline">Team sign in</Link>
+      <p className="text-[10px] text-muted-fg mt-6">{COPYRIGHT}</p>
     </div>
   );
 }

@@ -4,7 +4,6 @@
 //                                             the admin screen calls it repeatedly until remaining = 0.
 // Each person gets each campaign at most once (waitlist_emails), and unsubscribed people are skipped.
 // Deployed with verify_jwt = false because it checks the caller is an admin itself.
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { campaignEmail, resend, unsubHeaders, type Campaign } from "./email.ts";
 

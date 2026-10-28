@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase, useCloud } from "../lib/cloud";
 import { levelFor } from "../game/engine";
+import { COPYRIGHT } from "../lib/site";
 import { CONFIG_FIELDS, DEFAULT_CONFIG, levelThresholds, sanitizeConfig, type GameConfig } from "../game/config";
 import { PLAYER_TYPES, fmtDays, simulateClimb } from "../game/sim";
 import { EVENTS } from "../game/events";
@@ -87,6 +88,7 @@ export default function Admin() {
               {t.label}
             </button>
           ))}
+          <p className="hidden lg:block text-[10px] text-muted-fg px-3 mt-6">{COPYRIGHT}</p>
         </nav>
         <main className="flex-1 min-w-0">
           {tab === "insights" && <Insights />}

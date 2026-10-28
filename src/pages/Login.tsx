@@ -1,3 +1,4 @@
+import { COPYRIGHT } from "../lib/site";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Logo } from "../components/HeroBackdrop";
@@ -11,6 +12,7 @@ function Shell({ children, title, sub }: { children: React.ReactNode; title: str
       <h1 className="font-pixel text-sm text-center text-glow-pink" style={{ color: "var(--neon-pink)" }}>{title}</h1>
       {sub && <p className="text-center text-xs text-muted-fg mt-3 mb-2">{sub}</p>}
       <div className="mt-6">{children}</div>
+      <p className="text-center text-[10px] text-muted-fg mt-10">{COPYRIGHT}</p>
     </div>
   );
 }

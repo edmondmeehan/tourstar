@@ -27,7 +27,7 @@ function shell(inner: string, p: Person, preheader: string) {
 <tr><td style="padding:8px 28px 28px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#e9e6ff;font-size:16px;line-height:1.55;">${inner}</td></tr>
 </table>
 <p style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#7d79a6;font-size:12px;line-height:1.6;margin:18px 0 0;max-width:520px;">
-You're getting this because you joined the TourStar waitlist. Prizes fulfilled by Please and Thank You, Inc.<br>${esc(ADDRESS)}<br>
+You're getting this because you joined the TourStar waitlist. Copyright © 2026 TourStar, LLC. Prizes fulfilled by Please and Thank You, Inc.<br>${esc(ADDRESS)}<br>
 <a href="${unsubLink(p.unsub)}" style="color:#7d79a6;">Unsubscribe</a> · <a href="${SITE}/privacy" style="color:#7d79a6;">Privacy</a>
 </p></td></tr></table></body></html>`;
 }
@@ -64,6 +64,7 @@ ${TIERS.map((t) => `- ${t.friends} friend${t.friends > 1 ? "s" : ""}: ${t.reward
 
 We'll email you when TourStar hits the App Store.
 
+Copyright © 2026 TourStar, LLC.
 ${ADDRESS}
 Unsubscribe: ${unsubLink(p.unsub)}`;
   return { subject: "You're on the TourStar list 🎤", html, text };
@@ -85,6 +86,7 @@ ${inviteBlock(p)}
 
 Your invite link: ${inviteLink(p.code)}
 
+Copyright © 2026 TourStar, LLC.
 ${ADDRESS}
 Unsubscribe: ${unsubLink(p.unsub)}`;
   return { subject: c.subject, html, text };

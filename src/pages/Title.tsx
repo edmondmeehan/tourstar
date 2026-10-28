@@ -53,7 +53,7 @@ export default function Title() {
         </div>
 
         <div className="absolute bottom-10 inset-x-0 text-center font-pixel text-[7px] text-white/40 z-10">
-          © PLEASE & THANK YOU · TAP OR PRESS ENTER
+          © 2026 TOURSTAR, LLC · TAP OR PRESS ENTER
         </div>
         {flash && <div className="absolute inset-0 bg-white animate-flash z-20" />}
       </div>
