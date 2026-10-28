@@ -219,6 +219,7 @@ export default function ConcertOverlay() {
               </div>
               <ul className="text-xs mt-3 space-y-1 text-muted-fg">
                 <li>Netted <b className="text-fg">{fmtMoney(gig.net)}</b>{!!result?.points && <> · <b style={{ color: "var(--gold)" }}>+{result.points} ⭐ points</b></>}</li>
+                {result?.points === 0 && <li>⭐ You've earned today's show points. Quests and your daily reward still earn more.</li>}
                 {gig.playedRequest && <li>🙋 You played the fan request. The crowd loved it.</li>}
                 {gig.encore === "debut" && (gig.encoreLanded
                   ? <li>✨ "{gig.debutTitle}" landed. It's in your Locker and setlist now.</li>

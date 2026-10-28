@@ -9,6 +9,7 @@ import { gameStorage, isNative } from "./native";
 import { PREMIUM_SKUS, useMembership, type Sku } from "../game/settings";
 import { useGame } from "../game/store";
 import { supabase, useCloud } from "./cloud";
+import { refreshPerks } from "./ai";
 
 const IS_ANDROID = Capacitor.getPlatform() === "android";
 /** A key baked into the build wins; otherwise the one saved in Admin → Integrations is used. */
@@ -34,10 +35,9 @@ let KEY: string | null = ENV_KEY ?? null;
 
 /** Store product IDs: co.please.tourstar.<sku> (create these exactly in App Store Connect / Play Console). */
 export const productId = (sku: Sku) => `co.please.tourstar.${sku}`;
-/** RevenueCat entitlement IDs for the permanent unlocks. */
-const ENTITLEMENT: Partial<Record<Sku, "remove_timers" | "premium_pass" | "vip_badge">> = {
-  remove_timers: "remove_timers", premium_pass: "premium_pass", vip_badge: "vip_badge",
-};
+/** RevenueCat entitlement "vip" is attached to both VIP subscriptions. */
+const ENTITLEMENT: Partial<Record<Sku, "vip">> = { vip_monthly: "vip", vip_yearly: "vip" };
+const AI_PACK: Partial<Record<Sku, number>> = { ai_songs_5: 5, ai_songs_15: 15 };
 const CASH: Partial<Record<Sku, number>> = { cash_small: 100_000, cash_large: 1_000_000 };
 
 export type StoreStatus = "unavailable" | "loading" | "ready" | "error";
@@ -50,12 +50,8 @@ export const usePurchases = create<{ status: StoreStatus; products: Partial<Reco
 export const purchasesAvailable = () => isNative && usePurchases.getState().status !== "unavailable";
 
 function applyEntitlements(info: CustomerInfo) {
-  const active = info.entitlements.active;
-  useMembership.setState({
-    removeTimers: !!active.remove_timers,
-    premiumPass: !!active.premium_pass,
-    vipBadge: !!active.vip_badge,
-  });
+  const vip = !!info.entitlements.active.vip;
+  useMembership.setState({ removeTimers: vip, premiumPass: vip, vipBadge: vip });
 }
 
 let started = false;
@@ -67,13 +63,15 @@ export async function startPurchases() {
   try {
     await Purchases.configure({ apiKey: KEY!, appUserID: useCloud.getState().session?.user.id ?? undefined });
     await Purchases.addCustomerInfoUpdateListener(applyEntitlements);
-    const [{ customerInfo }, { products }] = await Promise.all([
+    const ids = (kind: "sub" | "consumable") => PREMIUM_SKUS.filter((p) => p.kind === kind).map((p) => productId(p.sku));
+    const [{ customerInfo }, subs, packs] = await Promise.all([
       Purchases.getCustomerInfo(),
-      Purchases.getProducts({ productIdentifiers: PREMIUM_SKUS.map((p) => productId(p.sku)), type: PRODUCT_CATEGORY.NON_SUBSCRIPTION }),
+      Purchases.getProducts({ productIdentifiers: ids("sub"), type: PRODUCT_CATEGORY.SUBSCRIPTION }),
+      Purchases.getProducts({ productIdentifiers: ids("consumable"), type: PRODUCT_CATEGORY.NON_SUBSCRIPTION }),
     ]);
     applyEntitlements(customerInfo);
     const map: Partial<Record<Sku, PurchasesStoreProduct>> = {};
-    for (const p of products) {
+    for (const p of [...subs.products, ...packs.products]) {
       const sku = PREMIUM_SKUS.find((s) => productId(s.sku) === p.identifier)?.sku;
       if (sku) map[sku] = p;
     }
@@ -104,7 +102,11 @@ export async function buy(sku: Sku): Promise<{ ok: boolean; message: string; can
       const cash = CASH[sku];
       if (cash) useGame.getState().grantCash(cash, `Bought ${def.name}.`);
     }
-    return { ok: true, message: `${def.emoji} ${def.name} unlocked. Thank you!` };
+    // AI credits and VIP status are added on the server (RevenueCat webhook); refresh them shortly.
+    if (AI_PACK[sku] || ENTITLEMENT[sku]) for (const ms of [3000, 10000]) window.setTimeout(() => void refreshPerks(), ms);
+    if (AI_PACK[sku]) return { ok: true, message: `${def.emoji} ${AI_PACK[sku]} AI songs added to your studio. Thank you!` };
+    if (ENTITLEMENT[sku]) return { ok: true, message: "👑 Welcome to TourStar VIP. Your perks are on." };
+    return { ok: true, message: `${def.emoji} ${def.name} added. Thank you!` };
   } catch (e) {
     const err = e as { userCancelled?: boolean; message?: string };
     if (err.userCancelled) return { ok: false, cancelled: true, message: "Purchase cancelled." };
@@ -125,3 +127,4 @@ export async function restore(): Promise<{ ok: boolean; message: string }> {
 }
 
 export const isEntitlementSku = (sku: Sku) => !!ENTITLEMENT[sku];
+export const aiPackSize = (sku: Sku) => AI_PACK[sku] ?? 0;

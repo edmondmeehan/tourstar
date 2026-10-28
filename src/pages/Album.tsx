@@ -21,7 +21,8 @@ export default function Album() {
   const [useAi, setUseAi] = useState(true);
   const aiOn = useAiFlags((s) => s.music);
   const signedIn = useCloud((s) => !!s.session);
-  const aiLimit = useAiFlags((s) => s.dailyLimit);
+  const aiLimit = useAiFlags((s) => s.dailyLimit + (s.vip ? s.vipBonus : 0));
+  const aiCredits = useAiFlags((s) => s.credits);
   const def = RELEASES.find((r) => r.kind === pick);
   const svc = MUSIC_SERVICES[0];
 
@@ -86,7 +87,7 @@ export default function Album() {
             {withSong && aiOn && (
               <label className="flex items-start gap-3 mb-3 text-sm">
                 <input type="checkbox" checked={useAi && signedIn} disabled={!signedIn} onChange={(e) => setUseAi(e.target.checked)} className="mt-1 accent-[var(--gold)]" />
-                <span>🎧 Record a real AI song <span className="block text-xs text-muted-fg">{signedIn ? `A real ~30s track in your genre, made by the AI studio. Up to ${aiLimit} a day.` : "Sign in to record real AI songs."}</span></span>
+                <span>🎧 Record a real AI song <span className="block text-xs text-muted-fg">{signedIn ? `A real ~30s track in your genre, made by the AI studio. ${aiLimit} free a day${aiCredits ? `, plus ${aiCredits} extra from your studio packs` : ""}.` : "Sign in to record real AI songs."}</span></span>
               </label>
             )}
             {withSong && svc.cost > 0 && (

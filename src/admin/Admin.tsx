@@ -14,14 +14,16 @@ import { RafflesTab, RewardsTab } from "./RewardsAdmin";
 import { BetaSignupsTab } from "./WaitlistAdmin";
 import { IntegrationsTab } from "./IntegrationsAdmin";
 import { AiTab } from "./AiAdmin";
+import { EconomyTab } from "./EconomyAdmin";
 import { refreshSite, useSite } from "../lib/site";
 
-type Tab = "insights" | "beta" | "players" | "finance" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "integrations" | "admins";
+type Tab = "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "raffles" | "orders" | "traffic" | "music" | "integrations" | "admins";
 const TABS: { id: Tab; label: string }[] = [
   { id: "insights", label: "Insights" },
   { id: "beta", label: "Beta signups" },
   { id: "players", label: "Players" },
   { id: "finance", label: "Finance" },
+  { id: "economy", label: "Economy" },
   { id: "marketing", label: "Marketing" },
   { id: "balance", label: "Balance" },
   { id: "events", label: "Events & gifts" },
@@ -81,6 +83,7 @@ export default function Admin() {
           {tab === "beta" && <BetaSignupsTab />}
           {tab === "players" && <Players />}
           {tab === "finance" && <Finance />}
+          {tab === "economy" && <EconomyTab />}
           {tab === "marketing" && <Marketing />}
           {tab === "balance" && <Balance />}
           {tab === "events" && <Broadcasts />}

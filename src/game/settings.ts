@@ -19,13 +19,27 @@ export const useSettings = create<SettingsState>()(
   ),
 );
 
+/**
+ * What's for sale. Money never buys reward points or raffle chances: purchases speed things up,
+ * add AI songs and cosmetics, and nothing else. (Points are capped per day for everyone.)
+ * kind: "sub" = auto-renewing subscription, "consumable" = can be bought again.
+ */
 export const PREMIUM_SKUS = [
-  { sku: "remove_timers", name: "Remove Timers", price: 4.99, emoji: "⏱️", blurb: "Energy refills 2× faster and lockouts are cut in half." },
-  { sku: "premium_pass", name: "Premium Pass", price: 9.99, emoji: "🎫", blurb: "+50% daily rewards and a gold name on the charts." },
-  { sku: "vip_badge", name: "VIP Badge", price: 1.99, emoji: "💎", blurb: "Flex a VIP badge next to your name." },
-  { sku: "cash_small", name: "Cash Pack — $100K", price: 2.99, emoji: "💵", blurb: "$100,000 in game cash." },
-  { sku: "cash_large", name: "Cash Pack — $1M", price: 9.99, emoji: "💰", blurb: "$1,000,000 in game cash." },
+  { sku: "vip_monthly", kind: "sub", name: "TourStar VIP · Monthly", price: 4.99, period: "month", emoji: "👑", blurb: "All VIP perks, billed monthly." },
+  { sku: "vip_yearly", kind: "sub", name: "TourStar VIP · Yearly", price: 39.99, period: "year", emoji: "👑", blurb: "All VIP perks. Save 33%." },
+  { sku: "ai_songs_5", kind: "consumable", name: "Studio Session · 5 AI songs", price: 2.99, emoji: "🎧", blurb: "5 extra real AI recordings, on top of your free daily songs." },
+  { sku: "ai_songs_15", kind: "consumable", name: "Studio Week · 15 AI songs", price: 6.99, emoji: "🎚️", blurb: "15 extra real AI recordings. Best value." },
+  { sku: "cash_small", kind: "consumable", name: "Cash Pack — $100K", price: 2.99, emoji: "💵", blurb: "$100,000 in game cash." },
+  { sku: "cash_large", kind: "consumable", name: "Cash Pack — $1M", price: 9.99, emoji: "💰", blurb: "$1,000,000 in game cash." },
 ] as const;
+
+/** VIP perks, shown on the Premium screen. Keep in sync with the game rules. */
+export const VIP_PERKS = [
+  "⚡ Energy refills 2× faster, lockouts cut in half",
+  "🎧 +3 free AI songs every day",
+  "💵 +50% daily cash reward",
+  "💎 VIP badge and a gold name on the charts",
+];
 
 export type Sku = (typeof PREMIUM_SKUS)[number]["sku"];
 
@@ -46,18 +60,18 @@ export const useMembership = create<MembershipState>()(
         const p: Purchase = { id: Math.random().toString(36).slice(2), sku, name: def.name, price: def.price, at: Date.now(), simulated: true };
         set((s) => ({
           purchases: [p, ...s.purchases],
-          removeTimers: s.removeTimers || sku === "remove_timers",
-          premiumPass: s.premiumPass || sku === "premium_pass",
-          vipBadge: s.vipBadge || sku === "vip_badge",
+          removeTimers: s.removeTimers || def.kind === "sub",
+          premiumPass: s.premiumPass || def.kind === "sub",
+          vipBadge: s.vipBadge || def.kind === "sub",
         }));
         return p;
       },
       restore: () => {
         const ps = get().purchases;
         set({
-          removeTimers: ps.some((p) => p.sku === "remove_timers"),
-          premiumPass: ps.some((p) => p.sku === "premium_pass"),
-          vipBadge: ps.some((p) => p.sku === "vip_badge"),
+          removeTimers: ps.some((p) => p.sku.startsWith("vip_")),
+          premiumPass: ps.some((p) => p.sku.startsWith("vip_")),
+          vipBadge: ps.some((p) => p.sku.startsWith("vip_")),
         });
         return ps.length;
       },

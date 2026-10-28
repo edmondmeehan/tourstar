@@ -12,11 +12,11 @@ const CATEGORIES = ["VIP", "Merch", "Records", "Tickets", "Experiences", "Digita
 // ================================================================= rewards
 
 type ItemForm = Omit<RewardItem, "id" | "options" | "stock" | "per_user_limit" | "image_url"> & {
-  id?: string; options: string; stock: string; per_user_limit: string; image_url: string;
+  id?: string; options: string; stock: string; per_user_limit: string; image_url: string; cost_usd: string;
 };
 const blankItem: ItemForm = {
   name: "", description: "", emoji: "🎁", image_url: "", category: "Merch", cost_points: 500, min_level: 1,
-  stock: "", per_user_limit: "1", needs_shipping: true, options: "", active: false, sort: 0,
+  stock: "", per_user_limit: "1", needs_shipping: true, options: "", active: false, sort: 0, cost_usd: "",
 };
 
 interface RedemptionRow {
@@ -28,6 +28,7 @@ const R_LABEL: Record<string, string> = { pending: "Pending", approved: "Approve
 
 export function RewardsTab() {
   const [items, setItems] = useState<RewardItem[] | null>(null);
+  const [costs, setCosts] = useState<Record<string, number>>({});
   const [form, setForm] = useState<ItemForm | null>(null);
   const [rows, setRows] = useState<RedemptionRow[] | null>(null);
   const [filter, setFilter] = useState<string>("pending");
@@ -37,6 +38,8 @@ export function RewardsTab() {
     const { data, error } = await supabase!.from("reward_items").select("*").order("sort").order("cost_points");
     if (error) return fail(error);
     setItems(data as RewardItem[]);
+    const c = await supabase!.from("reward_costs").select("item_id, cost_usd");
+    if (!c.error) setCosts(Object.fromEntries((c.data ?? []).map((r) => [r.item_id, Number(r.cost_usd)])));
   }, []);
   const loadRows = useCallback(async () => {
     const { data, error } = await supabase!.rpc("admin_redemptions", { p_status: filter || null });
@@ -49,6 +52,7 @@ export function RewardsTab() {
   const edit = (i: RewardItem) => setForm({
     ...i, options: i.options.join(", "), stock: i.stock === null ? "" : String(i.stock),
     per_user_limit: i.per_user_limit === null ? "" : String(i.per_user_limit), image_url: i.image_url ?? "",
+    cost_usd: costs[i.id] === undefined ? "" : String(costs[i.id]),
   });
 
   const save = async () => {
@@ -63,7 +67,17 @@ export function RewardsTab() {
       options: form.options.split(",").map((o) => o.trim()).filter(Boolean), active: form.active, sort: form.sort,
     };
     setBusy(true);
-    const { error } = form.id ? await supabase!.from("reward_items").update(row).eq("id", form.id) : await supabase!.from("reward_items").insert(row);
+    const res = form.id ? await supabase!.from("reward_items").update(row).eq("id", form.id).select("id") : await supabase!.from("reward_items").insert(row).select("id");
+    const error = res.error;
+    const itemId = res.data?.[0]?.id as string | undefined;
+    if (!error && itemId) {
+      // Your cost (admin-only; players never see it) powers the Economy tab.
+      const usd = form.cost_usd.trim() === "" ? null : Math.max(0, Number(form.cost_usd));
+      const c = usd === null || !Number.isFinite(usd)
+        ? await supabase!.from("reward_costs").delete().eq("item_id", itemId)
+        : await supabase!.from("reward_costs").upsert({ item_id: itemId, cost_usd: usd, updated_at: new Date().toISOString() });
+      if (c.error) fail(c.error);
+    }
     setBusy(false);
     if (error) return fail(error);
     toast({ ok: true, message: form.active ? "Saved. It's live in the store." : "Saved as hidden. Turn on \"Live\" when it's ready." });
@@ -114,11 +128,12 @@ export function RewardsTab() {
         {!items ? <p className="text-sm text-muted-fg">Loading…</p> : items.length === 0 ? <p className="text-sm text-muted-fg text-center py-6">No rewards yet. Add your first one.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[680px] [&_th]:px-3 [&_td]:px-3">
-              <thead className="text-[11px] uppercase tracking-wider text-muted-fg text-left"><tr className="border-b border-line"><th className="py-2">Reward</th><th className="text-right">Points</th><th>Level</th><th className="text-right">Stock</th><th>Status</th><th /></tr></thead>
+              <thead className="text-[11px] uppercase tracking-wider text-muted-fg text-left"><tr className="border-b border-line"><th className="py-2">Reward</th><th className="text-right">Points</th><th className="text-right">Your cost</th><th>Level</th><th className="text-right">Stock</th><th>Status</th><th /></tr></thead>
               <tbody>{items.map((i) => (
                 <tr key={i.id} className="border-b border-line/50">
                   <td className="py-2"><span className="mr-2">{i.emoji}</span>{i.name}<span className="text-muted-fg text-xs"> · {i.category}{i.options.length ? ` · ${i.options.join("/")}` : ""}</span></td>
                   <td className="text-right tabular-nums">{i.cost_points.toLocaleString()}</td>
+                  <td className="text-right tabular-nums">{costs[i.id] === undefined ? <span className="text-gold text-xs">add cost</span> : `$${costs[i.id].toFixed(2)}`}</td>
                   <td className="text-muted-fg">LV{i.min_level}</td>
                   <td className="text-right tabular-nums">{i.stock === null ? "∞" : i.stock}</td>
                   <td><span className={`text-[10px] px-2 py-0.5 rounded border ${i.active ? "text-success border-success" : "text-muted-fg border-line"}`}>{i.active ? "LIVE" : "HIDDEN"}</span></td>
@@ -152,6 +167,8 @@ export function RewardsTab() {
                 <label className="block text-xs text-muted-fg">Unlocks at<select className={`${input} mt-1`} value={form.min_level} onChange={(e) => setForm({ ...form, min_level: Number(e.target.value) })}>{levelOpts}</select></label>
                 <label className="block text-xs text-muted-fg">Category<select className={`${input} mt-1`} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></label>
                 <label className="block text-xs text-muted-fg">Sort order<input type="number" className={`${input} mt-1`} value={form.sort} onChange={(e) => setForm({ ...form, sort: Number(e.target.value) })} /></label>
+                <label className="block text-xs text-muted-fg col-span-2">Your cost per redemption, incl. shipping ($, only admins see this)<input type="number" min={0} step="0.01" className={`${input} mt-1`} value={form.cost_usd} onChange={(e) => setForm({ ...form, cost_usd: e.target.value })} placeholder="e.g. 18.50" />
+                  {form.cost_usd && form.cost_points > 0 && <span className="block mt-1">= ${(Number(form.cost_usd) / form.cost_points * 1000).toFixed(2)} per 1,000 points</span>}</label>
                 <label className="block text-xs text-muted-fg">Stock (blank = unlimited)<input type="number" min={0} className={`${input} mt-1`} value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></label>
                 <label className="block text-xs text-muted-fg">Max per player (blank = no limit)<input type="number" min={1} className={`${input} mt-1`} value={form.per_user_limit} onChange={(e) => setForm({ ...form, per_user_limit: e.target.value })} /></label>
               </div>

@@ -4,7 +4,7 @@ import { useState } from "react";
 const fmt = (n: number) => (n >= 10000 ? `${(n / 1000).toFixed(1)}K` : n.toLocaleString());
 
 /** Vertical bars over days. Hover a bar to see the exact value. */
-export function DayBars({ data, color = "var(--electric)", height = 140, label }: { data: { day: string; value: number }[]; color?: string; height?: number; label: string }) {
+export function DayBars({ data, color = "var(--electric)", height = 140, label, showTotal = true }: { data: { day: string; value: number }[]; color?: string; height?: number; label: string; showTotal?: boolean }) {
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => d.value));
   const ticks = max >= 2 ? [0, Math.ceil(max / 2), max] : [0, max];
@@ -35,7 +35,7 @@ export function DayBars({ data, color = "var(--electric)", height = 140, label }
       </div>
       <div className="flex justify-between text-[10px] text-muted-fg mt-1 pl-10">
         <span>{data[0] && new Date(data[0].day + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" })}</span>
-        <span>Total {total.toLocaleString()}</span>
+        <span>{showTotal ? `Total ${total.toLocaleString()}` : ""}</span>
         <span>{data.length > 0 && new Date(data[data.length - 1].day + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" })}</span>
       </div>
     </figure>

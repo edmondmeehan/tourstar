@@ -64,14 +64,30 @@ Deno.serve(async (req) => {
   const user = who?.user;
   if (!user) return json({ error: "Sign in to record AI songs." }, 401);
 
-  const { data: cfg } = await svc.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_music_daily_limit"]);
+  const { data: cfg } = await svc.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_music_daily_limit", "ai_music_vip_bonus"]);
   const conf = Object.fromEntries((cfg ?? []).map((r) => [r.key, r.value]));
   if (conf.ai_music_enabled !== "true") return json({ error: "AI songs are switched off right now." }, 403);
-  const limit = Math.max(0, Number(conf.ai_music_daily_limit ?? 3) || 0);
+  // Daily free songs (+ more for VIP members). Past that, a purchased Studio credit is used.
+  const { data: perks } = await svc.from("player_perks").select("vip_until, ai_credits").eq("user_id", user.id).maybeSingle();
+  const vip = !!perks?.vip_until && Date.parse(perks.vip_until) > Date.now();
+  const limit = Math.max(0, Number(conf.ai_music_daily_limit ?? 3) || 0) + (vip ? Math.max(0, Number(conf.ai_music_vip_bonus ?? 3) || 0) : 0);
   const since = new Date(Date.now() - 864e5).toISOString();
   const { count } = await svc.from("ai_generations").select("id", { count: "exact", head: true })
     .eq("user_id", user.id).eq("kind", "song").eq("status", "ok").gte("created_at", since);
-  if ((count ?? 0) >= limit) return json({ error: `You've recorded ${limit} AI songs today. Your studio time resets tomorrow.` }, 429);
+  let usedCredit = false;
+  if ((count ?? 0) >= limit) {
+    if ((perks?.ai_credits ?? 0) > 0) {
+      const { data: took } = await svc.from("player_perks").update({ ai_credits: perks!.ai_credits - 1, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id).eq("ai_credits", perks!.ai_credits).select("ai_credits");
+      usedCredit = !!took?.length;
+    }
+    if (!usedCredit) return json({ error: `You've used today's ${limit} free AI songs. Get a Studio Session in Premium, or come back tomorrow.`, outOfSongs: true }, 429);
+  }
+  const refund = async () => {
+    if (!usedCredit) return;
+    const { data: cur } = await svc.from("player_perks").select("ai_credits").eq("user_id", user.id).maybeSingle();
+    await svc.from("player_perks").update({ ai_credits: (cur?.ai_credits ?? 0) + 1 }).eq("user_id", user.id);
+  };
 
   const body = await req.json().catch(() => ({}));
   const genre = STYLES[body.genre] ? body.genre : "pop";
@@ -81,7 +97,7 @@ Deno.serve(async (req) => {
   const songId = String(body.songId ?? "").replace(/[^a-z0-9]/gi, "").slice(0, 40) || crypto.randomUUID();
 
   const { data: key } = await svc.rpc("get_secret", { p_name: "elevenlabs_api_key" });
-  if (!key) return json({ error: "AI songs aren't connected yet." }, 503);
+  if (!key) { await refund(); return json({ error: "AI songs aren't connected yet." }, 503); }
 
   try {
     const bytes = await eleven("/v1/music?output_format=mp3_44100_128", key as string, {
@@ -94,10 +110,11 @@ Deno.serve(async (req) => {
     if (up.error) throw up.error;
     await svc.from("ai_generations").insert({ user_id: user.id, kind: "song", path, detail: `${genre} · ${kind} · ${title}` });
     const { data: pub } = svc.storage.from("ai-audio").getPublicUrl(path);
-    return json({ url: pub.publicUrl, title });
+    return json({ url: pub.publicUrl, title, usedCredit });
   } catch (e) {
     const err = e as { statusCode?: number; body?: unknown; message?: string };
     const detail = JSON.stringify(err.body ?? err.message ?? "").slice(0, 300);
+    await refund();
     await svc.from("ai_generations").insert({ user_id: user.id, kind: "song", status: "failed", detail });
     const friendly = err.statusCode === 401 ? "The AI music key isn't valid." : err.statusCode === 429 ? "The studio is busy. Try again in a minute." : "The AI studio couldn't record this one.";
     return json({ error: friendly }, 502);

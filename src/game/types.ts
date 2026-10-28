@@ -109,6 +109,8 @@ export interface Career {
   lastSetlist?: string[];
   /** Lifetime reward points earned by playing. Spending is tracked on the server. */
   pointsEarned?: number;
+  /** Shows/releases that earned points today (daily cap). */
+  pointActs?: { day: string; n: number };
   /** When royalties were last collected (set by the first release). */
   royaltiesAt?: number;
   quests?: import("./quests").QuestDay;

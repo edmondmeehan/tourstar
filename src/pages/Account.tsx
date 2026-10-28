@@ -103,10 +103,7 @@ export default function Account() {
       <Card className="mb-4">
         <div className="font-pixel text-[8px] text-muted-fg mb-2">MEMBERSHIP</div>
         <div className="flex flex-wrap gap-2 mb-3">
-          {m.removeTimers && <Tag color="var(--gold)">REMOVE TIMERS</Tag>}
-          {m.premiumPass && <Tag color="var(--gold)">PREMIUM PASS</Tag>}
-          {m.vipBadge && <Tag color="var(--gold)">VIP</Tag>}
-          {!m.removeTimers && !m.premiumPass && !m.vipBadge && <span className="text-sm text-muted-fg">Free player</span>}
+          {m.premiumPass ? <Tag color="var(--gold)">👑 VIP</Tag> : <span className="text-sm text-muted-fg">Free player</span>}
         </div>
         <div className="font-pixel text-[8px] text-muted-fg mb-2">PURCHASE HISTORY</div>
         {m.purchases.length ? (

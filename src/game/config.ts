@@ -12,6 +12,7 @@ export interface GameConfig {
   renameCost: number;
   startingCashBonus: number;
   pointsMultiplier: number;
+  pointActsPerDay: number;
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -24,6 +25,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   renameCost: 50000,
   startingCashBonus: 0,
   pointsMultiplier: 1,
+  pointActsPerDay: 12,
 };
 
 /** Admin UI metadata: label, help text and safe bounds for each setting. */
@@ -36,6 +38,7 @@ export const CONFIG_FIELDS: { key: keyof GameConfig; label: string; help: string
   { key: "dailyRewardMultiplier", label: "Daily rewards", help: "Multiplies the daily login cash reward.", min: 0.25, max: 10, step: 0.25, unit: "×" },
   { key: "renameCost", label: "Rename cost", help: "Game cash to rename after the first free rename.", min: 0, max: 1000000, step: 1000, unit: "$" },
   { key: "pointsMultiplier", label: "Reward points", help: "Multiplies the points players earn for rewards and raffles (gigs, releases, daily claims, level-ups).", min: 0, max: 5, step: 0.05, unit: "×" },
+  { key: "pointActsPerDay", label: "Point-earning shows & releases per day", help: "Only this many shows and releases a day earn reward points, so faster energy (VIP) can't buy more points. Free players reach it easily. Quests, daily claims and level-ups still earn points.", min: 1, max: 100, step: 1 },
   { key: "startingCashBonus", label: "Starting cash bonus", help: "Extra game cash for brand-new careers.", min: 0, max: 100000, step: 100, unit: "$" },
 ];
 

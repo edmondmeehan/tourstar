@@ -1,21 +1,31 @@
-import { PREMIUM_SKUS, useMembership, type Sku } from "../game/settings";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { PREMIUM_SKUS, VIP_PERKS, useMembership, type Sku } from "../game/settings";
 import { useGame } from "../game/store";
 import { Card, PageTitle, Tag, toast } from "../components/ui";
-import { buy, isEntitlementSku, purchasesAvailable, restore, usePurchases } from "../lib/purchases";
+import { aiPackSize, buy, purchasesAvailable, restore, usePurchases } from "../lib/purchases";
+import { useAiFlags } from "../lib/ai";
+import { useCloud } from "../lib/cloud";
 import { sfx } from "../lib/fx";
-import { useState } from "react";
+
+const def = (sku: Sku) => PREMIUM_SKUS.find((p) => p.sku === sku)!;
 
 export default function Premium() {
   const m = useMembership();
   const grantCash = useGame((s) => s.grantCash);
   const { status, products } = usePurchases();
+  const credits = useAiFlags((s) => s.credits);
+  const aiOn = useAiFlags((s) => s.music);
+  const signedIn = useCloud((s) => !!s.session);
   const [busy, setBusy] = useState<Sku | null>(null);
   const real = purchasesAvailable();
   const dev = import.meta.env.DEV;
+  const vip = m.premiumPass;
 
-  const owned = (sku: Sku) => (sku === "remove_timers" && m.removeTimers) || (sku === "premium_pass" && m.premiumPass) || (sku === "vip_badge" && m.vipBadge);
+  const price = (sku: Sku) => (real ? products[sku]?.priceString : dev ? `$${def(sku).price}` : null);
 
   const purchase = async (sku: Sku) => {
+    if (aiPackSize(sku) && !signedIn) return toast({ ok: false, message: "Sign in first (Account tab) so your AI songs are saved to your account." });
     if (!real) {
       // Development builds only: test the perks without a store.
       m.buy(sku);
@@ -32,38 +42,84 @@ export default function Premium() {
     if (r.ok) sfx("levelup");
   };
 
+  const BuyButton = ({ sku, className = "btn-gold" }: { sku: Sku; className?: string }) => {
+    const p = price(sku);
+    if (!p) return real && status === "loading" ? <span className="text-xs text-muted-fg">Loading…</span> : null;
+    return <button className={`btn ${className} !px-3 whitespace-nowrap`} disabled={busy !== null} onClick={() => void purchase(sku)}>{busy === sku ? "…" : p}</button>;
+  };
+
+  const Row = ({ sku }: { sku: Sku }) => (
+    <Card className="flex items-center gap-3">
+      <div className="text-3xl">{def(sku).emoji}</div>
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-sm">{def(sku).name}</div>
+        <div className="text-xs text-muted-fg">{def(sku).blurb}</div>
+      </div>
+      <BuyButton sku={sku} />
+    </Card>
+  );
+
   return (
     <div>
-      <PageTitle title="PREMIUM" sub="Extras that support the game. Reward points can't be bought." />
+      <PageTitle title="PREMIUM" sub="Extras that support the game. Reward points and raffle entries can't be bought." />
       {!real && !dev && (
         <Card className="mb-4" glow="gold"><p className="text-sm">Premium extras are available in the TourStar app for iPhone and Android.</p></Card>
       )}
       {real && status === "error" && (
         <Card className="mb-4"><p className="text-sm">The store isn't reachable right now. Check your connection and try again.</p></Card>
       )}
-      <div className="space-y-3">
-        {PREMIUM_SKUS.map((p) => {
-          const has = isEntitlementSku(p.sku) && owned(p.sku);
-          const product = products[p.sku];
-          const price = real ? product?.priceString : dev ? `$${p.price}` : null;
-          return (
-            <Card key={p.sku} glow={has ? "gold" : undefined} className="flex items-center gap-3">
-              <div className="text-3xl">{p.emoji}</div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm">{p.name}</div>
-                <div className="text-xs text-muted-fg">{p.blurb}</div>
-              </div>
-              {has ? <Tag color="var(--gold)">OWNED</Tag> : price ? (
-                <button className="btn btn-gold !px-3" disabled={busy !== null} onClick={() => void purchase(p.sku)}>{busy === p.sku ? "…" : price}</button>
-              ) : real && status === "loading" ? <span className="text-xs text-muted-fg">Loading…</span> : null}
-            </Card>
-          );
-        })}
-      </div>
+
+      {/* ---------------- VIP subscription */}
+      <Card glow="gold" className="mb-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-pixel text-sm" style={{ color: "var(--gold)" }}>👑 TOURSTAR VIP</div>
+          {vip && <Tag color="var(--gold)">ACTIVE</Tag>}
+        </div>
+        <ul className="text-sm mt-3 space-y-1.5">
+          {VIP_PERKS.map((p) => <li key={p}>{p}</li>)}
+        </ul>
+        {vip ? (
+          <p className="text-xs text-muted-fg mt-4">Thanks for being a VIP. Manage or cancel any time in your {navigator.userAgent.includes("Android") ? "Google Play" : "App Store"} subscriptions.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            {(["vip_monthly", "vip_yearly"] as const).map((sku) => {
+              const p = price(sku);
+              return (
+                <button key={sku} className={`btn ${sku === "vip_yearly" ? "btn-gold" : "btn-pink"} flex flex-col items-center !py-2`} disabled={!p || busy !== null} onClick={() => void purchase(sku)}>
+                  <span className="text-sm font-bold">{busy === sku ? "…" : p ?? "—"}</span>
+                  <span className="text-[10px] opacity-80">{sku === "vip_yearly" ? "per year · save 33%" : "per month"}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* ---------------- AI studio */}
+      {aiOn && (
+        <>
+          <div className="flex items-baseline justify-between mb-2">
+            <h2 className="font-pixel text-[10px]" style={{ color: "var(--neon-pink)" }}>AI STUDIO</h2>
+            {signedIn && <span className="text-xs text-muted-fg">{credits} extra song{credits === 1 ? "" : "s"} left</span>}
+          </div>
+          <p className="text-xs text-muted-fg mb-3">Every release can come with a real AI recording. You get free songs every day; these packs add more. {!signedIn && <Link to="/login" className="underline">Sign in</Link>}</p>
+          <div className="space-y-3 mb-5"><Row sku="ai_songs_5" /><Row sku="ai_songs_15" /></div>
+        </>
+      )}
+
+      {/* ---------------- cash */}
+      <h2 className="font-pixel text-[10px] mb-2" style={{ color: "var(--electric)" }}>GAME CASH</h2>
+      <div className="space-y-3"><Row sku="cash_small" /><Row sku="cash_large" /></div>
+
       {real && (
         <button className="text-xs underline text-muted-fg mt-5 block mx-auto" onClick={async () => toast(await restore())}>Restore purchases</button>
       )}
-      <p className="text-[11px] text-muted-fg text-center mt-4">Payment is charged to your Apple ID or Google account. Purchases unlock in-game extras only. <a className="underline" href="https://tourstarapp.com/terms">Terms</a> · <a className="underline" href="https://tourstarapp.com/privacy">Privacy</a></p>
+      <p className="text-[11px] text-muted-fg text-center mt-4 leading-relaxed">
+        VIP is an auto-renewing subscription: {price("vip_monthly") ?? "$4.99"} a month or {price("vip_yearly") ?? "$39.99"} a year. Payment is charged to your Apple ID or Google account when you confirm.
+        It renews automatically unless you turn off auto-renew at least 24 hours before the end of the current period, and you can manage or cancel it in your account settings.
+        Purchases unlock in-game extras only and never buy reward points or raffle entries.{" "}
+        <a className="underline" href="https://tourstarapp.com/terms">Terms of Use</a> · <a className="underline" href="https://tourstarapp.com/privacy">Privacy</a>
+      </p>
     </div>
   );
 }

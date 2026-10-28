@@ -99,6 +99,15 @@ function newLog(c: Career, type: LogType, text: string) {
 
 /** Reward points: earned only by playing, never bought. */
 export const GRADE_POINTS: Record<Grade, number> = { S: 40, A: 25, B: 15, C: 8, D: 3 };
+/** Points for a show or release, only for the first few each day (same cap for everyone, paid or not). */
+function awardAct(c: Career, base: number) {
+  const day = new Date().toISOString().slice(0, 10);
+  const acts = c.pointActs?.day === day ? c.pointActs.n : 0;
+  if (acts >= cfg().pointActsPerDay) return 0;
+  c.pointActs = { day, n: acts + 1 };
+  return award(c, base);
+}
+
 function award(c: Career, base: number) {
   const n = Math.max(0, Math.round(base * cfg().pointsMultiplier));
   c.pointsEarned = (c.pointsEarned ?? 0) + n;
@@ -329,7 +338,7 @@ export const useGame = create<GameState>()(
           // Report the full cost of the show alongside the payout.
           applied.cash = net;
           applied.energy = -energyUsed;
-          const points = award(c, GRADE_POINTS[grade] + (sellout ? 5 : 0) + (playedRequest ? 3 : 0));
+          const points = awardAct(c, GRADE_POINTS[grade] + (sellout ? 5 : 0) + (playedRequest ? 3 : 0));
           quest(c, "gigs");
           if (grade === "S" || grade === "A") quest(c, "gradeA");
           if (grade === "S") quest(c, "gradeS");
@@ -404,7 +413,7 @@ export const useGame = create<GameState>()(
           c.week += r.weeks;
           c.stats.hype = Math.max(0, c.stats.hype - r.weeks * 2);
           c.totals.earnings += earnings;
-          const points = award(c, 10 + Math.floor(quality / 10));
+          const points = awardAct(c, 10 + Math.floor(quality / 10));
           if (!c.royaltiesAt) c.royaltiesAt = Date.now();
           quest(c, "release");
           if (c.tutorial && c.tutorial.step >= 4 && c.tutorial.step <= 5) c.tutorial = { step: 6 };
