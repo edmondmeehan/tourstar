@@ -25,6 +25,9 @@ export default function Premium() {
   const vip = m.premiumPass;
 
   const price = (sku: Sku) => (real ? products[sku]?.priceString : dev ? `$${def(sku).price}` : null);
+  /** On the website there's no App Store, so show the list price and point to the app. */
+  const webOnly = !real && !dev;
+  const listPrice = (sku: Sku) => `$${def(sku).price}`;
 
   const purchase = async (sku: Sku) => {
     if (needsAccount(sku) && !signedIn) return toast({ ok: false, message: "Sign in first (Account tab) so your purchase is saved to your account." });
@@ -46,6 +49,7 @@ export default function Premium() {
 
   const BuyButton = ({ sku, className = "btn-gold" }: { sku: Sku; className?: string }) => {
     const p = price(sku);
+    if (webOnly) return <span className="text-xs text-muted-fg text-right whitespace-nowrap"><b className="text-fg">{listPrice(sku)}</b><br />in the app</span>;
     if (!p) return real && status === "loading" ? <span className="text-xs text-muted-fg">Loading…</span> : null;
     return <button className={`btn ${className} !px-3 whitespace-nowrap`} disabled={busy !== null} onClick={() => void purchase(sku)}>{busy === sku ? "…" : p}</button>;
   };
@@ -65,7 +69,7 @@ export default function Premium() {
     <div>
       <PageTitle title="PREMIUM" sub="Extras that support the game. Reward points and raffle entries can't be bought." />
       {!real && !dev && (
-        <Card className="mb-4" glow="gold"><p className="text-sm">Premium extras are available in the TourStar app for iPhone and Android.</p></Card>
+        <Card className="mb-4" glow="gold"><p className="text-sm">Purchases are made in the TourStar app for iPhone and Android, through your App Store or Google Play account. Prices below are for reference.</p></Card>
       )}
       {real && status === "error" && (
         <Card className="mb-4"><p className="text-sm">The store isn't reachable right now. Check your connection and try again.</p></Card>
@@ -85,11 +89,11 @@ export default function Premium() {
         ) : (
           <div className="grid grid-cols-2 gap-2 mt-4">
             {(["vip_monthly", "vip_yearly"] as const).map((sku) => {
-              const p = price(sku);
+              const p = price(sku) ?? (webOnly ? listPrice(sku) : null);
               return (
-                <button key={sku} className={`btn ${sku === "vip_yearly" ? "btn-gold" : "btn-pink"} flex flex-col items-center !py-2`} disabled={!p || busy !== null} onClick={() => void purchase(sku)}>
+                <button key={sku} className={`btn ${sku === "vip_yearly" ? "btn-gold" : "btn-pink"} flex flex-col items-center !py-2`} disabled={webOnly || !price(sku) || busy !== null} onClick={() => void purchase(sku)}>
                   <span className="text-sm font-bold">{busy === sku ? "…" : p ?? "—"}</span>
-                  <span className="text-[10px] opacity-80">{sku === "vip_yearly" ? "per year · save 33%" : "per month"}</span>
+                  <span className="text-[10px] opacity-80">{sku === "vip_yearly" ? "per year · save 33%" : "per month"}{webOnly ? " · in the app" : ""}</span>
                 </button>
               );
             })}
