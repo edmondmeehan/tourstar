@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { PREMIUM_SKUS, VIP_PERKS, useMembership, type Sku } from "../game/settings";
 import { useGame } from "../game/store";
 import { Card, PageTitle, Tag, toast } from "../components/ui";
-import { aiPackSize, buy, purchasesAvailable, restore, usePurchases } from "../lib/purchases";
+import { buy, needsAccount, purchasesAvailable, restore, usePurchases } from "../lib/purchases";
 import { useAiFlags } from "../lib/ai";
+import { useGold } from "../lib/gold";
 import { useCloud } from "../lib/cloud";
 import { sfx } from "../lib/fx";
 
@@ -15,6 +16,7 @@ export default function Premium() {
   const grantCash = useGame((s) => s.grantCash);
   const { status, products } = usePurchases();
   const credits = useAiFlags((s) => s.credits);
+  const gold = useGold((s) => s.gold);
   const aiOn = useAiFlags((s) => s.music);
   const signedIn = useCloud((s) => !!s.session);
   const [busy, setBusy] = useState<Sku | null>(null);
@@ -25,7 +27,7 @@ export default function Premium() {
   const price = (sku: Sku) => (real ? products[sku]?.priceString : dev ? `$${def(sku).price}` : null);
 
   const purchase = async (sku: Sku) => {
-    if (aiPackSize(sku) && !signedIn) return toast({ ok: false, message: "Sign in first (Account tab) so your AI songs are saved to your account." });
+    if (needsAccount(sku) && !signedIn) return toast({ ok: false, message: "Sign in first (Account tab) so your purchase is saved to your account." });
     if (!real) {
       // Development builds only: test the perks without a store.
       m.buy(sku);
@@ -94,6 +96,14 @@ export default function Premium() {
           </div>
         )}
       </Card>
+
+      {/* ---------------- Gold Records */}
+      <div className="flex items-baseline justify-between mb-2">
+        <h2 className="font-pixel text-[10px]" style={{ color: "var(--gold)" }}>💿 GOLD RECORDS</h2>
+        {signedIn && <span className="text-xs text-muted-fg">Balance: {gold.toLocaleString()}</span>}
+      </div>
+      <p className="text-xs text-muted-fg mb-3">Spend Gold on limited drops in the Store: stage themes, titles, badges and official artist packs. Gold can't be turned into reward points.</p>
+      <div className="space-y-3 mb-5">{(["gold_100", "gold_550", "gold_1200", "gold_2500"] as const).map((s) => <Row key={s} sku={s} />)}</div>
 
       {/* ---------------- AI studio */}
       {aiOn && (

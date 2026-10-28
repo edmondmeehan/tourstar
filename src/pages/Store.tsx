@@ -5,9 +5,10 @@ import { fmtMoney, levelFor } from "../game/engine";
 import { useGame } from "../game/store";
 import { Card, DeltaChips, Modal, PageTitle, Tag, toast, askConfirm } from "../components/ui";
 import { cloudConfigured, useCloud } from "../lib/cloud";
+import { DropsTab } from "./Drops";
 import { RAFFLE_DISCLAIMER, enterRaffle, loadRewards, redeem, useRewards, type Raffle, type RewardItem } from "../lib/rewards";
 
-type Tab = "rewards" | "raffles" | "shop";
+type Tab = "rewards" | "raffles" | "drops" | "shop";
 const levelName = (n: number) => LEVELS.find((l) => l.level === n)?.name ?? `Level ${n}`;
 const STATUS: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending review", color: "var(--muted-foreground)" },
@@ -38,8 +39,8 @@ export default function Store() {
         {!!points?.pending && <div className="text-[11px] mt-1" style={{ color: "var(--gold)" }}>+{points.pending.toLocaleString()} pending review · <a className="underline" href="https://tourstarapp.com/support">why?</a></div>}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-4" role="tablist">
-        {([["rewards", "🎁 Rewards"], ["raffles", "🎟️ Raffles"], ["shop", "🛒 Shop"]] as const).map(([id, label]) => (
+      <div className="grid grid-cols-4 gap-2 mb-4" role="tablist">
+        {([["rewards", "🎁 Rewards"], ["raffles", "🎟️ Raffles"], ["drops", "💿 Drops"], ["shop", "🛒 Shop"]] as const).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
             className={`font-pixel text-[8px] py-2.5 rounded border ${tab === id ? "border-pink text-pink bg-black/30" : "border-line text-muted-fg"}`}>{label.toUpperCase()}</button>
         ))}
@@ -47,6 +48,7 @@ export default function Store() {
 
       {tab === "rewards" && <Rewards />}
       {tab === "raffles" && <Raffles />}
+      {tab === "drops" && <DropsTab />}
       {tab === "shop" && <Shop />}
     </div>
   );

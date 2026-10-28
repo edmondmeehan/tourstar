@@ -65,6 +65,10 @@ interface GameState {
   /** AI studio: attach a real recording (or its pending/failed state) to a song. */
   setSongAudio: (id: string, patch: Pick<Song, "audioUrl" | "ai">) => void;
   setAnnouncer: (url: string, name: string) => void;
+  /** Equip a stage theme, title or badge (undefined = none). */
+  setStyle: (patch: Partial<NonNullable<Career["style"]>>) => void;
+  /** Add a bought drop's game cash and energy to this career, once per purchase. */
+  claimDrop: (purchaseId: string, items: { type: string; amount?: number }[], name: string) => boolean;
   /** Pay out a started show. performance is 0..1 from the rhythm game. */
   finishShow: (performance: number, encore: EncoreChoice | null) => ActionResult;
   release: (kind: ReleaseKind, title: string, withSong: boolean) => ActionResult;
@@ -530,6 +534,26 @@ export const useGame = create<GameState>()(
           Object.assign(song, patch);
           if (!patch.ai) delete song.ai;
           commit(c);
+        },
+
+        setStyle: (patch) => {
+          const c = draft();
+          if (!c) return;
+          c.style = { ...(c.style ?? {}), ...patch };
+          commit(c);
+        },
+
+        claimDrop: (purchaseId, items, name) => {
+          const c = draft();
+          if (!c || (c.claimedDrops ?? []).includes(purchaseId)) return false;
+          const cash = items.filter((i) => i.type === "cash").reduce((n, i) => n + (Number(i.amount) || 0), 0);
+          const energy = items.filter((i) => i.type === "energy").reduce((n, i) => n + (Number(i.amount) || 0), 0);
+          c.claimedDrops = [...(c.claimedDrops ?? []), purchaseId];
+          if (cash) c.stats.cash += cash;
+          if (energy) c.stats.energy = Math.min(100, c.stats.energy + energy);
+          if (cash || energy) newLog(c, "system", `Unpacked ${name}.`);
+          commit(c);
+          return true;
         },
 
         setAnnouncer: (url, name) => {

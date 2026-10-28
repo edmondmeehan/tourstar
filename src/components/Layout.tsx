@@ -60,9 +60,9 @@ export default function Layout() {
         <div className="flex items-center justify-between gap-2">
           <Link to="/dashboard" className="min-w-0">
             <div className="font-pixel text-[10px] truncate" style={{ color: "var(--gold)" }}>
-              {career.name} {vip && <span title="VIP">💎</span>}
+              {career.name} {career.style?.badge && <span>{career.style.badge}</span>} {vip && <span title="VIP">💎</span>}
             </div>
-            <div className="font-pixel text-[8px] text-muted-fg mt-1 truncate">LV{lvl.level} · {lvl.name.toUpperCase()} · WK {career.week}</div>
+            <div className="font-pixel text-[8px] text-muted-fg mt-1 truncate">{career.style?.title ? <span style={{ color: "var(--neon-pink)" }}>{career.style.title.toUpperCase()} · </span> : null}LV{lvl.level} · {lvl.name.toUpperCase()} · WK {career.week}</div>
           </Link>
           <div className="flex items-center gap-1.5 shrink-0">
             <SyncPill />

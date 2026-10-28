@@ -12,6 +12,8 @@ export interface ConcertParams {
   lighting: boolean;
   sellout: boolean;
   onPyro?: () => void;
+  /** Stage theme colors (Drops cosmetic). Defaults to the classic pink/blue. */
+  theme?: { a: number; b: number; glow: number; sky: [number, number, number] };
 }
 
 const PINK = 0xff42d8;
@@ -103,11 +105,12 @@ export class ConcertScene extends Phaser.Scene {
     const pulse = 1 - beatPos;
     const ramp = Phaser.Math.SmoothStep(Math.min(1, this.progress * 1.6), 0, 1);
     const intensity = (ramp * 0.8 + 0.2) * (0.45 + 0.55 * this.energy);
-    const accent = p.sellout ? PINK : BLUE;
+    const th = p.theme ?? { a: PINK, b: BLUE, glow: GOLD, sky: [0x05040f, 0x140a2e, 0x2a0f45] as [number, number, number] };
+    const accent = p.sellout ? th.a : th.b;
     g.clear();
 
     // Back wall: banded gradient
-    const stops = [0x05040f, 0x140a2e, 0x2a0f45];
+    const stops = th.sky;
     const bands = 18;
     for (let i = 0; i < bands; i++) {
       const k = i / (bands - 1);
@@ -136,7 +139,7 @@ export class ConcertScene extends Phaser.Scene {
     for (let i = 0; i < beams; i++) {
       const bx = W * (0.12 + (0.76 * i) / (beams - 1));
       const sweep = Math.sin(t * (0.8 + i * 0.13) + i) * W * 0.35;
-      const col = i % 2 === 0 ? PINK : BLUE;
+      const col = i % 2 === 0 ? th.a : th.b;
       const a = 0.1 + 0.12 * intensity * (p.lighting ? 1.3 : 1) + pulse * 0.05;
       g.fillStyle(col, a);
       g.fillTriangle(bx, H * 0.07, bx + sweep - 40, H, bx + sweep + 40, H);
@@ -153,7 +156,7 @@ export class ConcertScene extends Phaser.Scene {
 
     // Spotlight halo
     const fx = W * 0.5;
-    g.fillStyle(GOLD, 0.12 + pulse * 0.08);
+    g.fillStyle(th.glow, 0.12 + pulse * 0.08);
     g.fillTriangle(fx, H * 0.07, fx - 46, stageY, fx + 46, stageY);
 
     // Performer

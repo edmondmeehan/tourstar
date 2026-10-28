@@ -2,6 +2,7 @@
 //  • Records revenue for Admin → Economy (revenue per player).
 //  • Keeps TourStar VIP status on the server (more AI songs per day).
 //  • Adds AI Studio credits when a player buys a song pack.
+//  • Adds Gold Records for Gold packs, and VIP's Gold allowance on each VIP payment.
 // Setup: RevenueCat → Project → Integrations → Webhooks → URL = <this function's URL>,
 // Authorization header = the value saved in Admin → Integrations → "revenuecat_webhook_secret".
 // Deployed with verify_jwt = false; it checks that Authorization header itself.
@@ -9,6 +10,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const AI_PACKS: Record<string, number> = { ai_songs_5: 5, ai_songs_15: 15 };
+const GOLD_PACKS: Record<string, number> = { gold_100: 100, gold_550: 550, gold_1200: 1200, gold_2500: 2500 };
 const VIP_PRODUCTS = ["vip_monthly", "vip_yearly"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const sku = (productId: string | undefined) => (productId ?? "").replace(/^co\.please\.tourstar\./, "").replace(/:.*$/, "");
@@ -50,6 +52,19 @@ Deno.serve(async (req) => {
   if (credits && e.type === "NON_RENEWING_PURCHASE") {
     const { data: cur } = await svc.from("player_perks").select("ai_credits").eq("user_id", uid).maybeSingle();
     await svc.from("player_perks").upsert({ user_id: uid, ai_credits: (cur?.ai_credits ?? 0) + credits, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+  }
+
+  // Gold Records packs (the ledger's ref makes this safe against retries).
+  const gold = GOLD_PACKS[product];
+  if (gold && e.type === "NON_RENEWING_PURCHASE") {
+    await svc.rpc("gold_add", { p_user: uid, p_delta: gold, p_reason: `Purchase ${product}`, p_ref: `rc:${e.id}` });
+  }
+  // VIP includes Gold Records: the monthly allowance each month, 12× up front for yearly.
+  if (VIP_PRODUCTS.includes(product) && ["INITIAL_PURCHASE", "RENEWAL"].includes(e.type)) {
+    const { data: cfg } = await svc.from("app_public_config").select("value").eq("key", "vip_monthly_gold").maybeSingle();
+    const monthly = Math.max(0, Number(cfg?.value ?? 150) || 0);
+    const amount = product === "vip_yearly" ? monthly * 12 : monthly;
+    if (amount) await svc.rpc("gold_add", { p_user: uid, p_delta: amount, p_reason: "VIP allowance", p_ref: `rcvip:${e.id}` });
   }
 
   // VIP subscription → keep the expiry date in sync.

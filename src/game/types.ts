@@ -93,6 +93,10 @@ export interface Career {
   /** Stadium announcer clip (AI voice) and the name it says. */
   announcerUrl?: string;
   announcerFor?: string;
+  /** Equipped cosmetics from Drops. */
+  style?: { stage?: string; title?: string; badge?: string };
+  /** Drop purchases whose cash/energy has been added to this career (each only once). */
+  claimedDrops?: string[];
   queue: string[]; // song ids, locker order
   log: LogEntry[];
   lockout: Lockout | null;

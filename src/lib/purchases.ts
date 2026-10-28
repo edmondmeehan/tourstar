@@ -10,6 +10,7 @@ import { PREMIUM_SKUS, useMembership, type Sku } from "../game/settings";
 import { useGame } from "../game/store";
 import { supabase, useCloud } from "./cloud";
 import { refreshPerks } from "./ai";
+import { refreshGold } from "./gold";
 
 const IS_ANDROID = Capacitor.getPlatform() === "android";
 /** A key baked into the build wins; otherwise the one saved in Admin → Integrations is used. */
@@ -38,6 +39,7 @@ export const productId = (sku: Sku) => `co.please.tourstar.${sku}`;
 /** RevenueCat entitlement "vip" is attached to both VIP subscriptions. */
 const ENTITLEMENT: Partial<Record<Sku, "vip">> = { vip_monthly: "vip", vip_yearly: "vip" };
 const AI_PACK: Partial<Record<Sku, number>> = { ai_songs_5: 5, ai_songs_15: 15 };
+const GOLD_PACK: Partial<Record<Sku, number>> = { gold_100: 100, gold_550: 550, gold_1200: 1200, gold_2500: 2500 };
 const CASH: Partial<Record<Sku, number>> = { cash_small: 100_000, cash_large: 1_000_000 };
 
 export type StoreStatus = "unavailable" | "loading" | "ready" | "error";
@@ -104,6 +106,8 @@ export async function buy(sku: Sku): Promise<{ ok: boolean; message: string; can
     }
     // AI credits and VIP status are added on the server (RevenueCat webhook); refresh them shortly.
     if (AI_PACK[sku] || ENTITLEMENT[sku]) for (const ms of [3000, 10000]) window.setTimeout(() => void refreshPerks(), ms);
+    if (GOLD_PACK[sku] || ENTITLEMENT[sku]) for (const ms of [3000, 10000, 30000]) window.setTimeout(() => void refreshGold(), ms);
+    if (GOLD_PACK[sku]) return { ok: true, message: `💿 ${GOLD_PACK[sku]!.toLocaleString()} Gold Records are on the way to your account. Thank you!` };
     if (AI_PACK[sku]) return { ok: true, message: `${def.emoji} ${AI_PACK[sku]} AI songs added to your studio. Thank you!` };
     if (ENTITLEMENT[sku]) return { ok: true, message: "👑 Welcome to TourStar VIP. Your perks are on." };
     return { ok: true, message: `${def.emoji} ${def.name} added. Thank you!` };
@@ -128,3 +132,5 @@ export async function restore(): Promise<{ ok: boolean; message: string }> {
 
 export const isEntitlementSku = (sku: Sku) => !!ENTITLEMENT[sku];
 export const aiPackSize = (sku: Sku) => AI_PACK[sku] ?? 0;
+/** Purchases that are credited to the player's account on the server (need sign-in). */
+export const needsAccount = (sku: Sku) => !!AI_PACK[sku] || !!GOLD_PACK[sku];

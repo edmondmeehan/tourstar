@@ -16,6 +16,7 @@ What's already built is marked ✅. Everything else needs your accounts, in this
 - ✅ AI audio (ElevenLabs): AI songs for releases, Mo's voice, stadium announcer. Admin → AI audio.
 - ✅ Waitlist referrals + emails: invite links move people up the list (rewards at launch: 1 friend +500 ⭐, 3 = Founding Fan badge + 1,500 ⭐, 10 = 5 launch-raffle tickets). Welcome email and announcements via Resend in Admin → Beta signups. **Still to build before launch: grant those referral rewards when someone creates an account with their waitlist email.**
 - ✅ Admin → Economy: points outstanding, their dollar value, what you owe, prize cost vs. revenue per active player, alerts. Enter your cost on each reward (Rewards store → Edit) for the dollar figures.
+- ✅ Gold Records 💿 + Drops: premium currency bought in 4 packs ($0.99–$19.99), VIP gets 150/month. Admin → Drops & Gold creates limited packs (stage themes, titles, badges, cash, energy, bonus Gold) with start/end times, new-player offers and level gates; live in the app with no update. Store → Drops + My style in the game.
 - ✅ Monetization: TourStar VIP subscription ($4.99/mo or $39.99/yr), AI song packs, cash packs. Money never buys points or raffle entries; only the first 12 shows/releases a day earn points, for everyone.
 
 > Have a lawyer review /privacy, /terms and each raffle's official rules before prizes go out. NY and FL require registration and a bond for sweepstakes with more than $5,000 in prizes. List ElevenLabs as a processor in /privacy, confirm TourStar, LLC's mailing address, and ask your accountant how to book outstanding points.
@@ -46,6 +47,10 @@ Supabase → tourstar → Authentication:
 
 | Product ID | Type | Price |
 |---|---|---|
+| `co.please.tourstar.gold_100` | Consumable | $0.99 |
+| `co.please.tourstar.gold_550` | Consumable | $4.99 |
+| `co.please.tourstar.gold_1200` | Consumable | $9.99 |
+| `co.please.tourstar.gold_2500` | Consumable | $19.99 |
 | `co.please.tourstar.ai_songs_5` | Consumable | $2.99 |
 | `co.please.tourstar.ai_songs_15` | Consumable | $6.99 |
 | `co.please.tourstar.cash_small` | Consumable | $2.99 |
@@ -59,9 +64,9 @@ Supabase → tourstar → Authentication:
 ## 4. RevenueCat (15 min)
 1. Sign up at revenuecat.com and create a project called **TourStar**. Add an **App Store** app with bundle ID `co.please.tourstar` and an App Store Connect API key (RevenueCat walks you through it).
 2. **Entitlements**: create one entitlement, `vip`, and attach both VIP subscriptions to it.
-3. Products: import all 6 products. The AI song packs and cash packs need no entitlement.
+3. Products: import all 10 products. Gold, AI song and cash packs need no entitlement.
 4. The public iOS SDK key (`appl_…`) is already saved in Admin → Integrations. If it changes, update it there; no rebuild needed.
-5. **Webhook** (needed for AI song packs, VIP's extra songs and the Economy tab's revenue): make up a long random password and save it in Admin → Integrations → "RevenueCat · webhook password". Then RevenueCat → Integrations → Webhooks: URL `https://vtpgrxavyspadmubfwtb.supabase.co/functions/v1/revenuecat-webhook`, Authorization header = that same password.
+5. **Webhook** (needed for Gold Records, AI song packs, VIP's extra songs and Gold allowance, and the Economy tab's revenue): make up a long random password and save it in Admin → Integrations → "RevenueCat · webhook password". Then RevenueCat → Integrations → Webhooks: URL `https://vtpgrxavyspadmubfwtb.supabase.co/functions/v1/revenuecat-webhook`, Authorization header = that same password.
 
 ## 5. Build and TestFlight (1 hour)
 1. On your Mac: `cd ~/tourstar-v2/tourstar && npm install && npm run ios`.
@@ -102,4 +107,4 @@ Supabase → tourstar → Authentication:
 TourStar is a music career game. Reward points are earned only by playing and cannot be purchased. They can be redeemed for physical merchandise and experiences fulfilled by Please and Thank You, Inc., or used for raffle tickets. Each raffle also offers a free daily entry (no purchase necessary), shows official rules in the app, and states that Apple is not a sponsor (guideline 5.3). Demo account: (create one and put it here).
 
 ## 7. Android (later)
-Google Play Console ($25 one-time) → new app `co.please.tourstar`, the same 6 products (2 subscriptions + 4 consumables), a RevenueCat Play app, `VITE_REVENUECAT_ANDROID_KEY`, then `npm run android` and upload an AAB to internal testing.
+Google Play Console ($25 one-time) → new app `co.please.tourstar`, the same 10 products (2 subscriptions + 8 consumables), a RevenueCat Play app, `VITE_REVENUECAT_ANDROID_KEY`, then `npm run android` and upload an AAB to internal testing.

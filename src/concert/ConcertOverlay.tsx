@@ -9,6 +9,7 @@ import { haptic } from "../lib/haptics";
 import { playClip, useAiFlags, type ClipHandle } from "../lib/ai";
 import { DeltaChips, toast } from "../components/ui";
 import { startConcert } from "./ConcertScene";
+import { stageTheme } from "../game/cosmetics";
 import { useConcert } from "./useConcert";
 import NoteHighway, { type HighwayResult, type Judge } from "./NoteHighway";
 
@@ -71,6 +72,7 @@ export default function ConcertOverlay() {
       lighting: !!career.crew.lighting,
       sellout: show.sellout,
       onPyro: () => sfx("coin", "pyro"),
+      theme: stageTheme(career.style?.stage),
     });
     sceneRef.current = scene;
     let cheered = false;

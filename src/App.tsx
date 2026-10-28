@@ -8,6 +8,7 @@ import { startLive, useLive } from "./lib/live";
 import { startNotifications } from "./lib/notify";
 import { startPurchases } from "./lib/purchases";
 import { startAi } from "./lib/ai";
+import { startGold } from "./lib/gold";
 import { OPEN_PATHS, WEB_BASE, refreshSite, useSite } from "./lib/site";
 import { ConflictModal } from "./components/CloudUI";
 import Login, { AuthCallback, ResetPassword } from "./pages/Login";
@@ -62,6 +63,7 @@ export default function App() {
     startNotifications();
     startPurchases();
     startAi();
+    startGold();
     void refreshSite();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
