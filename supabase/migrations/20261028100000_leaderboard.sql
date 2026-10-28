@@ -69,6 +69,7 @@ alter table public.leaderboard_awards enable row level security;
 drop policy if exists "Admins read leaderboard awards" on public.leaderboard_awards;
 create policy "Admins read leaderboard awards" on public.leaderboard_awards for select to authenticated using (public.is_admin());
 
+drop function if exists public.lb_week_scores(date);
 create or replace function public.lb_week_scores(p_week date) returns table (user_id uuid, artist_name text, genre text, level int, badge text, score bigint, fame bigint)
 language sql stable security definer set search_path = '' as $$
   select s.user_id, s.artist_name, s.career->>'genre', coalesce((s.career->>'peakLevel')::int, 1), s.career->'style'->>'badge',
