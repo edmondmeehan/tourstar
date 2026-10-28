@@ -6,9 +6,10 @@ import { useGame } from "../game/store";
 import { Card, DeltaChips, Modal, PageTitle, Tag, toast, askConfirm } from "../components/ui";
 import { cloudConfigured, useCloud } from "../lib/cloud";
 import { DropsTab } from "./Drops";
+import { MerchTab } from "./Merch";
 import { RAFFLE_DISCLAIMER, enterRaffle, loadRewards, redeem, useRewards, type Raffle, type RewardItem } from "../lib/rewards";
 
-type Tab = "rewards" | "raffles" | "drops" | "shop";
+type Tab = "rewards" | "raffles" | "drops" | "merch" | "shop";
 const levelName = (n: number) => LEVELS.find((l) => l.level === n)?.name ?? `Level ${n}`;
 const STATUS: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending review", color: "var(--muted-foreground)" },
@@ -20,7 +21,7 @@ const STATUS: Record<string, { label: string; color: string }> = {
 
 export default function Store() {
   const [params] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(() => (["rewards", "raffles", "drops", "shop"].includes(params.get("tab") ?? "") ? params.get("tab") as Tab : "rewards"));
+  const [tab, setTab] = useState<Tab>(() => (["rewards", "raffles", "drops", "merch", "shop"].includes(params.get("tab") ?? "") ? params.get("tab") as Tab : "rewards"));
   const session = useCloud((s) => s.session);
   const c = useGame((s) => s.career)!;
   const points = useRewards((s) => s.points);
@@ -40,8 +41,8 @@ export default function Store() {
         {!!points?.pending && <div className="text-[11px] mt-1" style={{ color: "var(--gold)" }}>+{points.pending.toLocaleString()} pending review · <a className="underline" href="https://tourstarapp.com/support">why?</a></div>}
       </div>
 
-      <div className="grid grid-cols-4 gap-2 mb-4" role="tablist">
-        {([["rewards", "🎁 Rewards"], ["raffles", "🎟️ Raffles"], ["drops", "💿 Drops"], ["shop", "🛒 Shop"]] as const).map(([id, label]) => (
+      <div className="grid grid-cols-5 gap-1.5 mb-4" role="tablist">
+        {([["rewards", "🎁 Rewards"], ["raffles", "🎟️ Raffles"], ["drops", "💿 Drops"], ["merch", "👕 Merch"], ["shop", "🛒 Shop"]] as const).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
             className={`font-pixel text-[8px] py-2.5 rounded border ${tab === id ? "border-pink text-pink bg-black/30" : "border-line text-muted-fg"}`}>{label.toUpperCase()}</button>
         ))}
@@ -50,6 +51,7 @@ export default function Store() {
       {tab === "rewards" && <Rewards />}
       {tab === "raffles" && <Raffles />}
       {tab === "drops" && <DropsTab />}
+      {tab === "merch" && <MerchTab />}
       {tab === "shop" && <Shop />}
     </div>
   );

@@ -23,6 +23,9 @@ const DEFS: Def[] = [
   { name: "apns_key_p8", kind: "secret", label: "Apple Push · key file (.p8)", what: "Lets TourStar send push notifications to iPhones. Open the .p8 file in TextEdit and paste everything, including the BEGIN and END lines.", where: { text: "developer.apple.com → Certificates, IDs & Profiles → Keys → + → Apple Push Notifications service (APNs)", url: "https://developer.apple.com/account/resources/authkeys/list" } },
   { name: "apns_key_id", kind: "secret", label: "Apple Push · Key ID", what: "The 10-character Key ID shown next to that key.", where: { text: "developer.apple.com → Keys", url: "https://developer.apple.com/account/resources/authkeys/list" } },
   { name: "apns_team_id", kind: "secret", label: "Apple Push · Team ID", what: "Your 10-character Apple Developer Team ID.", where: { text: "developer.apple.com → Membership details", url: "https://developer.apple.com/account" } },
+  { name: "shopify_storefront_token", kind: "public", label: "Shopify · Storefront access token (public)", what: "Lets the game show your TourStar merch and open Shopify checkout. This token is meant to be public.", where: { text: "Shopify admin → Settings → Apps and sales channels → Develop apps → your app → Storefront API access token (or the Headless channel)", url: "https://admin.shopify.com" } },
+  { name: "shopify_webhook_secret", kind: "secret", label: "Shopify · webhook signing secret", what: `Unlocks in-game items when a merch order is paid. In Shopify → Settings → Notifications → Webhooks, create an "Order payment" webhook (JSON) to ${import.meta.env.VITE_SUPABASE_URL ?? "<supabase>"}/functions/v1/shopify-webhook, then paste the signing secret shown under the webhook list here.`, where: { text: "Shopify admin → Settings → Notifications → Webhooks", url: "https://admin.shopify.com" } },
+  { name: "merch_vip_code", kind: "secret", label: "Merch · VIP discount code", what: "A Shopify discount code (e.g. VIPMERCH15) applied automatically at checkout for TourStar VIP members. Only VIPs ever see it. Create the code in Shopify → Discounts first.", where: { text: "Shopify admin → Discounts", url: "https://admin.shopify.com" } },
   { name: "resend_api_key", kind: "secret", label: "Resend · API key", prefix: "re_", testable: true, what: "Sends emails from the game: prize and order updates, raffle winners, waitlist news.", where: { text: "resend.com → API Keys", url: "https://resend.com/api-keys" } },
   { name: "anthropic_api_key", kind: "secret", label: "Anthropic (Claude) · API key", prefix: "sk-ant-", testable: true, what: "Powers AI features: song titles and lyrics, gossip headlines, rival banter, artist bios.", where: { text: "console.anthropic.com → API Keys", url: "https://console.anthropic.com/settings/keys" } },
   { name: "elevenlabs_api_key", kind: "secret", label: "ElevenLabs · API key", testable: true, what: "AI audio: real songs for releases, Mo's voice and the stadium announcer. Switch each on in the AI audio tab.", where: { text: "elevenlabs.io → Profile → API keys", url: "https://elevenlabs.io/app/settings/api-keys" } },
@@ -75,6 +78,9 @@ export function IntegrationsTab() {
           </Section>
           <Section title="Push notifications (iPhone)">
             {DEFS.filter((d) => d.name.startsWith("apns_")).map((d) => <KeyRow key={d.name} def={d} secret={secrets[d.name]} pub={publics[d.name]} onChange={load} />)}
+          </Section>
+          <Section title="Merch (Shopify)">
+            {DEFS.filter((d) => ["shopify_storefront_token", "shopify_webhook_secret", "merch_vip_code"].includes(d.name)).map((d) => <KeyRow key={d.name} def={d} secret={secrets[d.name]} pub={publics[d.name]} onChange={load} />)}
           </Section>
           <Section title="Email">
             {DEFS.filter((d) => d.name === "resend_api_key").map((d) => <KeyRow key={d.name} def={d} secret={secrets[d.name]} pub={publics[d.name]} onChange={load} />)}
