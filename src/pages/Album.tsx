@@ -5,7 +5,6 @@ import { fmtMoney, levelFor } from "../game/engine";
 import { useGame } from "../game/store";
 import type { ReleaseKind } from "../game/types";
 import { Card, Modal, PageTitle, Tag, toast } from "../components/ui";
-import { MUSIC_SERVICES } from "../components/SongGenerator";
 import { songTitle } from "../lib/chiptune";
 import { aiSongsAvailable, recordAiSong, useAiFlags } from "../lib/ai";
 import { useCloud } from "../lib/cloud";
@@ -17,19 +16,16 @@ export default function Album() {
   const [pick, setPick] = useState<ReleaseKind | null>(null);
   const [title, setTitle] = useState("");
   const [withSong, setWithSong] = useState(true);
-  const [typed, setTyped] = useState("");
   const [useAi, setUseAi] = useState(true);
   const aiOn = useAiFlags((s) => s.music);
   const signedIn = useCloud((s) => !!s.session);
   const aiLimit = useAiFlags((s) => s.dailyLimit + (s.vip ? s.vipBonus : 0));
   const aiCredits = useAiFlags((s) => s.credits);
   const def = RELEASES.find((r) => r.kind === pick);
-  const svc = MUSIC_SERVICES[0];
 
   const open = (k: ReleaseKind) => {
     setPick(k);
     setTitle(songTitle(Math.floor(Math.random() * 1e6)));
-    setTyped("");
   };
 
   const go = () => {
@@ -82,7 +78,7 @@ export default function Album() {
             <input value={title} onChange={(e) => setTitle(e.target.value.slice(0, 40))} className="w-full mt-1 mb-4 px-3 py-2 rounded bg-black/50 border border-line outline-none focus:border-pink" />
             <label className="flex items-start gap-3 mb-3 text-sm">
               <input type="checkbox" checked={withSong} onChange={(e) => setWithSong(e.target.checked)} className="mt-1 accent-[var(--neon-pink)]" />
-              <span>Generate a song for this release <span className="block text-xs text-muted-fg">Saved to your Locker. Uses {svc.label} ({svc.cost ? `$${svc.cost}` : "free"}).</span></span>
+              <span>Generate a song for this release <span className="block text-xs text-muted-fg">Saved to your Locker. Free.</span></span>
             </label>
             {withSong && aiOn && (
               <label className="flex items-start gap-3 mb-3 text-sm">
@@ -91,16 +87,10 @@ export default function Album() {
                   <span className="block text-[11px] text-muted-fg mt-1">AI songs belong to TourStar, LLC and may be released on streaming services in the TourStar Monthly with your artist name. You won't be paid for them. <a className="underline" href="https://tourstarapp.com/terms#content" target="_blank" rel="noreferrer">Terms</a></span></span>
               </label>
             )}
-            {withSong && svc.cost > 0 && (
-              <>
-                <label className="text-xs text-muted-fg">Type <b className="text-fg">{svc.name}</b> to confirm the music service</label>
-                <input value={typed} onChange={(e) => setTyped(e.target.value)} className="w-full mt-1 mb-4 px-3 py-2 rounded bg-black/50 border border-line outline-none focus:border-pink" />
-              </>
-            )}
             <div className="text-xs text-muted-fg mb-4">Costs {def.cost ? fmtMoney(def.cost) : "nothing"} and {def.energy} energy. You have {fmtMoney(c.stats.cash)} / ⚡{c.stats.energy}.</div>
             <div className="flex gap-2">
               <button className="btn btn-ghost flex-1" onClick={() => setPick(null)}>Cancel</button>
-              <button className="btn btn-pink flex-1" disabled={withSong && svc.cost > 0 && typed.trim().toLowerCase() !== svc.name.toLowerCase()} onClick={go}>Release</button>
+              <button className="btn btn-pink flex-1" onClick={go}>Release</button>
             </div>
           </>
         )}

@@ -23,7 +23,7 @@ import { MonthlyTab } from "./MonthlyAdmin";
 import { NotificationsTab, PresalesTab } from "./PresalesAdmin";
 import { refreshSite, useSite } from "../lib/site";
 
-type Tab = "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "presales" | "push" | "raffles" | "orders" | "traffic" | "music" | "integrations" | "admins";
+type Tab = "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "presales" | "push" | "raffles" | "traffic" | "music" | "integrations" | "admins";
 const TABS: { id: Tab; label: string }[] = [
   { id: "insights", label: "Insights" },
   { id: "beta", label: "Beta signups" },
@@ -40,7 +40,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "presales", label: "Presales" },
   { id: "push", label: "Notifications" },
   { id: "raffles", label: "Raffles" },
-  { id: "orders", label: "Orders" },
   { id: "traffic", label: "Traffic" },
   { id: "music", label: "AI audio" },
   { id: "integrations", label: "Integrations" },
@@ -105,7 +104,6 @@ export default function Admin() {
           {tab === "presales" && <PresalesTab />}
           {tab === "push" && <NotificationsTab />}
           {tab === "raffles" && <RafflesTab />}
-          {tab === "orders" && <Orders />}
           {tab === "traffic" && <Traffic />}
           {tab === "music" && <AiTab />}
           {tab === "integrations" && <IntegrationsTab />}
@@ -667,36 +665,6 @@ function Broadcasts() {
 
 // ================================================================= orders
 
-interface OrderRow { id: string; user_id: string; release_title: string; services: string[]; amount_cents: number; status: string; created_at: string }
-
-function Orders() {
-  const [rows, setRows] = useState<OrderRow[] | null>(null);
-  useEffect(() => {
-    supabase!.from("distribution_orders").select("*").order("created_at", { ascending: false }).limit(200).then(({ data, error }) => (error ? fail(error) : setRows(data as OrderRow[])));
-  }, []);
-  const paid = (rows ?? []).filter((r) => ["paid", "submitted", "live"].includes(r.status));
-  return (
-    <>
-      <div className="grid sm:grid-cols-3 gap-3 mb-5">
-        <Kpi label="Orders" value={rows?.length ?? "—"} />
-        <Kpi label="Paid" value={paid.length} />
-        <Kpi label="Distribution revenue" value={`$${(paid.reduce((a, r) => a + r.amount_cents, 0) / 100).toFixed(2)}`} />
-      </div>
-      <Section title="Distribution orders" sub="Players paying to send a release to Spotify, Apple Music and others. Checkout is off until Stripe is reconnected, so this stays empty for now.">
-        {!rows ? <p className="text-sm text-muted-fg">Loading…</p> : rows.length === 0 ? <p className="text-sm text-muted-fg text-center py-8">No orders yet.</p> : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[600px]">
-              <thead className="text-[11px] uppercase tracking-wider text-muted-fg text-left"><tr className="border-b border-line"><th className="py-2">Release</th><th>Services</th><th className="text-right">Amount</th><th>Status</th><th>Date</th></tr></thead>
-              <tbody>{rows.map((r) => (
-                <tr key={r.id} className="border-b border-line/50"><td className="py-2">{r.release_title}</td><td className="text-muted-fg">{r.services.join(", ")}</td><td className="text-right tabular-nums">${(r.amount_cents / 100).toFixed(2)}</td><td>{r.status}</td><td className="text-muted-fg">{when(r.created_at)}</td></tr>
-              ))}</tbody>
-            </table>
-          </div>
-        )}
-      </Section>
-    </>
-  );
-}
 
 // ================================================================= traffic
 
