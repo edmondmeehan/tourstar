@@ -27,7 +27,7 @@ const MORE = [
   { to: "/rivals", label: "Rivals", icon: "⚔️" },
   { to: "/releases", label: "Releases", icon: "📀" },
   { to: "/log", label: "Career Log", icon: "📜" },
-  { to: "/distribute", label: "Distribution", icon: "📡" },
+  { to: "/distribute", label: "TourStar Monthly", icon: "💿" },
   { to: "/premium", label: "Premium", icon: "💎" },
   { to: "/account", label: "Account & Settings", icon: "⚙️" },
 ];

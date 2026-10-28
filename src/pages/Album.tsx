@@ -87,7 +87,8 @@ export default function Album() {
             {withSong && aiOn && (
               <label className="flex items-start gap-3 mb-3 text-sm">
                 <input type="checkbox" checked={useAi && signedIn} disabled={!signedIn} onChange={(e) => setUseAi(e.target.checked)} className="mt-1 accent-[var(--gold)]" />
-                <span>🎧 Record a real AI song <span className="block text-xs text-muted-fg">{signedIn ? `A real ~30s track in your genre, made by the AI studio. ${aiLimit} free a day${aiCredits ? `, plus ${aiCredits} extra from your studio packs` : ""}.` : "Sign in to record real AI songs."}</span></span>
+                <span>🎧 Record a real AI song <span className="block text-xs text-muted-fg">{signedIn ? `A real ~30s track in your genre, made by the AI studio. ${aiLimit} free a day${aiCredits ? `, plus ${aiCredits} extra from your studio packs` : ""}.` : "Sign in to record real AI songs."}</span>
+                  <span className="block text-[11px] text-muted-fg mt-1">AI songs belong to TourStar, LLC and may be released on streaming services in the TourStar Monthly with your artist name. You won't be paid for them. <a className="underline" href="https://tourstarapp.com/terms#content" target="_blank" rel="noreferrer">Terms</a></span></span>
               </label>
             )}
             {withSong && svc.cost > 0 && (

@@ -35,7 +35,7 @@ export default function Releases() {
           );
         })}
       </div>
-      <Link to="/distribute" className="btn btn-ghost w-full mt-4 block text-center">📡 Send to streaming services</Link>
+      <Link to="/distribute" className="btn btn-ghost w-full mt-4 block text-center">💿 TourStar Monthly on streaming services</Link>
     </div>
   );
 }

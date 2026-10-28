@@ -19,10 +19,11 @@ import { AiTab } from "./AiAdmin";
 import { EconomyTab } from "./EconomyAdmin";
 import { DropsTab } from "./DropsAdmin";
 import { PartnersTab } from "./PartnersAdmin";
+import { MonthlyTab } from "./MonthlyAdmin";
 import { NotificationsTab, PresalesTab } from "./PresalesAdmin";
 import { refreshSite, useSite } from "../lib/site";
 
-type Tab = "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "presales" | "push" | "raffles" | "orders" | "traffic" | "music" | "integrations" | "admins";
+type Tab = "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "presales" | "push" | "raffles" | "orders" | "traffic" | "music" | "integrations" | "admins";
 const TABS: { id: Tab; label: string }[] = [
   { id: "insights", label: "Insights" },
   { id: "beta", label: "Beta signups" },
@@ -35,6 +36,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "rewards", label: "Rewards store" },
   { id: "drops", label: "Packs & Gold" },
   { id: "partners", label: "Partners & venues" },
+  { id: "monthly", label: "Monthly release" },
   { id: "presales", label: "Presales" },
   { id: "push", label: "Notifications" },
   { id: "raffles", label: "Raffles" },
@@ -99,6 +101,7 @@ export default function Admin() {
           {tab === "rewards" && <RewardsTab />}
           {tab === "drops" && <DropsTab />}
           {tab === "partners" && <PartnersTab />}
+          {tab === "monthly" && <MonthlyTab />}
           {tab === "presales" && <PresalesTab />}
           {tab === "push" && <NotificationsTab />}
           {tab === "raffles" && <RafflesTab />}
