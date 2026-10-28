@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { STORE, LEVELS, type StoreItem } from "../game/data";
 import { fmtMoney, levelFor } from "../game/engine";
 import { useGame } from "../game/store";
@@ -19,7 +19,8 @@ const STATUS: Record<string, { label: string; color: string }> = {
 };
 
 export default function Store() {
-  const [tab, setTab] = useState<Tab>("rewards");
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => (["rewards", "raffles", "drops", "shop"].includes(params.get("tab") ?? "") ? params.get("tab") as Tab : "rewards"));
   const session = useCloud((s) => s.session);
   const c = useGame((s) => s.career)!;
   const points = useRewards((s) => s.points);

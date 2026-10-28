@@ -1,6 +1,7 @@
 // Reminder notifications, scheduled on the device (no server or push certificates needed):
 // energy full, royalties full, streak about to break, and new daily quests.
 // Rescheduled whenever the app goes to the background. Native only; a no-op on the web.
+import { enablePush } from "./push";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -32,7 +33,7 @@ export async function askNotificationPermission() {
     const res = await LocalNotifications.requestPermissions();
     const status: Status = res.display === "granted" ? "granted" : "denied";
     useNotify.getState().set({ status, asked: true });
-    if (status === "granted") void scheduleReminders();
+    if (status === "granted") { void scheduleReminders(); void enablePush(); }
     return status === "granted";
   } catch {
     return false;

@@ -18,6 +18,9 @@ const config: CapacitorConfig = {
       backgroundColor: "#070a1a",
       showSpinner: false,
     },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"], // show pushes even while the game is open
+    },
     StatusBar: {
       style: "DARK",
       backgroundColor: "#070a1a",

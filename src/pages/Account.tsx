@@ -8,6 +8,7 @@ import { haptic } from "../lib/haptics";
 import { Link } from "react-router-dom";
 import { restore } from "../lib/purchases";
 import { askNotificationPermission, scheduleReminders, useNotify } from "../lib/notify";
+import { disablePush, enablePush } from "../lib/push";
 import { isNative } from "../lib/native";
 import { cloudConfigured, deleteAccount, resendConfirmation, signOut, useCloud } from "../lib/cloud";
 
@@ -66,13 +67,14 @@ function RemindersCard() {
       if (!ok) toast({ ok: false, message: "Turn on notifications for TourStar in your phone's Settings." });
     }
     void scheduleReminders();
+    if (on) void enablePush(); else void disablePush();
   };
   return (
     <Card className="mb-4">
       <label className="flex items-center justify-between text-sm gap-3">
         <span>
           <span className="font-pixel text-[8px] text-muted-fg block mb-1">REMINDERS</span>
-          Energy full, royalties ready, streak about to end, new quests
+          Energy full, royalties ready, streak about to end, new quests, VIP presales and new drops
         </span>
         <input type="checkbox" checked={enabled && status === "granted"} onChange={(e) => void toggle(e.target.checked)} className="w-5 h-5 accent-[var(--neon-pink)] shrink-0" />
       </label>

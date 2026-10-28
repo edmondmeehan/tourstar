@@ -9,6 +9,7 @@ import { startNotifications } from "./lib/notify";
 import { startPurchases } from "./lib/purchases";
 import { startAi } from "./lib/ai";
 import { startGold } from "./lib/gold";
+import { startPush } from "./lib/push";
 import { OPEN_PATHS, WEB_BASE, refreshSite, useSite } from "./lib/site";
 import { ConflictModal } from "./components/CloudUI";
 import Login, { AuthCallback, ResetPassword } from "./pages/Login";
@@ -29,6 +30,7 @@ import Releases from "./pages/Releases";
 import Log from "./pages/Log";
 import Distribute from "./pages/Distribute";
 import Premium from "./pages/Premium";
+import Presales from "./pages/Presales";
 import Account from "./pages/Account";
 
 /** Saves load asynchronously on device, so wait for all three stores before routing. */
@@ -64,6 +66,7 @@ export default function App() {
     startPurchases();
     startAi();
     startGold();
+    startPush((path) => nav(path));
     void refreshSite();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
@@ -104,6 +107,7 @@ export default function App() {
           <Route path="/log" element={<Log />} />
           <Route path="/distribute" element={<Distribute />} />
           <Route path="/premium" element={<Premium />} />
+          <Route path="/presales" element={<Presales />} />
           <Route path="/account" element={<Account />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,3 +1,4 @@
+import { PresalesTeaser } from "./Presales";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { GENRES, GOSSIP, MAX_ENERGY, PERSONAS, RIVALS } from "../game/data";
@@ -143,6 +144,7 @@ export default function Dashboard() {
         <p className="text-xs text-muted-fg mt-3 italic">{mood.tip}</p>
       </Card>
 
+      <PresalesTeaser />
       <QuestsCard c={c} now={now} />
       <RoyaltiesCard c={c} now={now} />
 

@@ -17,6 +17,8 @@ What's already built is marked ✅. Everything else needs your accounts, in this
 - ✅ Waitlist referrals + emails: invite links move people up the list (rewards at launch: 1 friend +500 ⭐, 3 = Founding Fan badge + 1,500 ⭐, 10 = 5 launch-raffle tickets). Welcome email and announcements via Resend in Admin → Beta signups. **Still to build before launch: grant those referral rewards when someone creates an account with their waitlist email.**
 - ✅ Admin → Economy: points outstanding, their dollar value, what you owe, prize cost vs. revenue per active player, alerts. Enter your cost on each reward (Rewards store → Edit) for the dollar figures.
 - ✅ Gold Records 💿 + Drops: premium currency bought in 4 packs ($0.99–$19.99), VIP gets 150/month. Admin → Drops & Gold creates limited packs (stage themes, titles, badges, cash, energy, bonus Gold) with start/end times, new-player offers and level gates; live in the app with no update. Store → Drops + My style in the game.
+- ✅ VIP presales (Admin → Presales): Ticketmaster presale codes for VIP members and/or players at a level; unique or shared codes, one per player, logged; "Push" button notifies eligible players. Get the artist's/promoter's written OK for each presale.
+- ✅ Push notifications (Admin → Notifications): send to everyone, VIP, players away 3+ days, or a test to yourself. Needs the APNs key below. Device reminders (energy, royalties, streak, quests) work without it.
 - ✅ Monetization: TourStar VIP subscription ($4.99/mo or $39.99/yr), AI song packs, cash packs. Money never buys points or raffle entries; only the first 12 shows/releases a day earn points, for everyone.
 
 > Have a lawyer review /privacy, /terms and each raffle's official rules before prizes go out. NY and FL require registration and a bond for sweepstakes with more than $5,000 in prizes. List ElevenLabs as a processor in /privacy, confirm TourStar, LLC's mailing address, and ask your accountant how to book outstanding points.
@@ -26,6 +28,8 @@ What's already built is marked ✅. Everything else needs your accounts, in this
 2. In Certificates, IDs & Profiles → Identifiers, register the App ID `co.please.tourstar` with **Sign in with Apple** checked.
 3. Create a **Services ID** (e.g. `co.please.tourstar.web`) with Sign in with Apple, domain `vtpgrxavyspadmubfwtb.supabase.co`, return URL `https://vtpgrxavyspadmubfwtb.supabase.co/auth/v1/callback`.
 4. Keys → create a key with **Sign in with Apple**, download the `.p8` and note the Key ID and your Team ID.
+5. Keys → create another key with **Apple Push Notifications service (APNs)**. Download the `.p8` and paste its contents, its Key ID and your Team ID in Admin → Integrations → Push notifications.
+6. In the App ID `co.please.tourstar`, turn on **Push Notifications**. (The Xcode project already has the Push Notifications entitlement; Xcode → Signing & Capabilities should list it.)
 
 ## 2. Supabase sign-in setup (15 min)
 Supabase → tourstar → Authentication:
