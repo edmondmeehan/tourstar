@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase, useCloud } from "../lib/cloud";
-import { CONFIG_FIELDS, DEFAULT_CONFIG, sanitizeConfig, type GameConfig } from "../game/config";
+import { levelFor } from "../game/engine";
+import { CONFIG_FIELDS, DEFAULT_CONFIG, levelThresholds, sanitizeConfig, type GameConfig } from "../game/config";
+import { PLAYER_TYPES, fmtDays, simulateClimb } from "../game/sim";
 import { EVENTS } from "../game/events";
 import { GENRES, LEVELS, STAT_META } from "../game/data";
 import { toast, askConfirm } from "../components/ui";
@@ -41,7 +43,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "admins", label: "Admins" },
 ];
 
-const levelName = (fame: number) => [...LEVELS].reverse().find((l) => fame >= l.fame)!;
+const levelName = (fame: number) => levelFor(fame);
 
 // ================================================================= gate
 
@@ -429,7 +431,7 @@ function Balance() {
       right={<span className="text-[11px] text-muted-fg whitespace-nowrap">Last saved {when(meta)}</span>}
     >
       <div className="grid md:grid-cols-2 gap-x-8 gap-y-5">
-        {CONFIG_FIELDS.map((f) => {
+        {CONFIG_FIELDS.filter((f) => !f.group).map((f) => {
           const v = draft[f.key];
           const changed = v !== DEFAULT_CONFIG[f.key];
           return (
@@ -437,7 +439,7 @@ function Balance() {
               <div className="flex items-baseline justify-between gap-3">
                 <label htmlFor={`cfg-${f.key}`} className="text-sm font-semibold">{f.label}</label>
                 <span className={`text-sm tabular-nums ${changed ? "text-gold" : "text-muted-fg"}`}>
-                  {f.unit === "$" ? `$${v.toLocaleString()}` : f.unit === "s" ? `${v}s` : `${v}×`}
+                  {f.unit === "$" ? `$${v.toLocaleString()}` : f.unit === "s" ? `${v}s` : f.unit === "×" ? `${v}×` : v.toLocaleString()}
                 </span>
               </div>
               <input id={`cfg-${f.key}`} type="range" className="w-full mt-2" min={f.min} max={f.max} step={f.step} value={v}
@@ -450,12 +452,102 @@ function Balance() {
           );
         })}
       </div>
+
+      <h3 className="text-sm font-bold mt-8">Level curve</h3>
+      <p className="text-[11px] text-muted-fg mb-3">Fame needed for each level. Raising these slows the climb. Players keep the tours and rewards they've already unlocked if a level moves above them.</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {CONFIG_FIELDS.filter((f) => f.group === "levels").map((f) => {
+          const v = draft[f.key];
+          const changed = v !== live[f.key];
+          return (
+            <label key={f.key} className="block">
+              <span className="text-xs font-semibold">{f.label}</span>
+              <input type="number" inputMode="numeric" min={f.min} max={f.max} step={f.step} value={v}
+                className={`w-full mt-1 px-2 py-1.5 rounded bg-black/40 border text-sm tabular-nums ${changed ? "border-gold text-gold" : "border-line"}`}
+                onChange={(e) => setDraft({ ...draft, [f.key]: Number(e.target.value) || 0 })} />
+              <span className="text-[10px] text-muted-fg">Default {DEFAULT_CONFIG[f.key].toLocaleString()} ★</span>
+            </label>
+          );
+        })}
+      </div>
+
+      <PaceTool live={live} draft={sanitizeConfig(draft)} />
       <div className="flex gap-2 mt-6 flex-wrap">
-        <button className="btn btn-pink" disabled={!dirty || busy} onClick={() => save(draft)}>{busy ? "Saving…" : "Save & push live"}</button>
+        <button className="btn btn-pink" disabled={!dirty || busy} onClick={() => save(sanitizeConfig(draft))}>{busy ? "Saving…" : "Save & push live"}</button>
         <button className="btn btn-ghost" disabled={!dirty} onClick={() => setDraft(live)}>Discard changes</button>
         <button className="btn btn-ghost" onClick={() => askConfirm("Reset every setting to the defaults and push live?", () => void save(DEFAULT_CONFIG), { yes: "Reset all" })}>Reset all to defaults</button>
       </div>
     </Section>
+  );
+}
+
+// ================================================================= pace / tuning tool
+
+interface PaceRow { players: number; median: number; p25: number; p75: number; gigs: number | null }
+
+function PaceTool({ live, draft }: { live: GameConfig; draft: GameConfig }) {
+  const [types, setTypes] = useState(PLAYER_TYPES);
+  const [real, setReal] = useState<Record<string, PaceRow> | null>(null);
+  const [realErr, setRealErr] = useState<string | null>(null);
+  useEffect(() => {
+    void supabase!.rpc("admin_level_pace", { p_days: 90 }).then(({ data, error }) => {
+      if (error) setRealErr(error.message.includes("admin_level_pace") ? "Run RUN-IN-SUPABASE-LEVEL-PACE.sql to turn on real-player timing." : error.message);
+      else setReal((data ?? {}) as Record<string, PaceRow>);
+    });
+  }, []);
+  const changed = JSON.stringify(live) !== JSON.stringify(draft);
+  const runs = useMemo(() => types.map((p) => ({ p, now: simulateClimb(p, live), next: simulateClimb(p, draft) })), [types, live, draft]);
+  const lv = levelThresholds(draft);
+
+  return (
+    <div className="mt-8">
+      <h3 className="text-sm font-bold">Pace preview</h3>
+      <p className="text-[11px] text-muted-fg mb-3">
+        Estimated days from a new career to each level{changed ? <> under the live settings <b>→</b> your unsaved changes</> : ""}. It's a model (a full energy bar per check-in, spent on the best tour or release),
+        so use it to compare settings, and check the "Real players" column once there's data.
+      </p>
+      <div className="flex flex-wrap gap-3 mb-3">
+        {types.map((p, i) => (
+          <label key={p.id} className="text-[11px] text-muted-fg flex items-center gap-1">
+            {p.label}
+            <input type="number" min={1} max={24} value={p.sessions} className="w-12 px-1 py-0.5 rounded bg-black/40 border border-line text-fg text-xs"
+              onChange={(e) => setTypes(types.map((t, j) => (j === i ? { ...t, sessions: Math.max(1, Math.min(24, Number(e.target.value) || 1)) } : t)))} />
+            check-ins/day
+          </label>
+        ))}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs tabular-nums">
+          <thead>
+            <tr className="text-left text-muted-fg">
+              <th className="py-1.5 pr-3 font-normal">Level</th>
+              {types.map((p) => <th key={p.id} className="py-1.5 pr-3 font-normal">{p.label}</th>)}
+              <th className="py-1.5 pr-3 font-normal">Real players (median)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {LEVELS.slice(1).map((l) => {
+              const r = real?.[String(l.level)];
+              return (
+                <tr key={l.level} className="border-t border-line">
+                  <td className="py-1.5 pr-3 whitespace-nowrap">{l.level}. {l.name}<span className="text-muted-fg"> · {lv[l.level].toLocaleString()} ★</span></td>
+                  {runs.map(({ p, now, next }) => (
+                    <td key={p.id} className="py-1.5 pr-3 whitespace-nowrap">
+                      {changed && now[l.level] !== next[l.level] ? <><span className="text-muted-fg">{fmtDays(now[l.level])}</span> → <b className="text-gold">{fmtDays(next[l.level])}</b></> : fmtDays(next[l.level])}
+                    </td>
+                  ))}
+                  <td className="py-1.5 pr-3 whitespace-nowrap">
+                    {r ? <>{fmtDays(Math.max(1, Math.ceil(r.median)))} <span className="text-muted-fg">({r.players} players{r.gigs != null ? ` · ${r.gigs} gigs` : ""})</span></> : <span className="text-muted-fg">—</span>}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {realErr && <p className="text-[11px] text-muted-fg mt-2">{realErr}</p>}
+      <p className="text-[11px] text-muted-fg mt-2">Real players: level-ups in the last 90 days, timed from when that device started its career. Players who reached a level under older settings are included.</p>
+    </div>
   );
 }
 

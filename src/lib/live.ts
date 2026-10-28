@@ -104,7 +104,7 @@ function watchGameplay() {
       track("gig", { level: c.peakLevel, sellout: !!last?.text.includes("SOLD OUT"), label: c.labelId, grade: last?.text.match(/grade (\w)/)?.[1] ?? null });
     }
     if (c.releases.length > o.releases.length) track("release", { kind: c.releases[0].kind, quality: c.releases[0].quality, song: !!c.releases[0].songId });
-    if (c.peakLevel > o.peakLevel) track("level_up", { level: c.peakLevel, week: c.week });
+    if (c.peakLevel > o.peakLevel) track("level_up", { level: c.peakLevel, week: c.week, days: Math.round(((Date.now() - c.createdAt) / 86_400_000) * 100) / 100, gigs: c.totals.gigs, fame: c.stats.fame });
     if (c.totals.scandals > o.totals.scandals) track("lockout", { kind: c.lockout?.kind });
     if (c.daily.streak !== o.daily.streak) track("daily_claim", { streak: c.daily.streak });
   });

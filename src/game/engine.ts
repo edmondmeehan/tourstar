@@ -1,17 +1,27 @@
 import { LABELS, LEVELS, RIVALS, STAT_META } from "./data";
 import type { Career, Delta, Stats } from "./types";
+import { cfg, levelThresholds } from "./config";
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
-export function levelFor(fame: number) {
-  let cur: (typeof LEVELS)[number] = LEVELS[0];
-  for (const l of LEVELS) if (fame >= l.fame) cur = l;
+export type LevelDef = { level: number; name: string; fame: number };
+
+/** The levels with the fame thresholds currently set in Admin → Balance. */
+export function levels(): LevelDef[] {
+  const th = levelThresholds(cfg());
+  return LEVELS.map((l) => ({ level: l.level, name: l.name, fame: th[l.level] }));
+}
+
+export function levelFor(fame: number): LevelDef {
+  const all = levels();
+  let cur = all[0];
+  for (const l of all) if (fame >= l.fame) cur = l;
   return cur;
 }
 
 export function levelProgress(fame: number) {
   const cur = levelFor(fame);
-  const next = LEVELS.find((l) => l.level === cur.level + 1);
+  const next = levels().find((l) => l.level === cur.level + 1);
   if (!next) return { cur, next: null, pct: 100 };
   return { cur, next, pct: Math.min(100, ((fame - cur.fame) / (next.fame - cur.fame)) * 100) };
 }

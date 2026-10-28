@@ -114,6 +114,18 @@ function awardAct(c: Career, base: number) {
   return award(c, base);
 }
 
+/** Energy from rest and store items is capped per day, so game cash can't buy an endless climb. Returns how much is allowed. */
+export function bonusEnergyLeft(c: Career) {
+  const day = new Date().toISOString().slice(0, 10);
+  return Math.max(0, cfg().bonusEnergyPerDay - (c.bonusEnergy?.day === day ? c.bonusEnergy.n : 0));
+}
+function takeBonusEnergy(c: Career, want: number) {
+  const day = new Date().toISOString().slice(0, 10);
+  const got = Math.min(want, bonusEnergyLeft(c));
+  c.bonusEnergy = { day, n: (c.bonusEnergy?.day === day ? c.bonusEnergy.n : 0) + got };
+  return got;
+}
+
 function award(c: Career, base: number) {
   const n = Math.max(0, Math.round(base * cfg().pointsMultiplier));
   c.pointsEarned = (c.pointsEarned ?? 0) + n;
@@ -480,7 +492,12 @@ export const useGame = create<GameState>()(
           const it = STORE.find((x) => x.id === id)!;
           if (levelFor(c.stats.fame).level < it.level) return { ok: false, message: `Unlocks at level ${it.level}.` };
           if (c.stats.cash < it.price) return { ok: false, message: `Need $${it.price.toLocaleString()}.` };
-          const applied = gain(c, { ...it.effects, cash: (it.effects.cash ?? 0) - it.price });
+          const effects = { ...it.effects };
+          if ((effects.energy ?? 0) > 0) {
+            if (bonusEnergyLeft(c) <= 0) return { ok: false, message: "That's enough energy drinks for today. Your energy refills on its own, or come back tomorrow." };
+            effects.energy = takeBonusEnergy(c, effects.energy!);
+          }
+          const applied = gain(c, { ...effects, cash: (effects.cash ?? 0) - it.price });
           newLog(c, "store", `Bought ${it.name}.`);
           quest(c, "shop");
           commit(c);
@@ -574,7 +591,7 @@ export const useGame = create<GameState>()(
           const c = draft();
           if (!c) return { ok: false, message: "No career." };
           if (c.pendingEvent) return { ok: false, message: "Deal with the situation first." };
-          const applied = gain(c, { health: 15, relationships: 8, hype: -3, energy: 5 });
+          const applied = gain(c, { health: 15, relationships: 8, hype: -3, energy: takeBonusEnergy(c, 5) });
           c.week += 1;
           newLog(c, "system", "Took a week off at home.");
           commit(c);

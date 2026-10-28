@@ -119,6 +119,8 @@ export interface Career {
   pointsEarned?: number;
   /** Shows/releases that earned points today (daily cap). */
   pointActs?: { day: string; n: number };
+  /** Energy taken from rest and store items today (daily cap). */
+  bonusEnergy?: { day: string; n: number };
   /** When royalties were last collected (set by the first release). */
   royaltiesAt?: number;
   quests?: import("./quests").QuestDay;
