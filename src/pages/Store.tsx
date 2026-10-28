@@ -218,6 +218,7 @@ function Raffles() {
       {error && <p className="text-xs text-danger mb-3">{error} <button className="underline" onClick={() => void loadRewards()}>Retry</button></p>}
       {loading && !raffles.length && <p className="text-sm text-muted-fg text-center py-6">Loading raffles…</p>}
       {!loading && !live.length && <p className="text-sm text-muted-fg text-center py-6">No raffle running right now. Check back soon.</p>}
+      <p className="text-[10px] text-muted-fg mb-3">No purchase necessary. 18+ where offered; void where prohibited. Each raffle's official rules are in the app and the <a className="underline" href="https://tourstarapp.com/terms#raffles" target="_blank" rel="noreferrer">Terms</a>. Apple Inc. and Google LLC are not sponsors of, and are not involved in, any TourStar raffle or reward.</p>
       <div className="space-y-3">
         {live.map((r) => <RaffleCard key={r.id} r={r} level={level} mine={myTickets[r.id]} signedIn={!!session} />)}
       </div>

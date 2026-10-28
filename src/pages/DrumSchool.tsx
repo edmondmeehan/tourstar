@@ -2,6 +2,7 @@
 // pay cash and fame; passing with an A or S earns chops (a bonus to the playing score at shows).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useGame } from "../game/store";
 import { levelFor } from "../game/engine";
 import { CHOPS_CAP, CHOPS_PER_LESSON, DRUM_COLORS, DRUM_LANES, LESSONS, LESSON_ENERGY, LESSONS_PER_DAY, drumChops, drumGrade, lessonChart, type Lesson } from "../game/drums";
@@ -83,7 +84,7 @@ export default function DrumSchool() {
       </div>
       <p className="text-[11px] text-muted-fg text-center mt-4">Tap the lanes, or use ← ↓ → / A S D on a keyboard. Two notes at once? Tap with two fingers.</p>
 
-      {playing && <LessonPlayer lesson={playing.lesson} practice={playing.practice} onClose={() => setPlaying(null)} />}
+      {playing && createPortal(<LessonPlayer lesson={playing.lesson} practice={playing.practice} onClose={() => setPlaying(null)} />, document.body)}
     </div>
   );
 }
@@ -139,7 +140,7 @@ function LessonPlayer({ lesson, practice, onClose }: { lesson: Lesson; practice:
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex justify-center bg-[#08060f]">
+    <div className="fixed inset-0 z-[90] flex justify-center bg-[#08060f]">
       <div className="w-full max-w-md flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="flex justify-between items-center px-4 pt-3 font-pixel text-[10px]">
           <span style={{ color: "var(--gold)" }}>🥁 {lesson.name.toUpperCase()}</span>
