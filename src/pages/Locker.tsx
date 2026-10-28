@@ -1,3 +1,4 @@
+import { stopRadio } from "../lib/radio";
 import { useEffect, useRef, useState } from "react";
 import { GENRES } from "../game/data";
 import { useGame } from "../game/store";
@@ -37,6 +38,7 @@ export default function Locker() {
       else { handle.current = null; setCurrent(null); }
     };
     // Real AI recording when there is one; otherwise the in-game synth version.
+    stopRadio();
     handle.current = s.audioUrl ? playClip(s.audioUrl, { onEnd: next }) : playSong(s.seed, s.genre, next);
   };
 

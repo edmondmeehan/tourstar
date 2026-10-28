@@ -11,6 +11,8 @@ import { CelebrationOverlay, EventModal, LockoutOverlay, OutcomeModal } from "./
 import { sfx } from "../lib/fx";
 import { applySkin } from "../game/cosmetics";
 import { COPYRIGHT } from "../lib/site";
+import RadioBar from "./RadioBar";
+import { useRadio } from "../lib/radio";
 import Coach, { coachTarget } from "./Coach";
 
 const NAV = [
@@ -52,6 +54,7 @@ export default function Layout() {
   const loc = useLocation();
   const concert = useConcert((s) => s.open);
   const coach = coachTarget(career?.tutorial?.step);
+  const radioOn = useRadio((s) => !!s.station && !!s.queue?.length);
   useGameTick();
   useEffect(() => setMenu(false), [loc.pathname]);
   const skinKey = JSON.stringify(career?.style?.skin ?? null);
@@ -60,7 +63,7 @@ export default function Layout() {
   const lvl = levelFor(career.stats.fame);
 
   return (
-    <div className={`min-h-screen max-w-md mx-auto relative ${career.tutorial ? "pb-64" : "pb-24"}`}>
+    <div className={`min-h-screen max-w-md mx-auto relative ${career.tutorial ? "pb-64" : radioOn ? "pb-40" : "pb-24"}`}>
       <header style={{ paddingTop: "max(12px, env(safe-area-inset-top))" }} className="sticky top-0 z-40 backdrop-blur-md bg-[color-mix(in_oklch,var(--background)_80%,transparent)] border-b border-line px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <Link to="/dashboard" className="min-w-0">
@@ -107,6 +110,7 @@ export default function Layout() {
         </div>
       </nav>
 
+      <RadioBar />
       <Coach />
       <EventModal />
       <OutcomeModal />

@@ -12,7 +12,7 @@ import { GENRES, LEVELS, STAT_META } from "../game/data";
 import { toast, askConfirm } from "../components/ui";
 import { DayBars, RankBars } from "./charts";
 import { Logo } from "../components/HeroBackdrop";
-import { Kpi, Section, fail, input, when } from "./kit";
+import { Kpi, Section, errMsg, fail, input, when } from "./kit";
 import { RafflesTab, RewardsTab } from "./RewardsAdmin";
 import { BetaSignupsTab } from "./WaitlistAdmin";
 import { IntegrationsTab } from "./IntegrationsAdmin";
@@ -705,6 +705,7 @@ function Traffic() {
 function Admins() {
   const [rows, setRows] = useState<{ email: string; status: string; created_at: string }[]>([]);
   const [email, setEmail] = useState("");
+  const [notify, setNotify] = useState(true);
   const me = useCloud((s) => s.email);
   const load = useCallback(async () => {
     const { data, error } = await supabase!.rpc("admin_list");
@@ -716,7 +717,15 @@ function Admins() {
   const add = async () => {
     const { data, error } = await supabase!.rpc("admin_add", { p_email: email.trim() });
     if (error) return fail(error);
-    toast({ ok: true, message: data === "added" ? `${email} is now an admin.` : `Invited ${email}. They become an admin when they sign in with that email and confirm it.` });
+    const who = email.trim();
+    let emailNote = "";
+    if (notify) {
+      const r = await supabase!.functions.invoke("admin-notify", { body: { email: who } });
+      let err = r.error ? errMsg(r.error) : "";
+      if (r.error) { try { err = (await (r.error as { context?: Response }).context?.json())?.error ?? err; } catch { /* keep */ } }
+      emailNote = r.error ? ` (The email didn't send: ${err})` : " We emailed them.";
+    }
+    toast({ ok: true, message: (data === "added" ? `${who} is now an admin.` : `Invited ${who}. They become an admin when they sign in with that email and confirm it.`) + emailNote });
     setEmail("");
     void load();
   };
@@ -734,6 +743,7 @@ function Admins() {
         <input className={input} type="email" placeholder="name@please.co" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && email && void add()} />
         <button className="btn btn-pink whitespace-nowrap" disabled={!email.includes("@")} onClick={add}>Add admin</button>
       </div>
+      <label className="flex items-center gap-2 text-xs text-muted-fg -mt-3 mb-5"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />Email them that they've been added (with a sign-in link)</label>
       <ul className="divide-y divide-line">
         {rows.map((r) => (
           <li key={r.email} className="py-3 flex items-center gap-3">
