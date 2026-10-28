@@ -10,6 +10,7 @@ import { Bar, Card, Modal, StatBar, toast } from "../components/ui";
 import type { Career, Stats } from "../game/types";
 import { ALL_QUESTS_BONUS, ROYALTY_CAP_HOURS, currentQuests, questEmoji, questLabel, royaltiesPending, royaltyRate } from "../game/quests";
 import { sfx } from "../lib/fx";
+import { useMyRank } from "../lib/leaderboard";
 
 function untilMidnight(now: number) {
   const d = new Date(now); d.setHours(24, 0, 0, 0);
@@ -144,6 +145,7 @@ export default function Dashboard() {
         <p className="text-xs text-muted-fg mt-3 italic">{mood.tip}</p>
       </Card>
 
+      <RankCard />
       <PresalesTeaser />
       <QuestsCard c={c} now={now} />
       <RoyaltiesCard c={c} now={now} />
@@ -204,5 +206,23 @@ export default function Dashboard() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+/** Your weekly leaderboard rank (signed-in players on the board). */
+function RankCard() {
+  const { rank, pct, score } = useMyRank();
+  if (!rank) return null;
+  return (
+    <Link to="/rivals" className="block mb-4">
+      <Card className="flex items-center gap-3">
+        <div className="text-2xl">🏆</div>
+        <div className="flex-1">
+          <div className="font-pixel text-[8px]" style={{ color: "var(--gold)" }}>YOUR RANK THIS WEEK</div>
+          <div className="text-sm mt-1"><b>#{rank.toLocaleString()}</b> · top {pct}% · {score.toLocaleString()} fame</div>
+        </div>
+        <span className="text-xs text-muted-fg">›</span>
+      </Card>
+    </Link>
   );
 }

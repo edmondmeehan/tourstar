@@ -10,6 +10,7 @@ import { startPurchases } from "./lib/purchases";
 import { startAi } from "./lib/ai";
 import { startGold } from "./lib/gold";
 import { startPush } from "./lib/push";
+import { startLeaderboard } from "./lib/leaderboard";
 import { OPEN_PATHS, WEB_BASE, refreshSite, useSite, COPYRIGHT } from "./lib/site";
 import { ConflictModal } from "./components/CloudUI";
 import Login, { AuthCallback, ResetPassword } from "./pages/Login";
@@ -68,6 +69,7 @@ export default function App() {
     startPurchases();
     startAi();
     startGold();
+    startLeaderboard();
     startPush((path) => nav(path));
     void refreshSite();
     // eslint-disable-next-line react-hooks/exhaustive-deps
