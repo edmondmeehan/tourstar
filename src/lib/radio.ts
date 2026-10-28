@@ -6,7 +6,7 @@ import { useConcert } from "../concert/useConcert";
 import { supabase } from "./cloud";
 import { useLive } from "./live";
 
-export interface RadioSong { id: string; path: string; genre: string; title: string; artist: string; likes: number; liked: boolean }
+export interface RadioSong { id: string; path: string; genre: string; title: string; artist: string; likes: number; liked: boolean; picked?: boolean; note?: string | null }
 
 export const songUrl = (path: string) => supabase!.storage.from("ai-audio").getPublicUrl(path).data.publicUrl;
 const device = () => useLive.getState().deviceId;

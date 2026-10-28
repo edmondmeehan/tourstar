@@ -4,6 +4,7 @@ import { PERSONAS, TOURS, type TourDef } from "../game/data";
 import { crewBonuses, fmtMoney, fmtNum, labelOf, levelFor } from "../game/engine";
 import { useGame } from "../game/store";
 import { Card, PageTitle, Tag } from "../components/ui";
+import { drumChops } from "../game/drums";
 import SetlistSheet from "../components/SetlistSheet";
 import { SET_SLOTS } from "../game/setlist";
 import { useConcert } from "../concert/useConcert";
@@ -34,6 +35,11 @@ export default function Tour() {
           <button className="btn btn-pink w-full mt-3" onClick={() => resume(pending)}>Back on stage</button>
         </Card>
       )}
+      <Link to="/drums" className="panel flex items-center gap-3 px-4 py-3 mb-4 hover:border-pink">
+        <span className="text-2xl">🥁</span>
+        <span className="flex-1 text-sm"><b>Drum School</b><span className="block text-xs text-muted-fg">Learn real grooves. Chops boost every show: +{drumChops(c.drums?.best)}% now.</span></span>
+        <span className="text-muted-fg">›</span>
+      </Link>
       {venues.length > 0 && (
         <>
           <h2 className="font-pixel text-[10px] mb-2" style={{ color: "var(--gold)" }}>★ FEATURED VENUES</h2>

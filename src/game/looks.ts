@@ -50,6 +50,7 @@ export const LOOK_ITEMS: LookItem[] = [
   I("hair-spikes", "hair", "Spikes", "spikes", "cash", { price: 30000, level: 4 }),
   I("hair-slick", "hair", "Slicked Back", "slick", "cash", { price: 75000, level: 5 }),
   I("hair-frosted", "hair", "Frosted Tips", "frosted", "gold"),
+  I("hair-big-afro", "hair", "Big Afro & Pick", "bigafro", "gold", { c: "#1E1E24", c2: "#F2C230" }),
 
   // Tops
   I("top-tee-white", "top", "White Tee", "tee", "starter", { c: "#F2F2F2" }),
@@ -71,6 +72,8 @@ export const LOOK_ITEMS: LookItem[] = [
   I("top-white-suit", "top", "White Suit Jacket", "suit", "gold", { c: "#F7F7F2", c2: "#C8C8C0" }),
   I("top-sequin", "top", "Gold Sequins", "sequin", "gold", { c: "#E5B83A", c2: "#FFF3B0" }),
   I("top-cape", "top", "Stage Cape", "cape", "gold", { c: "#8E1BD1", c2: "#F2C230" }),
+  I("top-crate-tee", "top", "Oversized Crate Tee", "bigtee", "gold", { c: "#1E1E24", c2: "#FF9F1C" }),
+  I("top-soul-jacket", "top", "Soul Track Jacket", "tour", "gold", { c: "#FF9F1C", c2: "#2EC4B6" }),
   I("top-ts-hoodie", "top", "TourStar Hoodie", "hoodie", "merch", { c: "#111111", c2: "#F2C230" }),
 
   // Bottoms
@@ -111,6 +114,7 @@ export const LOOK_ITEMS: LookItem[] = [
   I("acc-star-shades", "acc", "Star Shades", "starshades", "gold", { c: "#FF42D8" }),
   I("acc-silver-shades", "acc", "Silver Shades", "shades", "gold", { c: "#B8C4D6" }),
   I("acc-silver-chain", "acc", "Silver Chain", "chain", "gold", { c: "#D6DAE2" }),
+  I("acc-round-specs", "acc", "Round Specs", "roundspecs", "gold", { c: "#1E1E24", c2: "#9FD8FF" }),
   I("acc-crown", "acc", "Legend Crown", "crown", "level", { c: "#F2C230", level: 7 }),
 
   // Held
@@ -124,6 +128,7 @@ export const LOOK_ITEMS: LookItem[] = [
   I("held-flying-v", "held", "Flying V", "flyingv", "cash", { c: "#1A1A1F", c2: "#B8BCC8", price: 80000, level: 5 }),
   I("held-gold-mic", "held", "Gold Mic", "mic", "gold", { c: "#F2C230" }),
   I("held-headset", "held", "Headset Mic", "headset", "gold", { c: "#1E1E24", c2: "#9AA0A6" }),
+  I("held-gold-sticks", "held", "Gold Drumsticks", "sticks", "gold", { c: "#F2C230" }),
   I("held-legend-guitar", "held", "Legend Guitar", "guitar", "level", { c: "#F2C230", c2: "#FFFFFF", level: 7 }),
 ];
 export const lookItem = (id: string) => LOOK_ITEMS.find((i) => i.id === id);
@@ -190,6 +195,7 @@ export function buildAvatar(look: Look, opts: { arms?: boolean; held?: boolean }
     case "locs": for (let i = 0; i < 5; i++) { r(5 + (i % 2), 5 + i * 0, 1, 14, i % 2 ? hairDark : hairC); } r(6, 5, 2, 13, hairC); r(16, 5, 2, 13, hairC); r(17, 5, 1, 14, hairDark); break;
     case "braids": r(6, 6, 2, 13, hairC); r(16, 6, 2, 13, hairC); for (let y = 7; y < 19; y += 3) { r(6, y, 2, 1, hairDark); r(16, y, 2, 1, hairDark); } break;
     case "afro": r(4, 1, 16, 12, hairC); break;
+    case "bigafro": r(2, 0, 20, 14, hairC); break;
     case "pigtails": r(3, 7, 4, 7, hairC); r(17, 7, 4, 7, hairC); break;
   }
   // Cape goes behind the body
@@ -253,11 +259,12 @@ export function buildAvatar(look: Look, opts: { arms?: boolean; held?: boolean }
     case "coat": r(12, 14, 1, 18, c2); r(10, 14, 1, 4, c2); r(13, 14, 1, 4, c2); break;
     case "sequin": for (let y = 15; y < 26; y += 2) for (let x = tL + ((y >> 1) % 2); x < tR; x += 2) r(x, y, 1, 1, c2); break;
     case "cape": r(11, 14, 2, 2, c2); break;
+    case "bigtee": r(tL - 1, 24, tW + 2, 3, c1); r(10, 17, 4, 4, c2); r(11, 18, 2, 2, c1); r(11, 18, 1, 1, c2); break;
   }
 
   // Arms (static pose: down at the sides)
   if (arms) {
-    const sleeve = top.style === "tank" ? 0 : ["tee", "bandtee", "sparkle", "jersey"].includes(top.style) ? 4 : 11;
+    const sleeve = top.style === "tank" ? 0 : top.style === "bigtee" ? 6 : ["tee", "bandtee", "sparkle", "jersey"].includes(top.style) ? 4 : 11;
     for (const ax of [tL - 2, tR]) {
       if (sleeve) r(ax, 14, 2, sleeve, c1);
       if (sleeve < 11) r(ax, 14 + sleeve, 2, 11 - sleeve, skin);
@@ -272,6 +279,13 @@ export function buildAvatar(look: Look, opts: { arms?: boolean; held?: boolean }
     case "buzz": r(8, 4, 8, 2, hairC); break;
     case "curly": r(6, 2, 12, 4, hairC); r(6, 6, 2, 4, hairC); r(16, 6, 2, 4, hairC); for (let x = 6; x < 18; x += 2) r(x, 2, 1, 1, hairDark); break;
     case "afro": r(6, 1, 12, 4, hairC); for (let x = 5; x < 19; x += 3) r(x, 2, 1, 1, hairDark); break;
+    case "bigafro": {
+      r(5, 0, 14, 5, hairC); for (let x = 3; x < 21; x += 3) r(x, 1 + (x % 2), 1, 1, hairDark);
+      // the pick: comb teeth in the hair, handle sticking out
+      const p1 = hair.c ?? "#1E1E24", p2 = hair.c2 ?? "#F2C230";
+      r(16, 1, 3, 1, p1); r(16, 2, 1, 2, p1); r(18, 2, 1, 2, p1); r(17, 0, 1, 1, p2); r(19, 0, 2, 2, p2);
+      break;
+    }
     case "braids": case "locs": r(7, 3, 10, 3, hairC); r(8, 3, 1, 3, hairDark); r(11, 3, 1, 3, hairDark); r(14, 3, 1, 3, hairDark); break;
     case "bun": r(8, 4, 8, 2, hairC); r(10, 1, 4, 3, hairC); break;
     case "pigtails": r(7, 3, 10, 3, hairC); break;
@@ -287,6 +301,7 @@ export function buildAvatar(look: Look, opts: { arms?: boolean; held?: boolean }
   const a1 = acc.c ?? "#111", a2 = acc.c2 ?? shade(a1, 0.3);
   switch (acc.style) {
     case "shades": r(9, 7, 3, 2, a1); r(12, 7, 3, 2, a1); r(12, 7, 1, 1, a1); break;
+    case "roundspecs": r(8, 7, 4, 3, a1); r(13, 7, 4, 3, a1); r(9, 8, 2, 1, a2); r(14, 8, 2, 1, a2); r(12, 8, 1, 1, a1); break;
     case "starshades": r(9, 7, 3, 2, a1); r(12, 7, 3, 2, a1); r(10, 6, 1, 1, a1); r(13, 6, 1, 1, a1); break;
     case "beanie": r(7, 1, 10, 4, a1); r(7, 4, 10, 1, shade(a1, -0.3)); break;
     case "cap": r(7, 2, 10, 3, a1); r(4, 4, 4, 1, a1); r(11, 2, 2, 1, a2); break;

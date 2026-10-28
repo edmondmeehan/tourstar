@@ -8,8 +8,8 @@ import { masterVolume } from "./fx";
 import { useGame } from "../game/store";
 import type { ReleaseKind, Song } from "../game/types";
 
-interface AiFlags { music: boolean; voice: boolean; dailyLimit: number; vipBonus: number; minLevel: number; loaded: boolean; credits: number; vip: boolean; songsTotal: number }
-export const useAiFlags = create<AiFlags>(() => ({ music: false, voice: false, dailyLimit: 3, vipBonus: 3, minLevel: 3, loaded: false, credits: 0, vip: false, songsTotal: 0 }));
+interface AiFlags { music: boolean; voice: boolean; dailyLimit: number; vipBonus: number; minLevel: number; loaded: boolean; credits: number; vip: boolean; songsTotal: number; curator: string }
+export const useAiFlags = create<AiFlags>(() => ({ music: false, voice: false, dailyLimit: 3, vipBonus: 3, minLevel: 3, loaded: false, credits: 0, vip: false, songsTotal: 0, curator: "" }));
 
 /** Purchased AI Studio credits and server-side VIP status (signed-in players). */
 export async function refreshPerks() {
@@ -20,10 +20,10 @@ export async function refreshPerks() {
 
 export async function refreshAiFlags() {
   if (!supabase) return;
-  const { data } = await supabase.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_voice_enabled", "ai_music_daily_limit", "ai_music_vip_bonus", "ai_music_min_level"]);
+  const { data } = await supabase.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_voice_enabled", "ai_music_daily_limit", "ai_music_vip_bonus", "ai_music_min_level", "curator_name"]);
   if (!data) return;
   const m = Object.fromEntries(data.map((r) => [r.key, r.value as string]));
-  useAiFlags.setState({ music: m.ai_music_enabled === "true", voice: m.ai_voice_enabled === "true", dailyLimit: Number(m.ai_music_daily_limit ?? 3) || 0, vipBonus: Number(m.ai_music_vip_bonus ?? 3) || 0, minLevel: Math.max(1, Math.min(7, Number(m.ai_music_min_level ?? 3) || 1)), loaded: true });
+  useAiFlags.setState({ music: m.ai_music_enabled === "true", voice: m.ai_voice_enabled === "true", dailyLimit: Number(m.ai_music_daily_limit ?? 3) || 0, vipBonus: Number(m.ai_music_vip_bonus ?? 3) || 0, minLevel: Math.max(1, Math.min(7, Number(m.ai_music_min_level ?? 3) || 1)), curator: (m.curator_name ?? "").trim().slice(0, 40), loaded: true });
 }
 
 /**

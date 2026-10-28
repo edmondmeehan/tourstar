@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { GRID_H, LOOK_ITEMS, SKIN_TONES, buildAvatar, lookItem, normalizeLook, type Look, type Px } from "../game/looks";
 
 const hexNum = (h: string) => parseInt(h.slice(1), 16);
-const SHORT = ["tee", "bandtee", "sparkle", "jersey"];
+const SHORT = ["tee", "bandtee", "sparkle", "jersey", "bigtee"];
 
 /** A bandmate's look: same vibe, different hair, skin and outfit. */
 function bandmate(lead: Look, i: number, match = false): Look {
@@ -60,6 +60,12 @@ function poseFor(id: string, t: number, beat: number, progress: number): Pose {
     case "jump": {
       const up = Math.floor(b) % 2 === 0 ? Math.sin(Math.PI * ph) : 0;
       return { dx: 0, lift: up * 26, armR: up ? -1.2 : 0.7, armL: up ? Math.PI + 1.2 : Math.PI - 0.7, legs: up * 5, squash: 1 };
+    }
+    case "drummer": { // behind the kit: alternate sticks on every 8th note, crash on the finale
+      if (finale) return { dx: 0, lift: 0, armR: -1.0, armL: Math.PI + 1.0, legs: 0, squash: 1 };
+      const hb = b * 2;
+      const up = 0.5 + 0.5 * Math.cos(Math.PI * hb);
+      return { dx: 0, lift: hit * 1.5, armR: 0.95 - 1.1 * (1 - up), armL: Math.PI - 0.95 + 1.1 * up, legs: 0, squash: 1 };
     }
     case "boyband": {
       if (finale) return { dx: 0, lift: 0, armR: -0.9, armL: Math.PI + 0.9, legs: 6, squash: 1 }; // the freeze
@@ -191,7 +197,7 @@ export class ConcertScene extends Phaser.Scene {
       g.fillStyle(skin, 1); g.fillCircle(ex, ey, 1.2 * u);
       return { ex, ey };
     };
-    arm(-1, p.armL);
+    const handL = arm(-1, p.armL);
     const hand = arm(1, p.armR);
     // What they're holding
     const held = lookItem(look.held);
@@ -199,7 +205,11 @@ export class ConcertScene extends Phaser.Scene {
     if (held && held.style !== "none" && showMic) {
       const c1 = hexNum(held.c ?? "#9AA0A6"), c2 = hexNum(held.c2 ?? "#333333");
       if (held.style === "mic") { g.fillStyle(c1, 1); g.fillCircle(hand.ex, hand.ey - 1.2 * u, 1.4 * u); }
-      else if (held.style === "sticks") { g.lineStyle(0.8 * u, c1, 1); g.lineBetween(hand.ex, hand.ey, hand.ex + 2 * u, hand.ey - 5 * u); }
+      else if (held.style === "sticks") {
+        g.lineStyle(0.8 * u, c1, 1);
+        g.lineBetween(hand.ex, hand.ey, hand.ex + 2 * u, hand.ey - 5 * u);
+        g.lineBetween(handL.ex, handL.ey, handL.ex - 2 * u, handL.ey - 5 * u);
+      }
       else if (["guitar", "acoustic", "flyingv", "keytar"].includes(held.style)) {
         const gy = y - (GRID_H - 24) * u;
         g.lineStyle(1 * u, 0x3a2410, 1); g.lineBetween(x - 7 * u * sq, gy - 6 * u, x + 3 * u * sq, gy);
@@ -279,12 +289,29 @@ export class ConcertScene extends Phaser.Scene {
     const leadLook = p.look ?? normalizeLook(undefined, "pop");
     const scale = members >= 4 ? 0.8 : members >= 2 ? 0.9 : 1;
     const gap = Math.min(W * 0.16, 44) * scale;
+    let leadX = fx;
     for (let m = 0; m < members; m++) {
       const x = fx + (m - (members - 1) / 2) * gap;
+      if (members === 1 || m === Math.floor(members / 2)) leadX = x;
       // A tiny delay across the line reads as a ripple at the end; otherwise everyone is in sync.
       const pose = poseFor(mv.id, this.t, beat, this.progress);
       const isLead = members === 1 || m === Math.floor(members / 2);
       this.drawFigure(g, x + pose.dx * scale, stageY, scale, pose, members > 1 && isLead, isLead ? leadLook : bandmate(leadLook, m, !!mv.match));
+    }
+
+    // Drum kit in front of the lead when they're playing drums
+    if (mv.id === "drummer") {
+      const u = (64 / 40) * scale;
+      const hitNow = Math.abs(Math.cos(Math.PI * (this.t / beat) * 2)) > 0.92;
+      g.fillStyle(0x3a1f5c, 1); g.fillCircle(leadX, stageY - 9 * u, 9 * u);
+      g.fillStyle(hitNow ? th.a : 0x1e1030, 1); g.fillCircle(leadX, stageY - 9 * u, 6.5 * u);
+      g.fillStyle(th.glow, 1); g.fillRect(leadX - 3 * u, stageY - 10 * u, 6 * u, 2 * u);
+      g.fillStyle(0xe8e8e8, 1); g.fillRect(leadX + 10 * u, stageY - 15 * u, 8 * u, 3 * u); // snare
+      g.fillStyle(0x777777, 1); g.fillRect(leadX + 13.5 * u, stageY - 12 * u, 1 * u, 12 * u);
+      g.fillStyle(0xc9a43a, 1); g.fillRect(leadX - 20 * u, stageY - (hitNow ? 27 : 26) * u, 10 * u, 1.5 * u); // hi-hat
+      g.fillStyle(0x777777, 1); g.fillRect(leadX - 15.5 * u, stageY - 25 * u, 1 * u, 25 * u);
+      g.fillStyle(0xc9a43a, 1); g.fillRect(leadX + 14 * u, stageY - 33 * u, 12 * u, 1.5 * u); // crash
+      g.fillStyle(0x777777, 1); g.fillRect(leadX + 19.5 * u, stageY - 31 * u, 1 * u, 31 * u);
     }
 
     // Floor + crowd

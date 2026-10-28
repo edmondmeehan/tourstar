@@ -19,20 +19,26 @@ interface Pop { text: string; color: string; lane: number; born: number }
  * ← ↓ → / A S D) as a note crosses the line. Empty taps aren't punished, so phones
  * with a little touch lag still feel fair.
  */
-export default function NoteHighway({ medley, now, onJudge, onDone, tuning = DEFAULT_TUNING }: {
+export default function NoteHighway({ medley, now, onJudge, onDone, tuning = DEFAULT_TUNING, lanes, onTap, hint = "TAP THE LANES ON THE LINE" }: {
   medley: Medley;
   /** approach = seconds a note takes to fall to the line; perfect/good = timing windows in seconds. */
   tuning?: { approach: number; perfect: number; good: number };
   now: () => number;
   onJudge: (j: Judge, combo: number) => void;
   onDone: (r: HighwayResult) => void;
+  /** Optional lane names and colors (Drum School: kick, snare, hat). */
+  lanes?: { labels: string[]; colors: string[] };
+  /** Called on every tap, hit or not (Drum School plays the drum). */
+  onTap?: (lane: number) => void;
+  hint?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cb = useRef({ onJudge, onDone });
-  cb.current = { onJudge, onDone };
+  const cb = useRef({ onJudge, onDone, onTap });
+  cb.current = { onJudge, onDone, onTap };
 
   useEffect(() => {
     const { approach: APPROACH, perfect: PERFECT, good: GOOD } = tuning;
+    const COLORS = lanes?.colors ?? LANE_COLORS;
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
     const notes: Live[] = medley.notes.map((n) => ({ ...n, state: "open" }));
@@ -55,6 +61,7 @@ export default function NoteHighway({ medley, now, onJudge, onDone, tuning = DEF
     const tap = (lane: number) => {
       const t = now();
       flash[lane] = t;
+      cb.current.onTap?.(lane);
       let best: Live | null = null;
       for (const n of notes) {
         if (n.state !== "open" || n.lane !== lane) continue;
@@ -106,17 +113,23 @@ export default function NoteHighway({ medley, now, onJudge, onDone, tuning = DEF
         ctx.fillRect(x + 4, 0, laneW - 8, H);
         const lit = Math.max(0, 1 - (t - flash[i]) / 0.18);
         if (lit > 0) {
-          ctx.fillStyle = LANE_COLORS[i] + Math.round(lit * 70).toString(16).padStart(2, "0");
+          ctx.fillStyle = COLORS[i] + Math.round(lit * 70).toString(16).padStart(2, "0");
           ctx.fillRect(x + 4, lineY - H * 0.35, laneW - 8, H * 0.35 + 6);
         }
         // Target pad
-        ctx.strokeStyle = LANE_COLORS[i];
+        ctx.strokeStyle = COLORS[i];
         ctx.lineWidth = 3;
         ctx.globalAlpha = 0.55 + lit * 0.45;
         ctx.beginPath();
         ctx.roundRect(x + laneW * 0.18, lineY - 13, laneW * 0.64, 26, 13);
         ctx.stroke();
         ctx.globalAlpha = 1;
+        if (lanes?.labels[i]) {
+          ctx.textAlign = "center";
+          ctx.font = "8px 'Press Start 2P', monospace";
+          ctx.fillStyle = COLORS[i];
+          ctx.fillText(lanes.labels[i], x + laneW / 2, lineY + 30);
+        }
       }
 
       // Notes
@@ -128,8 +141,8 @@ export default function NoteHighway({ medley, now, onJudge, onDone, tuning = DEF
         const x = n.lane * laneW + laneW / 2;
         const s = 0.75 + (1 - dt / APPROACH) * 0.25;
         ctx.globalAlpha = n.state === "miss" ? 0.25 : 1;
-        ctx.fillStyle = LANE_COLORS[n.lane];
-        ctx.shadowColor = LANE_COLORS[n.lane];
+        ctx.fillStyle = COLORS[n.lane];
+        ctx.shadowColor = COLORS[n.lane];
         ctx.shadowBlur = 14;
         ctx.beginPath();
         ctx.roundRect(x - laneW * 0.3 * s, y - 10 * s, laneW * 0.6 * s, 20 * s, 10 * s);
@@ -168,7 +181,7 @@ export default function NoteHighway({ medley, now, onJudge, onDone, tuning = DEF
         ctx.fillText(left > 4 ? "READY" : String(Math.max(1, left)), W / 2, H * 0.42);
         ctx.font = "9px 'Press Start 2P', monospace";
         ctx.fillStyle = "rgba(255,255,255,0.7)";
-        ctx.fillText("TAP THE LANES ON THE LINE", W / 2, H * 0.42 + 28);
+        ctx.fillText(hint, W / 2, H * 0.42 + 28);
       }
 
       if (!finished && t > medley.durationSec + 0.3) {

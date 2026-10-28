@@ -9,7 +9,7 @@ import { GENRES } from "../game/data";
 import { LINK_KEYS, monthLabel, type LinkKey } from "../lib/monthly";
 import { Kpi, Section, fail, input } from "./kit";
 
-interface Song { id: string; path: string; created_at: string; genre: string; kind: string; title: string; artist: string; email: string | null; likes?: number; reports?: number }
+interface Song { id: string; path: string; created_at: string; genre: string; kind: string; title: string; artist: string; email: string | null; likes?: number; reports?: number; picked?: boolean }
 interface Track { gen_id: string; title: string; artist: string; genre: string; path: string }
 interface ReleaseRow {
   id?: string; month: string; title: string; status: "draft" | "submitted" | "live"; cover_url: string | null;
@@ -82,6 +82,21 @@ export function MonthlyTab() {
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState("");
+  const [curator, setCurator] = useState("");
+  useEffect(() => {
+    void supabase!.from("app_public_config").select("value").eq("key", "curator_name").maybeSingle().then(({ data }) => setCurator((data?.value as string) ?? ""));
+  }, []);
+  const saveCurator = async () => {
+    const { error } = await supabase!.from("app_public_config").upsert({ key: "curator_name", value: curator.trim().slice(0, 40), updated_at: new Date().toISOString() });
+    if (error) return fail(error);
+    toast({ ok: true, message: curator.trim() ? `Players now see "${curator.trim()} Picks" on the radio.` : "Curator name cleared. The station shows as Curator's Picks." });
+  };
+  const setPick = async (s: Song) => {
+    const on = !s.picked;
+    const { error } = await supabase!.rpc("admin_set_pick", { p_gen: s.id, p_on: on, p_note: "" });
+    if (error) return fail(error.message.includes("admin_set_pick") ? { message: "Run the curator picks SQL in Supabase first." } : error);
+    setSongs((list) => list?.map((x) => (x.id === s.id ? { ...x, picked: on } : x)) ?? null);
+  };
 
   const load = useCallback(async () => {
     setSongs(null);
@@ -188,6 +203,12 @@ export function MonthlyTab() {
 
   return (
     <>
+      <Section title="Curator's Picks" sub="Star songs below to put them on the Picks radio station. The name shows to players as '[name] Picks' on the radio, Drum School and Crate Digging. Leave it blank until the curator's written agreement covers using their name.">
+        <div className="flex gap-2 items-center">
+          <input className={input} placeholder="Curator name (e.g. Questlove)" value={curator} maxLength={40} onChange={(e) => setCurator(e.target.value)} />
+          <button className="btn btn-pink text-xs shrink-0" onClick={() => void saveCurator()}>Save</button>
+        </div>
+      </Section>
       <Section title="Monthly release" sub="Every song recorded in the AI studio this month. Pick and order the tracklist, download the bundle for DistroKid, then paste the streaming links back here and go live. Only AI-studio recordings have audio files; the in-game synth songs aren't included."
         right={<input type="month" className={`${input} !w-auto`} value={ym} max={thisMonth()} onChange={(e) => e.target.value && setYm(e.target.value)} />}>
         <div className="grid sm:grid-cols-4 gap-3 mb-4">
@@ -205,12 +226,13 @@ export function MonthlyTab() {
               <button className="underline" onClick={() => setPicked(songs.map((s) => s.id))}>Select all</button>
               <button className="underline" onClick={() => setPicked([])}>Clear</button>
               <button className="underline" onClick={() => setPicked([...songs].sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0)).slice(0, 15).map((s) => s.id))}>Top 15 by radio likes</button>
+              <button className="underline" onClick={() => setPicked([...songs.filter((s) => s.picked), ...[...songs].filter((s) => !s.picked).sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0))].slice(0, 15).map((s) => s.id))}>Curator's picks first</button>
               {dupes.size > 0 && <span style={{ color: "var(--gold)" }}>⚠ {dupes.size} duplicate title{dupes.size > 1 ? "s" : ""}: stores may reject repeats on one album.</span>}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[860px] [&_th]:px-2 [&_td]:px-2">
                 <thead className="text-[11px] uppercase tracking-wider text-muted-fg text-left">
-                  <tr className="border-b border-line"><th className="py-2 w-8" /><th className="w-10">#</th><th>Title</th><th>Player artist</th><th>Genre</th><th className="text-right">❤️</th><th>Recorded</th><th>Listen</th><th /></tr>
+                  <tr className="border-b border-line"><th className="py-2 w-8" /><th className="w-10">#</th><th>Title</th><th>Player artist</th><th>Genre</th><th className="text-right">❤️</th><th title="Curator's pick">⭐</th><th>Recorded</th><th>Listen</th><th /></tr>
                 </thead>
                 <tbody>
                   {[...tracks.map((t) => songs.find((s) => s.id === t.gen_id)!), ...songs.filter((s) => !picked.includes(s.id))].map((s) => {
@@ -224,6 +246,7 @@ export function MonthlyTab() {
                         <td className="text-xs">{s.artist}<span className="text-muted-fg">{s.email ? ` · ${s.email}` : ""}</span></td>
                         <td className="text-xs">{genreName(s.genre)}</td>
                         <td className="text-xs text-right tabular-nums">{s.likes ?? 0}{s.reports ? <span className="text-danger" title="Radio reports"> ⚑{s.reports}</span> : null}</td>
+                        <td><button className={`text-base ${s.picked ? "" : "opacity-30 grayscale"}`} title={s.picked ? "Remove from Picks" : "Add to Picks"} onClick={() => void setPick(s)}>⭐</button></td>
                         <td className="text-xs text-muted-fg whitespace-nowrap">{new Date(s.created_at).toLocaleDateString()}</td>
                         <td><audio controls preload="none" src={audioUrl(s.path)} className="h-8 w-48" /></td>
                         <td className="whitespace-nowrap text-xs space-x-2">{on && <><button className="underline" onClick={() => move(s.id, -1)}>↑</button><button className="underline" onClick={() => move(s.id, 1)}>↓</button></>}</td>

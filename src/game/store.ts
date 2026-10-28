@@ -21,6 +21,8 @@ import { defaultLook, lookItem, normalizeLook, type Look } from "./looks";
 import {
   SET_SLOTS, debutChance, fanRequest, gradeFor, setlistScore, showScore, songPool, type EncoreChoice, type Grade, type PendingShow, type ShowVenue,
 } from "./setlist";
+import { LESSON_ENERGY, LESSONS_PER_DAY, betterGrade, drumChops, drumGrade, lessonById } from "./drums";
+import { CRATE_MAX, DIG_ENERGY, RARITY, rollSample, sampleBoost, type Sample } from "./crate";
 import { ALL_QUESTS_BONUS, currentQuests, questLabel, royaltiesPending, type QuestKind } from "./quests";
 
 export interface GigReport {
@@ -78,7 +80,12 @@ interface GameState {
   claimDrop: (purchaseId: string, items: { type: string; amount?: number }[], name: string) => boolean;
   /** Pay out a started show. performance is 0..1 from the rhythm game. */
   finishShow: (performance: number, encore: EncoreChoice | null) => ActionResult;
-  release: (kind: ReleaseKind, title: string, withSong: boolean) => ActionResult;
+  release: (kind: ReleaseKind, title: string, withSong: boolean, sampleId?: string) => ActionResult;
+  /** Drum School: spend energy to start a graded lesson (practice skips this and earns nothing). */
+  startDrumLesson: (id: string) => ActionResult;
+  finishDrumLesson: (id: string, accuracy: number) => ActionResult & { grade?: Grade; firstPass?: boolean };
+  /** Crate Digging: one free dig a day, then energy. */
+  digCrate: () => ActionResult & { sample?: Sample };
   signLabel: (id: string) => ActionResult;
   leaveLabel: () => ActionResult;
   hire: (id: CrewId) => ActionResult;
@@ -317,7 +324,8 @@ export const useGame = create<GameState>()(
           const t = TOURS.find((x) => x.id === show.tourId)!;
           const b = crewBonuses(c);
           const label = labelOf(c);
-          const perf = Math.max(0, Math.min(1, performance));
+          // Drum School chops: a small boost to the playing score.
+          const perf = Math.max(0, Math.min(1, performance * (1 + drumChops(c.drums?.best) / 100)));
           const pool = songPool(c);
           const setQ = setlistScore(show.setlist, pool, show.requestKey, SET_SLOTS[t.id] ?? 3);
           const score = showScore(perf, setQ);
@@ -403,7 +411,7 @@ export const useGame = create<GameState>()(
           };
         },
 
-        release: (kind, title, withSong) => {
+        release: (kind, title, withSong, sampleId) => {
           const c = draft();
           if (!c) return { ok: false, message: "No career." };
           if (isLocked(c)) return lockMsg(c);
@@ -414,7 +422,10 @@ export const useGame = create<GameState>()(
           if (c.stats.energy < r.energy) return { ok: false, message: `Need ${r.energy} energy.` };
           if (c.stats.cash < r.cost) return { ok: false, message: `Need $${r.cost.toLocaleString()}.` };
 
-          const quality = Math.round(Math.min(100, Math.max(5, c.stats.credibility * 0.6 + c.stats.hype * 0.2 + Math.random() * 35 + crewBonuses(c).payMult * 5 - 5)));
+          const sample = sampleId ? (c.samples ?? []).find((x) => x.id === sampleId) : undefined;
+          const flip = sample ? sampleBoost(sample, c.genre) : 0;
+          const quality = Math.round(Math.min(100, Math.max(5, c.stats.credibility * 0.6 + c.stats.hype * 0.2 + Math.random() * 35 + crewBonuses(c).payMult * 5 - 5 + flip)));
+          if (sample) c.samples = (c.samples ?? []).filter((x) => x.id !== sample.id);
           const q = quality / 60;
           const label = labelOf(c);
           const m = levelMult(lvl);
@@ -448,10 +459,76 @@ export const useGame = create<GameState>()(
           if (!c.royaltiesAt) c.royaltiesAt = Date.now();
           quest(c, "release");
           if (c.tutorial && c.tutorial.step >= 4 && c.tutorial.step <= 5) c.tutorial = { step: 6 };
-          newLog(c, "release", `Released ${r.name} "${c.releases[0].title}" — quality ${quality}/100, ${streams.toLocaleString()} streams.`);
+          newLog(c, "release", `Released ${r.name} "${c.releases[0].title}" — quality ${quality}/100, ${streams.toLocaleString()} streams.${sample ? ` Flipped the ${sample.name} sample (+${flip}).` : ""}`);
           maybeEvent(c, 0.15);
           commit(c);
-          return { ok: true, title: `${r.name} out now!`, message: `Quality ${quality}/100 · ${streams.toLocaleString()} streams · +${points} points`, delta: applied, points };
+          return { ok: true, title: `${r.name} out now!`, message: `Quality ${quality}/100${flip ? ` (sample +${flip})` : ""} · ${streams.toLocaleString()} streams · +${points} points`, delta: applied, points };
+        },
+
+        startDrumLesson: (id) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          if (isLocked(c)) return lockMsg(c);
+          const l = lessonById(id);
+          if (!l) return { ok: false, message: "That lesson doesn't exist." };
+          const lvl = Math.max(c.peakLevel, levelFor(c.stats.fame).level);
+          if (lvl < l.level) return { ok: false, message: `Unlocks at level ${l.level}.` };
+          if (c.stats.energy < LESSON_ENERGY) return { ok: false, message: `Need ${LESSON_ENERGY} energy. Practice is free.` };
+          c.stats = applyDelta(c.stats, { energy: -LESSON_ENERGY });
+          c.drums = { ...(c.drums ?? { best: {} }), active: id };
+          commit(c);
+          return { ok: true, message: "Sticks up." };
+        },
+
+        finishDrumLesson: (id, accuracy) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const l = lessonById(id);
+          if (!l || c.drums?.active !== id) return { ok: false, message: "No lesson in progress." };
+          const grade = drumGrade(Math.max(0, Math.min(1, accuracy)));
+          const prev = c.drums.best[id];
+          const before = drumChops(c.drums.best);
+          const best = { ...c.drums.best, [id]: betterGrade(prev, grade) };
+          const firstPass = (grade === "A" || grade === "S") && prev !== "A" && prev !== "S";
+          const day = new Date().toISOString().slice(0, 10);
+          const n = c.drums.day === day ? c.drums.n ?? 0 : 0;
+          c.drums = { best, active: null, day, n: n + 1 };
+          let applied: Delta = {};
+          if (n < LESSONS_PER_DAY) {
+            const gm = { S: 1.5, A: 1.2, B: 1, C: 0.6, D: 0.3 }[grade];
+            const lm = levelMult(Math.max(1, Math.min(c.peakLevel, 7)));
+            applied = gain(c, {
+              cash: Math.round(250 * lm * gm),
+              fame: Math.round(12 * lm * gm * cfg().fameMultiplier),
+              credibility: grade === "S" || grade === "A" ? 1 : 0,
+              hype: grade === "S" ? 2 : 0,
+            });
+          }
+          const chops = drumChops(best);
+          newLog(c, "milestone", `Drum School: ${l.name}, grade ${grade}.${chops > before ? ` Chops up to +${chops}% at shows.` : ""}`);
+          commit(c);
+          return {
+            ok: true, grade, firstPass, delta: applied,
+            title: firstPass ? `${l.name}: passed!` : `${l.name}: ${grade}`,
+            message: chops > before ? `New chops: +${chops}% to your playing score at every show.` : n >= LESSONS_PER_DAY ? "Lesson rewards are done for today. Your best grade still counts." : "Nice work behind the kit.",
+          };
+        },
+
+        digCrate: () => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          if (isLocked(c)) return lockMsg(c);
+          if ((c.samples ?? []).length >= CRATE_MAX) return { ok: false, message: `Your crate is full (${CRATE_MAX}). Flip a sample into a release first.` };
+          const day = new Date().toISOString().slice(0, 10);
+          const free = c.crateDay !== day;
+          if (!free && c.stats.energy < DIG_ENERGY) return { ok: false, message: `Need ${DIG_ENERGY} energy. Your free dig resets tomorrow.` };
+          if (free) c.crateDay = day;
+          else c.stats = applyDelta(c.stats, { energy: -DIG_ENERGY });
+          const sample = rollSample();
+          c.samples = [sample, ...(c.samples ?? [])];
+          if (sample.rarity === "legendary" || sample.rarity === "epic") newLog(c, "milestone", `Found a ${RARITY[sample.rarity].name.toLowerCase()} record: ${sample.name}.`);
+          commit(c);
+          return { ok: true, sample, title: `${RARITY[sample.rarity].emoji} ${RARITY[sample.rarity].name} find!`, message: `${sample.name}: +${sampleBoost(sample, c.genre)} quality when you flip it into a release.` };
         },
 
         signLabel: (id) => {

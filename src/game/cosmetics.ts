@@ -19,6 +19,8 @@ export const STAGE_THEMES: StageTheme[] = [
   { id: "royal-gold", name: "Royal Gold", emoji: "👑", a: 0xf2c230, b: 0xfff3c4, glow: 0xffd23f, sky: [0x07050a, 0x1e1428, 0x3d2a14] },
   { id: "festival", name: "Festival Fields", emoji: "🌻", a: 0x7cff6b, b: 0xffe14d, glow: 0x47e0a0, sky: [0x03100a, 0x0c3020, 0x1d5a3a] },
   { id: "vaporwave", name: "Vaporwave", emoji: "🌴", a: 0xff71ce, b: 0x01cdfe, glow: 0xb967ff, sky: [0x0d0221, 0x261447, 0x541388] },
+  { id: "soul-groove", name: "Soul Groove", emoji: "🕺", a: 0xff9f1c, b: 0x2ec4b6, glow: 0xffd23f, sky: [0x0d0705, 0x2a1408, 0x5c2a0e] },
+  { id: "late-night", name: "Late Night", emoji: "🌙", a: 0x4f7cff, b: 0xf2c230, glow: 0x9fb4ff, sky: [0x030510, 0x0b1230, 0x1a2350] },
 ];
 export const stageTheme = (id?: string | null) => STAGE_THEMES.find((t) => t.id === id) ?? STAGE_THEMES[0];
 
@@ -45,7 +47,7 @@ export const SKIN_PRESETS: Skin[] = [
   { name: "Pure White", a: "#F5F7FF", b: "#9FD8FF", bg: "#0E1220" },
   { name: "Silver & Ice", a: "#D9E2F2", b: "#6FC3FF", bg: "#0B1422" },
   { name: "Millennium Gold", a: "#F5D36B", b: "#FFFFFF", bg: "#15110A" },
-  { name: "Soul Train", a: "#FF9F1C", b: "#2EC4B6", bg: "#140D07" },
+  { name: "Soul Groove", a: "#FF9F1C", b: "#2EC4B6", bg: "#140D07" },
   { name: "Neon Red", a: "#FF3B5C", b: "#FFD166", bg: "#16070C" },
   { name: "Emerald", a: "#3DFFA2", b: "#7AE7FF", bg: "#06140F" },
 ];
@@ -73,7 +75,7 @@ export function applySkin(s: Skin | null | undefined) {
 
 // ------------------------------------------------------------------ dance moves
 
-export type MoveId = "classic" | "step" | "spin" | "point" | "jump" | "boyband";
+export type MoveId = "classic" | "step" | "spin" | "point" | "jump" | "boyband" | "drummer";
 export const MOVES: { id: MoveId; name: string; blurb: string }[] = [
   { id: "classic", name: "Classic", blurb: "Bob and wave." },
   { id: "step", name: "Step-Touch", blurb: "Side to side on every beat." },
@@ -81,6 +83,7 @@ export const MOVES: { id: MoveId; name: string; blurb: string }[] = [
   { id: "point", name: "Point to the Crowd", blurb: "Hits the beat with a point." },
   { id: "jump", name: "Jump", blurb: "Up on every other beat, arms high." },
   { id: "boyband", name: "Boy Band 8-Count", blurb: "Step, pop, point, spin, freeze. Best in formation." },
+  { id: "drummer", name: "Behind the Kit", blurb: "You play the show from a full drum kit. Best with drumsticks." },
 ];
 export const moveName = (id?: string) => MOVES.find((m) => m.id === id)?.name ?? "Classic";
 

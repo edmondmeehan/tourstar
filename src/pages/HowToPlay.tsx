@@ -6,6 +6,8 @@ import { CREW, LABELS, RELEASES, TOURS } from "../game/data";
 import { fmtMoney, fmtNum, levels } from "../game/engine";
 import { useConfig } from "../game/config";
 import { useAiFlags } from "../lib/ai";
+import { CHOPS_CAP, CHOPS_PER_LESSON, LESSON_ENERGY, LESSONS_PER_DAY } from "../game/drums";
+import { CRATE_MAX, DIG_ENERGY, GENRE_FIT, RARITY } from "../game/crate";
 
 function Section({ id, emoji, title, open, toggle, children }: { id: string; emoji: string; title: string; open: boolean; toggle: (id: string) => void; children: React.ReactNode }) {
   return (
@@ -69,6 +71,17 @@ export default function HowToPlay() {
         <p>On <Link to="/album" className="underline">Album</Link>, drop a {RELEASES.map((r) => `${r.name} (LV${r.level})`).join(", ")}. Releases earn cash, fans and fame, and quality depends on your credibility and hype. Songs keep earning royalties you can collect later.</p>
         <p><b>Real AI songs:</b> your first one is free. Daily free AI recordings unlock at level {aiMin} (sign in required). VIP members and Studio Sessions can record at any level.</p>
         <p>AI songs play on <Link to="/radio" className="underline">TourStar Radio</Link>, and the best can make the <Link to="/distribute" className="underline">TourStar Monthly</Link> on real streaming services.</p>
+      </Section>
+
+      <Section id="drums" emoji="🥁" title="Drum School and chops" open={open === "drums"} toggle={toggle}>
+        <p>On <Link to="/drums" className="underline">Drum School</Link>, play real grooves on a kick, snare and hi-hat: from a basic backbeat to boom bap, ghost notes and breakbeats. More lessons unlock as you level up.</p>
+        <p><b>Lessons</b> cost ⚡{LESSON_ENERGY} and pay cash and fame by grade (up to {LESSONS_PER_DAY} paid lessons a day). <b>Practice</b> is free and unlimited.</p>
+        <p><b>Chops:</b> every lesson you pass with an A or S adds +{CHOPS_PER_LESSON}% to your playing score at every show, up to +{CHOPS_CAP}%.</p>
+      </Section>
+
+      <Section id="crate" emoji="📦" title="Crate digging and samples" open={open === "crate"} toggle={toggle}>
+        <p>On <Link to="/album" className="underline">Album</Link>, dig through crates of old (made-up) records once a day for free, then for ⚡{DIG_ENERGY} a dig. Your crate holds {CRATE_MAX} records.</p>
+        <p>Flip a sample into a release for a quality boost: {Object.values(RARITY).map((r) => `${r.name} +${r.boost}`).join(", ")}. Samples that fit your genre give {GENRE_FIT}×. Each sample is used up when you flip it.</p>
       </Section>
 
       <Section id="crew" emoji="🧑‍🤝‍🧑" title="Crew and gear: do they make more money?" open={open === "crew"} toggle={toggle}>

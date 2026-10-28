@@ -7,8 +7,10 @@ import { GENRES } from "../game/data";
 import { useGame } from "../game/store";
 import { closeRadio, dropSong, patchSong, playAt, reportSong, stopRadio, toggleLike, tune, useRadio, type RadioSong } from "../lib/radio";
 import { sfx } from "../lib/fx";
+import { useAiFlags } from "../lib/ai";
 
 const STATIONS = [
+  { id: "picks", name: "Curator's Picks", emoji: "⭐" },
   { id: "hot", name: "Hot", emoji: "🔥" },
   { id: "new", name: "New", emoji: "✨" },
   { id: "all", name: "Shuffle", emoji: "🔀" },
@@ -40,13 +42,15 @@ export default function Radio() {
     toast({ ok, message: ok ? "Thanks. We'll review it, and you won't hear it again." : "Couldn't send the report. Try again." });
   };
 
-  const st = STATIONS.find((s) => s.id === station) ?? STATIONS[0];
+  const curator = useAiFlags((s) => s.curator);
+  const stations = STATIONS.map((s) => (s.id === "picks" && curator ? { ...s, name: `${curator} Picks` } : s));
+  const st = stations.find((s) => s.id === station) ?? stations[1];
 
   return (
     <div>
       <PageTitle title="TOURSTAR RADIO" sub="Real AI songs recorded by players everywhere. Keeps playing while you tour. Like your favorites: the most-liked songs can make the TourStar Monthly." />
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-3">
-        {STATIONS.map((s) => (
+        {stations.map((s) => (
           <button key={s.id} onClick={() => pick(s.id)} className={`shrink-0 px-3 py-2 rounded-full border text-xs ${station === s.id ? "border-pink text-pink bg-black/30" : "border-line text-muted-fg"}`}>{s.emoji} {s.name}</button>
         ))}
       </div>
@@ -58,7 +62,9 @@ export default function Radio() {
         </div>
         {!queue ? <p className="text-sm text-muted-fg py-6 text-center">{station ? "Tuning in…" : "Pick a station."}</p>
           : !queue.length ? (
-            <p className="text-sm text-muted-fg py-6 text-center">No songs on this station yet. <Link to="/album" className="underline">Record one</Link> and be the first.</p>
+            station === "picks"
+              ? <p className="text-sm text-muted-fg py-6 text-center">No picks yet. The best player songs get hand-picked here. <Link to="/album" className="underline">Record one</Link>.</p>
+              : <p className="text-sm text-muted-fg py-6 text-center">No songs on this station yet. <Link to="/album" className="underline">Record one</Link> and be the first.</p>
           ) : (
             <>
               <div className="mt-3 flex items-center gap-3">
@@ -66,6 +72,7 @@ export default function Radio() {
                 <div className="flex-1 min-w-0">
                   <div className="font-bold truncate">{song!.title}</div>
                   <div className="text-xs text-muted-fg truncate">{song!.artist} · {GENRES[song!.genre as keyof typeof GENRES]?.name ?? song!.genre}</div>
+                  {song!.picked && <div className="text-[11px] mt-0.5 truncate" style={{ color: "var(--gold)" }}>⭐ {curator ? `${curator}'s pick` : "Curator's pick"}{song!.note ? `: "${song!.note}"` : ""}</div>}
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-2 mt-4">
@@ -89,7 +96,7 @@ export default function Radio() {
               <li key={s.id}>
                 <button className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded border text-sm ${i === idx ? "border-pink" : "border-line"}`} onClick={() => playAt(i)}>
                   <span className="w-5 text-right text-xs text-muted-fg">{i + 1}</span>
-                  <span className="flex-1 min-w-0 truncate">{s.title} <span className="text-muted-fg text-xs">· {s.artist}</span></span>
+                  <span className="flex-1 min-w-0 truncate">{s.picked && station !== "picks" ? "⭐ " : ""}{s.title} <span className="text-muted-fg text-xs">· {s.artist}</span></span>
                   <span className="text-[11px] text-muted-fg">{s.liked ? "❤️" : "🤍"} {s.likes}</span>
                 </button>
               </li>

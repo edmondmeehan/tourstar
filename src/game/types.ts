@@ -135,6 +135,11 @@ export interface Career {
   quests?: import("./quests").QuestDay;
   /** First-time tutorial progress. Undefined/null = finished (or a career from before the tutorial). */
   tutorial?: { step: number } | null;
+  /** Drum School: best grade per lesson, the lesson in progress, and rewarded lessons today. */
+  drums?: { best: Record<string, import("./setlist").Grade>; active?: string | null; day?: string; n?: number };
+  /** Crate Digging: samples found, and the last day the free dig was used. */
+  samples?: import("./crate").Sample[];
+  crateDay?: string;
   /** A show that has started (energy spent) but not finished yet. */
   pendingShow?: import("./setlist").PendingShow | null;
 }
