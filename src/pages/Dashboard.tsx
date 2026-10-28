@@ -11,6 +11,8 @@ import type { Career, Stats } from "../game/types";
 import { ALL_QUESTS_BONUS, ROYALTY_CAP_HOURS, currentQuests, questEmoji, questLabel, royaltiesPending, royaltyRate } from "../game/quests";
 import { sfx } from "../lib/fx";
 import { useMyRank } from "../lib/leaderboard";
+import { Avatar } from "../components/Avatar";
+import { normalizeLook } from "../game/looks";
 
 function untilMidnight(now: number) {
   const d = new Date(now); d.setHours(24, 0, 0, 0);
@@ -122,7 +124,11 @@ export default function Dashboard() {
 
       <Card glow="pink" className="mb-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <Link to="/look" className="shrink-0 -my-1 relative" aria-label="Edit your look">
+            <Avatar look={normalizeLook(c.look, c.genre)} size={72} />
+            <span className="absolute -bottom-1 -right-1 text-[10px] bg-black/70 rounded-full px-1">✏️</span>
+          </Link>
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold truncate">{c.name}</h2>
               <button aria-label="Rename" className="text-muted-fg hover:text-fg" onClick={() => { setNewName(c.name); setRenaming(true); }}>✏️</button>

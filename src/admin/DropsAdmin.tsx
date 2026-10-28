@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/cloud";
 import { askConfirm, toast } from "../components/ui";
 import { ITEM_TYPES, MOVES, SKIN_PRESETS, STAGE_THEMES, itemLabel, type DropItem, type MoveId } from "../game/cosmetics";
+import { LOOK_ITEMS } from "../game/looks";
 import type { Drop } from "../lib/gold";
 import { Kpi, Section, fail, input, when } from "./kit";
 import { USD_PER_GOLD, licenseState, type Partner } from "./partners";
@@ -246,6 +247,7 @@ function DropEditor({ form, setForm, save, busy, partners, venues, perkStats }: 
     : t === "energy" ? { type: "energy", amount: 100 } : t === "gold" ? { type: "gold", amount: 50 }
     : t === "venue" ? { type: "venue", id: venues[0]?.id ?? "", name: venues[0]?.name ?? "" }
     : t === "skin" ? { type: "skin", ...SKIN_PRESETS[0] } : t === "moves" ? { type: "moves", id: "boyband", members: 5 } : t === "perk" ? { type: "perk", text: "" }
+    : t === "look" ? { type: "look", id: LOOK_ITEMS.find((x) => x.source === "gold")!.id }
     : { type: "cash", amount: 25000 };
   const partner = partners.find((x) => x.id === form.partner_id);
   const lic = licenseState(partner);
@@ -319,6 +321,11 @@ function DropEditor({ form, setForm, save, busy, partners, venues, perkStats }: 
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 1 ? "Solo" : `${n} performers`}</option>)}</select>
                   <input className={`${input} flex-1 min-w-[8rem]`} maxLength={32} placeholder="Custom name (optional)" value={it.name ?? ""} onChange={(e) => setItem(i, { ...it, name: e.target.value || undefined })} />
                 </>}
+                {it.type === "look" && (
+                  <select className={`${input} !w-auto`} value={it.id} onChange={(e) => setItem(i, { type: "look", id: e.target.value })}>
+                    {LOOK_ITEMS.filter((x) => x.source === "gold").map((x) => <option key={x.id} value={x.id}>{x.name} ({x.slot})</option>)}
+                  </select>
+                )}
                 {it.type === "perk" && <input className={`${input} flex-1`} maxLength={80} placeholder="15% off the official store" value={it.text} onChange={(e) => setItem(i, { ...it, text: e.target.value })} />}
                 {(it.type === "cash" || it.type === "energy" || it.type === "gold") && (
                   <input type="number" min={1} className={`${input} !w-32`} value={it.amount} onChange={(e) => setItem(i, { ...it, amount: Math.max(1, Math.round(Number(e.target.value) || 0)) })} />

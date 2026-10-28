@@ -1,4 +1,15 @@
 import Phaser from "phaser";
+import { GRID_H, LOOK_ITEMS, SKIN_TONES, buildAvatar, lookItem, normalizeLook, type Look, type Px } from "../game/looks";
+
+const hexNum = (h: string) => parseInt(h.slice(1), 16);
+const SHORT = ["tee", "bandtee", "sparkle", "jersey"];
+
+/** A bandmate's look: same vibe, different hair, skin and outfit. */
+function bandmate(lead: Look, i: number): Look {
+  const tops = LOOK_ITEMS.filter((x) => x.slot === "top" && x.source === "starter");
+  const hairs = LOOK_ITEMS.filter((x) => x.slot === "hair" && x.source === "starter");
+  return { ...lead, skin: (lead.skin + 2 + i * 3) % SKIN_TONES.length, hairColor: (lead.hairColor + 1 + i * 2) % 12, hair: hairs[(i * 3 + 1) % hairs.length].id, top: tops[(i * 2 + 3) % tops.length].id, acc: "acc-none", held: "held-none" };
+}
 
 /**
  * The live show. Progress runs 0→1 over the set; beams sweep, the LED wall and crowd
@@ -16,6 +27,8 @@ export interface ConcertParams {
   theme?: { a: number; b: number; glow: number; sky: [number, number, number] };
   /** Dance moves (pack cosmetic) and how many performers are on stage. */
   moves?: { id: string; members: number };
+  /** The player's create-your-look outfit for the lead performer (band members get variations). */
+  look?: Look;
 }
 
 /** One frame of a performer: offsets in px and arm angles in radians (0 = straight out to the side, -PI/2 = up). */
@@ -143,26 +156,54 @@ export class ConcertScene extends Phaser.Scene {
     this.draw();
   }
 
-  private drawFigure(g: Phaser.GameObjects.Graphics, x: number, floor: number, s: number, p: Pose, lead: boolean) {
-    const body = 0x05030c;
+  private bodyCache = new Map<string, Px[]>();
+  private bodyFor(look: Look) {
+    const k = JSON.stringify(look);
+    let px = this.bodyCache.get(k);
+    if (!px) { px = buildAvatar(look, { arms: false }); this.bodyCache.set(k, px); }
+    return px;
+  }
+
+  private drawFigure(g: Phaser.GameObjects.Graphics, x: number, floor: number, s: number, p: Pose, lead: boolean, look: Look) {
+    const u = (64 / GRID_H) * s; // grid unit in px: the figure stands about 64px tall at scale 1
     const y = floor - p.lift * s;
-    const w = 18 * s * p.squash;
-    g.fillStyle(body, 1);
-    g.fillRect(x - w / 2, y - 44 * s, w, 30 * s);
-    // legs
-    const leg = 7 * s * p.squash;
-    g.fillRect(x - w / 2 - p.legs * s * 0.3, y - 16 * s, leg, 16 * s + p.lift * s * 0.3);
-    g.fillRect(x + w / 2 - leg + p.legs * s * 0.3, y - 16 * s, leg, 16 * s + p.lift * s * 0.3);
-    g.fillCircle(x, y - 54 * s, 10 * s);
-    // arms
-    const sh = y - 40 * s, len = 22 * s;
-    g.lineStyle(6 * s, body, 1);
-    g.lineBetween(x + w / 2 - 1, sh, x + w / 2 - 1 + Math.cos(p.armR) * len * Math.max(0.3, p.squash), sh + Math.sin(p.armR) * len);
-    g.lineBetween(x - w / 2 + 1, sh, x - w / 2 + 1 + Math.cos(p.armL) * len * Math.max(0.3, p.squash), sh + Math.sin(p.armL) * len);
-    if (lead || this.p.moves === undefined || (this.p.moves.members ?? 1) <= 1) {
-      // mic in the lead's hand
-      g.fillStyle(0x888888, 1);
-      g.fillCircle(x + w / 2 - 1 + Math.cos(p.armR) * len * Math.max(0.3, p.squash), sh + Math.sin(p.armR) * len, 3 * s);
+    const sq = Math.max(0.2, p.squash);
+    // Body, head, hair, clothes, shoes
+    for (const r of this.bodyFor(look)) {
+      g.fillStyle(hexNum(r.c), 1);
+      g.fillRect(x + (r.x - 12) * u * sq, y - (GRID_H - r.y) * u, Math.max(1, r.w * u * sq), r.h * u);
+    }
+    // Arms follow the dance pose: sleeve in the top's color, hand in skin tone
+    const top = lookItem(look.top);
+    const skin = hexNum(SKIN_TONES[look.skin] ?? SKIN_TONES[0]);
+    const sleeve = top?.style === "tank" ? skin : hexNum(top?.c ?? "#F2F2F2");
+    const short = SHORT.includes(top?.style ?? "");
+    const tW = look.body === "slim" ? 8 : look.body === "broad" ? 12 : 10;
+    const sh = y - (GRID_H - 15) * u, len = 11 * u;
+    const arm = (side: 1 | -1, ang: number) => {
+      const sx = x + side * (tW / 2 + 1) * u * sq;
+      const ex = sx + Math.cos(ang) * len * sq, ey = sh + Math.sin(ang) * len;
+      const mx = sx + (ex - sx) * (short ? 0.4 : 1), my = sh + (ey - sh) * (short ? 0.4 : 1);
+      g.lineStyle(2 * u, short ? skin : sleeve, 1); g.lineBetween(sx, sh, ex, ey);
+      if (short) { g.lineStyle(2 * u, sleeve, 1); g.lineBetween(sx, sh, mx, my); }
+      g.fillStyle(skin, 1); g.fillCircle(ex, ey, 1.2 * u);
+      return { ex, ey };
+    };
+    arm(-1, p.armL);
+    const hand = arm(1, p.armR);
+    // What they're holding
+    const held = lookItem(look.held);
+    const showMic = lead || this.p.moves === undefined || (this.p.moves.members ?? 1) <= 1;
+    if (held && held.style !== "none" && showMic) {
+      const c1 = hexNum(held.c ?? "#9AA0A6"), c2 = hexNum(held.c2 ?? "#333333");
+      if (held.style === "mic") { g.fillStyle(c1, 1); g.fillCircle(hand.ex, hand.ey - 1.2 * u, 1.4 * u); }
+      else if (held.style === "sticks") { g.lineStyle(0.8 * u, c1, 1); g.lineBetween(hand.ex, hand.ey, hand.ex + 2 * u, hand.ey - 5 * u); }
+      else {
+        const gy = y - (GRID_H - 24) * u;
+        g.lineStyle(1 * u, 0x3a2410, 1); g.lineBetween(x - 7 * u * sq, gy - 6 * u, x + 3 * u * sq, gy);
+        g.fillStyle(c1, 1); g.fillRect(x + 0.5 * u * sq, gy - 2 * u, (held.style === "keytar" ? 10 : 6) * u * sq, 5 * u);
+        g.fillStyle(c2, 1); g.fillRect(x + 2 * u * sq, gy - 0.5 * u, 2 * u * sq, 2 * u);
+      }
     }
   }
 
@@ -233,13 +274,15 @@ export class ConcertScene extends Phaser.Scene {
     // Performer(s)
     const mv = p.moves ?? { id: "classic", members: 1 };
     const members = Math.max(1, Math.min(5, Math.round(mv.members || 1)));
+    const leadLook = p.look ?? normalizeLook(undefined, "pop");
     const scale = members >= 4 ? 0.8 : members >= 2 ? 0.9 : 1;
     const gap = Math.min(W * 0.16, 44) * scale;
     for (let m = 0; m < members; m++) {
       const x = fx + (m - (members - 1) / 2) * gap;
       // A tiny delay across the line reads as a ripple at the end; otherwise everyone is in sync.
       const pose = poseFor(mv.id, this.t, beat, this.progress);
-      this.drawFigure(g, x + pose.dx * scale, stageY, scale, pose, members > 1 && m === Math.floor(members / 2));
+      const isLead = members === 1 || m === Math.floor(members / 2);
+      this.drawFigure(g, x + pose.dx * scale, stageY, scale, pose, members > 1 && isLead, isLead ? leadLook : bandmate(leadLook, m));
     }
 
     // Floor + crowd

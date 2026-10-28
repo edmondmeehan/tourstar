@@ -3,11 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/cloud";
 import { toast } from "../components/ui";
 import { MOVES, SKIN_PRESETS, STAGE_THEMES, itemLabel, type DropItem, type MoveId } from "../game/cosmetics";
+import { LOOK_ITEMS } from "../game/looks";
 import { loadMerchConfig, loadProducts, money, type MerchProduct } from "../lib/merch";
 import { Kpi, Section, fail, input, when } from "./kit";
 
 const KEYS = ["merch_enabled", "merch_shop_domain", "merch_collection", "merch_api_version"] as const;
-type ItemType = "badge" | "title" | "stage" | "skin" | "moves";
+type ItemType = "badge" | "title" | "stage" | "skin" | "moves" | "look";
 interface Order { id: number; order: string; email: string | null; player: string | null; total: number; currency: string; items: { title: string; variant: string | null; qty: number }[]; unlocked: number; at: string }
 
 export function MerchAdminTab() {
@@ -119,7 +120,7 @@ function ProductUnlock({ p, items: initial, onSave }: { p: MerchProduct; items: 
   const [add, setAdd] = useState<ItemType>("badge");
   useEffect(() => setItems(initial), [initial]);
   const blank = (t: ItemType): DropItem => t === "badge" ? { type: "badge", emoji: "👕", name: p.title.slice(0, 32) } : t === "title" ? { type: "title", name: "" }
-    : t === "stage" ? { type: "stage", id: STAGE_THEMES[1].id } : t === "skin" ? { type: "skin", ...SKIN_PRESETS[0] } : { type: "moves", id: "step", members: 1 };
+    : t === "stage" ? { type: "stage", id: STAGE_THEMES[1].id } : t === "skin" ? { type: "skin", ...SKIN_PRESETS[0] } : t === "look" ? { type: "look", id: LOOK_ITEMS.find((x) => x.source === "merch")!.id } : { type: "moves", id: "step", members: 1 };
   const set = (i: number, it: DropItem) => setItems(items.map((x, j) => (j === i ? it : x)));
   const changed = JSON.stringify(items) !== JSON.stringify(initial);
 
@@ -135,6 +136,7 @@ function ProductUnlock({ p, items: initial, onSave }: { p: MerchProduct; items: 
               {it.type === "title" && <input className={`${input} flex-1`} maxLength={32} value={it.name} onChange={(e) => set(i, { ...it, name: e.target.value })} placeholder="Title, e.g. Hoodie Season" />}
               {it.type === "stage" && <select className={`${input} !w-auto`} value={it.id} onChange={(e) => set(i, { ...it, id: e.target.value })}>{STAGE_THEMES.filter((t) => t.id !== "classic").map((t) => <option key={t.id} value={t.id}>{t.emoji} {t.name}</option>)}</select>}
               {it.type === "skin" && <><input className={`${input} !w-32`} maxLength={32} value={it.name} onChange={(e) => set(i, { ...it, name: e.target.value })} />{(["a", "b", "bg"] as const).map((k) => <input key={k} type="color" className="w-8 h-7 bg-transparent" value={it[k]} onChange={(e) => set(i, { ...it, [k]: e.target.value.toUpperCase() })} />)}</>}
+              {it.type === "look" && <select className={`${input} !w-auto`} value={it.id} onChange={(e) => set(i, { type: "look", id: e.target.value })}>{LOOK_ITEMS.filter((x) => x.source === "merch" || x.source === "gold").map((x) => <option key={x.id} value={x.id}>{x.name} ({x.slot})</option>)}</select>}
               {it.type === "moves" && <select className={`${input} !w-auto`} value={it.id} onChange={(e) => set(i, { ...it, id: e.target.value as MoveId })}>{MOVES.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>}
               <span className="text-muted-fg">{itemLabel(it)}</span>
               <button className="underline text-danger" onClick={() => setItems(items.filter((_, j) => j !== i))}>Remove</button>
@@ -143,7 +145,7 @@ function ProductUnlock({ p, items: initial, onSave }: { p: MerchProduct; items: 
         </ul>
         <div className="flex gap-2 mt-2">
           <select className={`${input} !w-auto text-xs`} value={add} onChange={(e) => setAdd(e.target.value as ItemType)}>
-            <option value="badge">Badge</option><option value="title">Title</option><option value="stage">Stage theme</option><option value="skin">App colors</option><option value="moves">Dance moves</option>
+            <option value="badge">Badge</option><option value="title">Title</option><option value="stage">Stage theme</option><option value="skin">App colors</option><option value="moves">Dance moves</option><option value="look">Outfit (look item)</option>
           </select>
           <button className="btn btn-ghost text-xs" onClick={() => setItems([...items, blank(add)])}>+ Add unlock</button>
           <button className="btn btn-pink text-xs" disabled={!changed} onClick={() => onSave(items.filter((it) => it.type !== "title" || it.name.trim()))}>Save</button>

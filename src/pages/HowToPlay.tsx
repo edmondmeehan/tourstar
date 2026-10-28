@@ -78,6 +78,11 @@ export default function HowToPlay() {
         <p>Higher tiers replace lower ones. On the <Link to="/management" className="underline">Crew</Link> screen each upgrade shows what it adds at your biggest venue.</p>
       </Section>
 
+      <Section id="look" emoji="🧑‍🎤" title="Your look" open={open === "look"} toggle={toggle}>
+        <p>Build your artist on <Link to="/look" className="underline">My Look</Link>: skin tone, build and hair color are always free, and you start with a full closet of free basics.</p>
+        <p>More hair, outfits, shoes, accessories and instruments come from game cash, level-ups, Gold drops and artist packs, and real TourStar merch unlocks the matching in-game item. Your look shows on stage, at home and on the leaderboard. It never changes your stats.</p>
+      </Section>
+
       <Section id="labels" emoji="🏷️" title="Record labels" open={open === "labels"} toggle={toggle}>
         <p>Labels boost your pay and fan growth but keep a share. Bigger labels pay a signing advance.</p>
         <ul className="space-y-1">{LABELS.map((l) => <li key={l.id}>{l.emoji} <b>{l.name}</b> (LV{l.level}): +{Math.round(l.boost * 100)}% boost, keeps {Math.round(l.share * 100)}% · net about {Math.round(((1 + l.boost) * (1 - l.share) - 1) * 100)}% more per show · {fmtMoney(l.advance)} advance</li>)}</ul>

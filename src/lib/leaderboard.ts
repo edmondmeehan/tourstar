@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { supabase, useCloud } from "./cloud";
 import { refreshGold } from "./gold";
 
-export interface LbRow { rank: number; name: string; genre: string | null; level: number; badge: string | null; score: number; me: boolean }
+export interface LbRow { rank: number; name: string; genre: string | null; level: number; badge: string | null; score: number; me: boolean; look?: Partial<import("../game/looks").Look> | null }
 export interface Leaderboard {
   board: "week" | "all"; week: string; resets_at: string; total: number; rows: LbRow[];
   me: { rank: number; score: number; pct: number } | null;

@@ -1,3 +1,4 @@
+import { lookItem } from "./looks";
 // Cosmetics sold in Drops (Admin → Drops). Stage themes recolor the concert; titles and badges show
 // next to the artist's name. None of these change reward points, odds or anything prize-related.
 
@@ -32,7 +33,8 @@ export type DropItem =
   | { type: "venue"; id: string; name: string }
   | { type: "skin"; name: string; a: string; b: string; bg: string }
   | { type: "moves"; id: MoveId; name?: string; members?: number }
-  | { type: "perk"; text: string };
+  | { type: "perk"; text: string }
+  | { type: "look"; id: string };
 
 // ------------------------------------------------------------------ app colors ("skins")
 
@@ -93,6 +95,7 @@ export const ITEM_TYPES: { type: DropItem["type"]; label: string }[] = [
   { type: "skin", label: "App colors (recolors the whole game)" },
   { type: "moves", label: "Dance moves / formation" },
   { type: "perk", label: "Perk line (shown in the pack, e.g. merch discount)" },
+  { type: "look", label: "Outfit / look item (hair, clothes, accessory, instrument)" },
 ];
 
 export function itemLabel(i: DropItem) {
@@ -107,5 +110,6 @@ export function itemLabel(i: DropItem) {
     case "skin": return `🎨 ${i.name || "Custom"} app colors`;
     case "moves": return `🕺 ${i.name || moveName(i.id)} moves${(i.members ?? 1) > 1 ? ` · ${i.members}-piece formation` : ""}`;
     case "perk": return `🎁 ${i.text}`;
+    case "look": return `👕 ${lookItem(i.id)?.name ?? "Outfit"} (look)`;
   }
 }

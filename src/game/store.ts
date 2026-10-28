@@ -17,6 +17,7 @@ import type {
 } from "./types";
 import { songTitle } from "../lib/chiptune";
 import { DIFFICULTIES, type Difficulty } from "./difficulty";
+import { defaultLook, lookItem, normalizeLook, type Look } from "./looks";
 import {
   SET_SLOTS, debutChance, fanRequest, gradeFor, setlistScore, showScore, songPool, type EncoreChoice, type Grade, type PendingShow, type ShowVenue,
 } from "./setlist";
@@ -69,6 +70,10 @@ interface GameState {
   setAnnouncer: (url: string, name: string) => void;
   /** Equip a stage theme, title or badge (undefined = none). */
   setStyle: (patch: Partial<NonNullable<Career["style"]>>) => void;
+  /** Change the artist's look (only to items they own; the Look page checks). */
+  setLook: (look: Look) => void;
+  /** Buy a look item with game cash. */
+  buyLook: (id: string) => ActionResult;
   /** Add a bought drop's game cash and energy to this career, once per purchase. */
   claimDrop: (purchaseId: string, items: { type: string; amount?: number }[], name: string) => boolean;
   /** Pay out a started show. performance is 0..1 from the rhythm game. */
@@ -224,6 +229,8 @@ export const useGame = create<GameState>()(
             peakLevel: 1, unlockedTours: TOURS.filter((t) => t.level === 1).map((t) => t.id),
             rivals: { weekKey: weekKey(), points: 0, cooldowns: {}, lastPaidWeek: null }, pendingEvent: null,
             tutorial: { step: 0 },
+            look: defaultLook(genre, Math.floor(Math.random() * 64)),
+            ownedLooks: [],
           };
           newLog(c, "system", `${c.name} starts out in Mom's basement — ${GENRES[genre].name}, ${PERSONAS[persona].name}.`);
           if (themeSeed !== undefined) {
@@ -559,6 +566,28 @@ export const useGame = create<GameState>()(
           Object.assign(song, patch);
           if (!patch.ai) delete song.ai;
           commit(c);
+        },
+
+        setLook: (look) => {
+          const c = draft();
+          if (!c) return;
+          c.look = normalizeLook(look, c.genre);
+          commit(c);
+        },
+
+        buyLook: (id) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const it = lookItem(id);
+          if (!it || it.source !== "cash" || !it.price) return { ok: false, message: "That item isn't sold for cash." };
+          if ((c.ownedLooks ?? []).includes(id)) return { ok: false, message: "You already own it." };
+          if ((it.level ?? 1) > Math.max(c.peakLevel, levelFor(c.stats.fame).level)) return { ok: false, message: `Unlocks at level ${it.level}.` };
+          if (c.stats.cash < it.price) return { ok: false, message: `Need $${it.price.toLocaleString()}.` };
+          c.stats.cash -= it.price;
+          c.ownedLooks = [...(c.ownedLooks ?? []), id];
+          newLog(c, "store", `Bought ${it.name} for your look.`);
+          commit(c);
+          return { ok: true, title: "New look unlocked", message: `${it.name} is in your closet.` };
         },
 
         setStyle: (patch) => {

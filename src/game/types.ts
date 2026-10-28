@@ -101,6 +101,9 @@ export interface Career {
     /** Performer dance moves and how many performers (formation). */
     moves?: { id: import("./cosmetics").MoveId; members: number };
   };
+  /** Create-your-look: the artist's pixel look and the outfits bought with game cash. */
+  look?: import("./looks").Look;
+  ownedLooks?: string[];
   /** Drop purchases whose cash/energy has been added to this career (each only once). */
   claimedDrops?: string[];
   queue: string[]; // song ids, locker order

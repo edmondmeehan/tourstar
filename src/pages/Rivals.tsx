@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GENRES, RIVALS } from "../game/data";
+import { Avatar } from "../components/Avatar";
+import { normalizeLook } from "../game/looks";
+import type { GenreId } from "../game/types";
 import { useCloud } from "../lib/cloud";
 import { loadLeaderboard, resetsIn, type Leaderboard } from "../lib/leaderboard";
 import { buildChart, chartReward, levelFor, weekKey } from "../game/engine";
@@ -151,7 +154,7 @@ function PlayerBoard() {
             {lb.rows.map((r) => (
               <li key={`${r.rank}-${r.name}`} className="panel px-3 py-2.5 flex items-center gap-3" style={r.me ? { borderColor: "var(--gold)" } : undefined}>
                 {r.rank <= 3 ? <span className="w-9 text-xl">{["🏆", "🥈", "🥉"][r.rank - 1]}</span> : <span className="font-pixel text-[10px] w-9 text-muted-fg">#{r.rank}</span>}
-                <span className="text-lg">{GENRES[r.genre as keyof typeof GENRES]?.emoji ?? "🎵"}</span>
+                {r.look ? <Avatar look={normalizeLook(r.look, (r.genre ?? "pop") as GenreId)} size={40} /> : <span className="text-lg">{GENRES[r.genre as keyof typeof GENRES]?.emoji ?? "🎵"}</span>}
                 <span className="flex-1 min-w-0">
                   <span className={`block text-sm truncate ${r.me ? "font-bold" : ""}`}>{r.name}{r.badge ? ` ${r.badge}` : ""}{r.me ? " (you)" : ""}</span>
                   <span className="block text-[10px] text-muted-fg">LV{r.level}</span>

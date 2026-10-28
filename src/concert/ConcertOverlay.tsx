@@ -11,6 +11,7 @@ import { DeltaChips, toast } from "../components/ui";
 import { startConcert } from "./ConcertScene";
 import { DIFFICULTIES, showTuning } from "../game/difficulty";
 import { stageTheme } from "../game/cosmetics";
+import { normalizeLook } from "../game/looks";
 import { useConcert } from "./useConcert";
 import NoteHighway, { type HighwayResult, type Judge } from "./NoteHighway";
 
@@ -79,6 +80,7 @@ export default function ConcertOverlay() {
       onPyro: () => sfx("coin", "pyro"),
       theme: stageTheme(show.venue?.theme || career.style?.stage),
       moves: career.style?.moves,
+      look: normalizeLook(career.look, career.genre),
     });
     sceneRef.current = scene;
     let cheered = false;
