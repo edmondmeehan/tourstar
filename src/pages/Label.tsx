@@ -1,4 +1,5 @@
-import { LABELS } from "../game/data";
+import { Link } from "react-router-dom";
+import { LABELS, TOURS } from "../game/data";
 import { fmtMoney, levelFor } from "../game/engine";
 import { useGame } from "../game/store";
 import { Card, PageTitle, Tag, toast, askConfirm } from "../components/ui";
@@ -10,7 +11,7 @@ export default function Label() {
 
   return (
     <div>
-      <PageTitle title="LABEL" sub="Labels boost your earnings and fan growth — and take a cut." />
+      <PageTitle title="LABEL" sub="Labels boost your earnings and fan growth — and take a cut." right={<Link to="/how-to-play" className="font-pixel text-[8px] text-electric underline">HOW IT WORKS</Link>} />
       {c.labelId ? (
         <Card glow="gold" className="mb-4 flex items-center justify-between">
           <div className="text-sm">Signed to <b>{LABELS.find((l) => l.id === c.labelId)?.name}</b></div>
@@ -41,6 +42,11 @@ export default function Label() {
                     <div className="rounded bg-black/40 py-2"><div className="font-pixel text-[7px] text-muted-fg">ADVANCE</div><div className="text-sm mt-1" style={{ color: "var(--gold)" }}>{fmtMoney(l.advance)}</div></div>
                   </div>
                   <div className="text-[11px] text-muted-fg mt-2">Net earnings ×{net.toFixed(2)} · fans ×{(1 + l.boost * 0.5).toFixed(2)}</div>
+                  {(() => {
+                    const t = [...TOURS].reverse().find((v) => v.level <= Math.max(lvl, l.level))!;
+                    const extra = Math.round(t.pay * 0.8 * (net - 1));
+                    return <div className="text-[11px] mt-1" style={{ color: "var(--gold)" }}>≈ {extra >= 0 ? "+" : ""}{fmtMoney(extra)} per {t.name} vs. staying independent</div>;
+                  })()}
                   {!locked && !signed && <button className="btn btn-primary w-full mt-3" onClick={() => toast(signLabel(l.id))}>Sign deal</button>}
                 </div>
               </div>

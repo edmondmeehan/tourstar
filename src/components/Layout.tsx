@@ -30,6 +30,7 @@ const MORE = [
   { to: "/rivals", label: "Rivals", icon: "⚔️" },
   { to: "/releases", label: "Releases", icon: "📀" },
   { to: "/log", label: "Career Log", icon: "📜" },
+  { to: "/how-to-play", label: "How to Play", icon: "❓" },
   { to: "/radio", label: "TourStar Radio", icon: "📻" },
   { to: "/distribute", label: "TourStar Monthly", icon: "💿" },
   { to: "/premium", label: "Premium", icon: "💎" },

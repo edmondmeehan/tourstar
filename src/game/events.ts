@@ -233,4 +233,120 @@ export const EVENTS: GameEvent[] = [
       ] },
     ],
   },
+  // ---------------------------------------------------------------- temptations & scams
+  // Saying yes can buy a quick bump in hype, but the cost is real (health, credibility, cash or a lockout).
+  // Saying no is always safe. Kept non-graphic for the game's age rating.
+  {
+    id: "hotel-afterparty",
+    title: "Hotel Afterparty",
+    emoji: "🌃",
+    kind: "party",
+    text: "A couple of fans from the front row invite you back to the hotel bar. Upstairs, someone pulls out \"party favors.\"",
+    choices: [
+      { label: "Take the party favors", outcomes: [
+        { p: 3, text: "The wildest night of the tour. Tomorrow you feel every minute of it.", effects: { hype: 10, health: -18, credibility: -2 } },
+        { p: 2, bad: true, text: "Someone was filming. The clip is everywhere by breakfast.", effects: { hype: 6, health: -20, credibility: -10 } },
+        { p: 1, bad: true, text: "You collapse in the hallway. Paramedics, then rehab.", effects: { health: -25, hype: 2 }, lockout: { kind: "rehab", minutes: 8 } },
+      ] },
+      { label: "Hang out, skip the favors", outcomes: [{ p: 1, text: "Great stories, clear head. The fans post about how chill you were.", effects: { hype: 4, relationships: 6, health: -3 } }] },
+      { label: "Sign their shirts and go to bed", outcomes: [{ p: 1, text: "Eight hours of sleep. You crush the next show.", effects: { health: 10, credibility: 3 } }] },
+    ],
+  },
+  {
+    id: "tour-doctor",
+    title: "The Tour Doctor",
+    emoji: "💊",
+    kind: "scandal",
+    minLevel: 2,
+    text: "You're running on fumes. A guy calling himself the \"tour doctor\" offers pills that will \"keep you going all week.\"",
+    choices: [
+      { label: "Take them", outcomes: [
+        { p: 3, text: "You feel unstoppable. For now. Your body keeps the receipt.", effects: { energy: 25, health: -22 } },
+        { p: 2, bad: true, text: "You crash hard mid-set. The crew carries you off. Rehab.", effects: { health: -25, hype: -6, credibility: -6 }, lockout: { kind: "rehab", minutes: 10 } },
+      ] },
+      { label: "Cancel tomorrow and rest", outcomes: [{ p: 1, text: "Your body thanks you. Fans understand.", effects: { health: 20, energy: 10, hype: -3 } }] },
+      { label: "Report him to the venue", outcomes: [{ p: 1, text: "Security walks him out. Your crew respects it.", effects: { credibility: 5, relationships: 4 } }] },
+    ],
+  },
+  {
+    id: "crypto-coin",
+    title: "Get Rich Quick",
+    emoji: "🪙",
+    kind: "opportunity",
+    minLevel: 2,
+    text: "A guy in a vest pitches $STARCOIN: \"Put in $5K today, it's 10x by Friday. Guaranteed.\"",
+    choices: [
+      { label: "Go all in", outcomes: [
+        { p: 1, text: "It actually pumps! You sell just in time.", effects: { cash: 6000 } },
+        { p: 5, bad: true, text: "Rug pulled. The vest guy deletes his account. Your $5K is gone.", effects: { cash: -5000, credibility: -2 } },
+      ] },
+      { label: "Promote it to your fans for a fee", outcomes: [
+        { p: 1, text: "You get paid before it crashes. Fans notice who sent them.", effects: { cash: 3000, credibility: -12, fans: -150 } },
+        { p: 2, bad: true, text: "It crashes overnight and your fans lose everything. You're cancelled.", effects: { cash: 2000, credibility: -20, fans: -300, hype: -5 }, lockout: { kind: "cancelled", minutes: 8 } },
+      ] },
+      { label: "Walk away", outcomes: [{ p: 1, text: "Two weeks later it's worth zero. Dodged it.", effects: { credibility: 3 } }] },
+    ],
+  },
+  {
+    id: "booking-scam",
+    title: "Too Good To Be True",
+    emoji: "📝",
+    kind: "opportunity",
+    text: "A smooth talker says he can put you on a stadium tour next month. He just needs a $2,000 \"booking fee\" wired today.",
+    choices: [
+      { label: "Wire the fee", outcomes: [
+        { p: 1, bad: true, text: "The number is disconnected. There is no stadium tour.", effects: { cash: -2000, hype: -2 } },
+      ] },
+      { label: "Ask for references first", outcomes: [
+        { p: 3, text: "He gets weird and stops replying. Bullet dodged.", effects: { credibility: 3 } },
+        { p: 1, bad: true, text: "He sends fake references, you wire half, and he vanishes.", effects: { cash: -1000 } },
+      ] },
+      { label: "Hang up", outcomes: [{ p: 1, text: "Real promoters don't charge you to play. You knew that.", effects: { credibility: 4 } }] },
+    ],
+  },
+  {
+    id: "loan-shark",
+    title: "The Investor",
+    emoji: "🦈",
+    kind: "drama",
+    minLevel: 3,
+    text: "A \"private investor\" offers $20K cash for your next tour, no paperwork. You can pay him back \"whenever.\"",
+    choices: [
+      { label: "Take the cash", outcomes: [
+        { p: 1, text: "He's actually just a weird rich fan. Lucky.", effects: { cash: 20000 } },
+        { p: 3, bad: true, text: "\"Whenever\" was last week. His guys collect double, backstage.", effects: { cash: -20000, health: -10, relationships: -5 } },
+      ] },
+      { label: "Get a real loan from the label", outcomes: [{ p: 1, text: "Boring paperwork, fair terms.", effects: { cash: 5000, credibility: 2 } }] },
+      { label: "No thanks", outcomes: [{ p: 1, text: "You build it the slow way.", effects: { credibility: 3 } }] },
+    ],
+  },
+  {
+    id: "password-phish",
+    title: "You Won a Car!",
+    emoji: "🎣",
+    kind: "drama",
+    text: "A DM from \"Official Verification Team\": you won a free sports car. Just send your account password to claim it.",
+    choices: [
+      { label: "Send the password", outcomes: [
+        { p: 1, bad: true, text: "Hacked. They post crypto spam to your fans all night.", effects: { hype: -8, credibility: -8, fans: -100 } },
+      ] },
+      { label: "Report and block", outcomes: [{ p: 1, text: "Real companies never ask for your password. Fans thank you for the warning.", effects: { credibility: 4, relationships: 3 } }] },
+    ],
+  },
+  {
+    id: "drinking-contest",
+    title: "Drinking Contest",
+    emoji: "🍻",
+    kind: "party",
+    minLevel: 2,
+    text: "The headliner challenges you to a drinking contest after the show. The whole crew is watching.",
+    choices: [
+      { label: "Accept", outcomes: [
+        { p: 2, text: "You win. The crew chants your name. Your head disagrees.", effects: { hype: 8, relationships: 5, health: -12 } },
+        { p: 2, bad: true, text: "You lose, loudly, on camera.", effects: { hype: 3, credibility: -6, health: -15 } },
+      ] },
+      { label: "Challenge them to arm wrestling instead", outcomes: [{ p: 1, text: "Wildly entertaining, zero hangover.", effects: { hype: 5, relationships: 4 } }] },
+      { label: "Head to the bus", outcomes: [{ p: 1, text: "Early night. You're fresh for tomorrow.", effects: { health: 6 } }] },
+    ],
+  },
 ];

@@ -27,7 +27,7 @@ export default function Tour() {
 
   return (
     <div>
-      <PageTitle title="TOUR" sub="Bigger stages pay more — and cost more energy, health and time." />
+      <PageTitle title="TOUR" sub="Bigger stages pay more — and cost more energy, health and time." right={<Link to="/how-to-play" className="font-pixel text-[8px] text-electric underline">HOW IT WORKS</Link>} />
       {pending && (
         <Card className="mb-4" glow="pink">
           <div className="text-sm">🎤 You're mid-show at {pending.venue ? <b>{pending.venue.name}</b> : <>the <b>{TOURS.find((t) => t.id === pending.tourId)?.name}</b></>}. The crowd is still waiting.</div>

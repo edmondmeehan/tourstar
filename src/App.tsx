@@ -30,6 +30,7 @@ import Releases from "./pages/Releases";
 import Log from "./pages/Log";
 import Distribute from "./pages/Distribute";
 import Radio from "./pages/Radio";
+import HowToPlay from "./pages/HowToPlay";
 import Premium from "./pages/Premium";
 import Presales from "./pages/Presales";
 import Account from "./pages/Account";
@@ -108,6 +109,7 @@ export default function App() {
           <Route path="/log" element={<Log />} />
           <Route path="/distribute" element={<Distribute />} />
           <Route path="/radio" element={<Radio />} />
+          <Route path="/how-to-play" element={<HowToPlay />} />
           <Route path="/premium" element={<Premium />} />
           <Route path="/presales" element={<Presales />} />
           <Route path="/account" element={<Account />} />
