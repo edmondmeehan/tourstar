@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { openTickets } from "../lib/presales";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../game/store";
 import { useMembership, useSettings } from "../game/settings";
@@ -147,6 +149,24 @@ export default function Account() {
       </div>
 
       <button className="btn btn-danger w-full mb-6" onClick={() => askConfirm("Reset your career? This can't be undone.", () => { retire(); nav("/create"); }, { yes: "Reset", danger: true })}>Reset career</button>
+
+      <MadeBy />
     </div>
+  );
+}
+
+const PTY_LOGO = "https://please.co/cdn/shop/files/PTY_Logo_Type_Yellow_WhiteText.png?v=1768929642&width=440";
+
+/** Credit line: made in NYC by Please and Thank You. */
+function MadeBy() {
+  const [logoOk, setLogoOk] = useState(true);
+  return (
+    <a href="https://please.co" onClick={(e) => { e.preventDefault(); void openTickets("https://please.co"); }} className="block text-center pb-8 pt-2 opacity-90 hover:opacity-100">
+      <div className="text-xs text-muted-fg">Made with <span aria-label="love">❤️</span> in New York City</div>
+      <div className="text-xs text-muted-fg mt-1">by your friends at</div>
+      {logoOk
+        ? <img src={PTY_LOGO} alt="Please and Thank You" className="h-10 mx-auto mt-3 object-contain" loading="lazy" onError={() => setLogoOk(false)} />
+        : <div className="font-bold mt-2" style={{ color: "var(--gold)" }}>Please and Thank You</div>}
+    </a>
   );
 }
