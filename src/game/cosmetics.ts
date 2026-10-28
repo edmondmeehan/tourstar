@@ -28,7 +28,8 @@ export type DropItem =
   | { type: "badge"; emoji: string; name?: string }
   | { type: "cash"; amount: number }
   | { type: "energy"; amount: number }
-  | { type: "gold"; amount: number };
+  | { type: "gold"; amount: number }
+  | { type: "venue"; id: string; name: string };
 
 export const ITEM_TYPES: { type: DropItem["type"]; label: string }[] = [
   { type: "stage", label: "Stage theme" },
@@ -37,6 +38,7 @@ export const ITEM_TYPES: { type: DropItem["type"]; label: string }[] = [
   { type: "cash", label: "Game cash" },
   { type: "energy", label: "Energy refill" },
   { type: "gold", label: "Bonus Gold Records" },
+  { type: "venue", label: "Venue (unlocks a pack-only venue on the Tour page)" },
 ];
 
 export function itemLabel(i: DropItem) {
@@ -47,5 +49,6 @@ export function itemLabel(i: DropItem) {
     case "cash": return `💵 $${i.amount.toLocaleString()} game cash`;
     case "energy": return `⚡ +${i.amount} energy`;
     case "gold": return `💿 ${i.amount.toLocaleString()} bonus Gold`;
+    case "venue": return `🏟️ Play ${i.name || "a featured venue"}`;
   }
 }

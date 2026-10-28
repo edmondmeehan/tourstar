@@ -6,6 +6,7 @@ import { SET_SLOTS, autoSetlist, fanRequest, setlistScore, songPool, type SetSon
 import { Modal, toast } from "./ui";
 import { useConcert } from "../concert/useConcert";
 import { sfx } from "../lib/fx";
+import { showVenue, trackVenue, type Venue } from "../lib/venues";
 
 const TAG_COLOR: Record<string, string> = { "FAN FAVE": "var(--gold)", NEW: "var(--electric)", COVER: "var(--muted-foreground)" };
 
@@ -14,7 +15,7 @@ function Appeal({ v }: { v: number }) {
   return <span className="text-[10px] tracking-tight" style={{ color: "var(--gold)" }} aria-label={`Appeal ${v} of 100`}>{"★".repeat(stars)}<span className="opacity-25">{"★".repeat(5 - stars)}</span></span>;
 }
 
-export default function SetlistSheet({ tour, onClose }: { tour: TourDef; onClose: () => void }) {
+export default function SetlistSheet({ tour, venue, onClose }: { tour: TourDef; venue?: Venue; onClose: () => void }) {
   const c = useGame((s) => s.career)!;
   const startShow = useGame((s) => s.startShow);
   const startConcert = useConcert((s) => s.start);
@@ -42,8 +43,9 @@ export default function SetlistSheet({ tour, onClose }: { tour: TourDef; onClose
   };
 
   const go = () => {
-    const r = startShow(tour.id, keys, diff);
+    const r = startShow(tour.id, keys, diff, venue ? showVenue(venue) : undefined);
     if (!r.ok || !r.show) { toast(r); return; }
+    if (venue) trackVenue(venue.id, "play");
     onClose();
     startConcert(r.show);
   };
@@ -55,7 +57,7 @@ export default function SetlistSheet({ tour, onClose }: { tour: TourDef; onClose
     <Modal open onClose={onClose}>
       <div className="flex items-baseline justify-between mb-1">
         <h3 className="font-pixel text-xs" style={{ color: "var(--gold)" }}>SETLIST</h3>
-        <span className="text-xs text-muted-fg">{tour.emoji} {tour.name} · {slots} songs</span>
+        <span className="text-xs text-muted-fg">{venue ? `${venue.emoji} ${venue.name}` : `${tour.emoji} ${tour.name}`} · {slots} songs</span>
       </div>
       <p className="text-[11px] text-muted-fg mb-3">Your opener and closer matter most. Songs you play often become fan faves.</p>
 

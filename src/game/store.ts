@@ -18,7 +18,7 @@ import type {
 import { songTitle } from "../lib/chiptune";
 import { DIFFICULTIES, type Difficulty } from "./difficulty";
 import {
-  SET_SLOTS, debutChance, fanRequest, gradeFor, setlistScore, showScore, songPool, type EncoreChoice, type Grade, type PendingShow,
+  SET_SLOTS, debutChance, fanRequest, gradeFor, setlistScore, showScore, songPool, type EncoreChoice, type Grade, type PendingShow, type ShowVenue,
 } from "./setlist";
 import { ALL_QUESTS_BONUS, currentQuests, questLabel, royaltiesPending, type QuestKind } from "./quests";
 
@@ -59,7 +59,7 @@ interface GameState {
   createCareer: (p: { name: string; genre: GenreId; persona: PersonaId; themeSeed?: number }) => void;
   tick: () => void;
   /** Spend energy and costs, lock in the crowd, and put the show on (the concert overlay plays it). */
-  startShow: (tourId: string, setlist: string[], difficulty?: Difficulty) => ActionResult & { show?: PendingShow };
+  startShow: (tourId: string, setlist: string[], difficulty?: Difficulty, venue?: ShowVenue) => ActionResult & { show?: PendingShow };
   collectRoyalties: () => ActionResult;
   claimQuest: (index: number) => ActionResult;
   /** Tutorial: move to a step, or null to finish/skip. */
@@ -272,7 +272,7 @@ export const useGame = create<GameState>()(
           if (changed) commit(c);
         },
 
-        startShow: (id, setlist, difficulty = "normal") => {
+        startShow: (id, setlist, difficulty = "normal", venue) => {
           const c = draft();
           if (!c) return { ok: false, message: "No career." };
           if (isLocked(c)) return lockMsg(c);
@@ -294,7 +294,7 @@ export const useGame = create<GameState>()(
           const attendance = sellout ? 1 : 0.4 + Math.random() * 0.5 * draw;
           c.stats = applyDelta(c.stats, { energy: -energy, cash: -t.cost });
           const diff: Difficulty = DIFFICULTIES[difficulty] ? difficulty : "normal";
-          const show: PendingShow = { tourId: t.id, setlist: keys, attendance, sellout, requestKey: fanRequest(c, pool), at: Date.now(), difficulty: diff };
+          const show: PendingShow = { tourId: t.id, setlist: keys, attendance, sellout, requestKey: fanRequest(c, pool), at: Date.now(), difficulty: diff, ...(venue ? { venue } : {}) };
           c.pendingShow = show;
           c.lastSetlist = keys;
           c.lastDifficulty = diff;
@@ -316,11 +316,13 @@ export const useGame = create<GameState>()(
           const score = showScore(perf, setQ);
           const grade = gradeFor(score);
           const { attendance, sellout } = show;
-          const crowd = Math.round(t.capacity * attendance);
+          const capacity = show.venue?.capacity || t.capacity;
+          const where = show.venue ? `${show.venue.name}` : t.name;
+          const crowd = Math.round(capacity * attendance);
 
           const dm = DIFFICULTIES[show.difficulty ?? "normal"] ?? DIFFICULTIES.normal;
           let payM = (0.75 + 0.5 * score) * dm.pay;
-          let fameM = (0.6 + 0.9 * score) * (grade === "S" ? 1.25 : 1) * dm.fame;
+          let fameM = (0.6 + 0.9 * score) * (grade === "S" ? 1.25 : 1) * dm.fame * (1 + Math.max(0, Math.min(50, show.venue?.fameBonus ?? 0)) / 100);
           let hypeBonus = Math.round((score - 0.5) * 12);
           let healthBonus = 0;
           let encoreLanded: boolean | undefined;
@@ -377,18 +379,18 @@ export const useGame = create<GameState>()(
           c.totals.gigs += 1;
           c.totals.earnings += Math.max(0, gross);
           if (sellout) c.totals.sellouts += 1;
-          newLog(c, "gig", `${t.name}: ${crowd.toLocaleString()} fans${sellout ? " (SOLD OUT)" : ""}, grade ${grade}${show.difficulty && show.difficulty !== "normal" ? ` (${dm.label})` : ""}, netted $${net.toLocaleString()}.`);
+          newLog(c, "gig", `${where}: ${crowd.toLocaleString()} fans${sellout ? " (SOLD OUT)" : ""}, grade ${grade}${show.difficulty && show.difficulty !== "normal" ? ` (${dm.label})` : ""}, netted $${net.toLocaleString()}.`);
           if (debutTitle) newLog(c, "release", `Debuted "${debutTitle}" live. It's in your Locker and setlist.`);
           maybeEvent(c);
           commit(c);
           return {
             ok: true,
-            title: sellout ? "SOLD OUT!" : `${t.name} done`,
+            title: sellout ? "SOLD OUT!" : `${where} done`,
             message: `${crowd.toLocaleString()} fans showed up.`,
             delta: applied,
             points,
             gig: {
-              tourId: t.id, tourName: t.name, crowd, capacity: t.capacity, sellout, net, pyro: !!c.crew.pyro, lighting: !!c.crew.lighting,
+              tourId: t.id, tourName: where, crowd, capacity, sellout, net, pyro: !!c.crew.pyro, lighting: !!c.crew.lighting,
               grade, performance: perf, setlist: setQ, encore, encoreLanded, debutTitle, playedRequest, difficulty: show.difficulty ?? "normal",
             },
           };

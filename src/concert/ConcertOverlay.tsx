@@ -23,7 +23,9 @@ export default function ConcertOverlay() {
   const career = useGame((s) => s.career)!;
   const finishShow = useGame((s) => s.finishShow);
   const tour = TOURS.find((t) => t.id === show.tourId)!;
-  const crowdTotal = Math.round(tour.capacity * show.attendance);
+  const capacity = show.venue?.capacity || tour.capacity;
+  const venueName = show.venue?.name ?? tour.name;
+  const crowdTotal = Math.round(capacity * show.attendance);
 
   // Freeze the songs at the start so the setlist doesn't shift as plays are counted.
   const songs = useMemo(() => {
@@ -75,7 +77,7 @@ export default function ConcertOverlay() {
       lighting: !!career.crew.lighting,
       sellout: show.sellout,
       onPyro: () => sfx("coin", "pyro"),
-      theme: stageTheme(career.style?.stage),
+      theme: stageTheme(show.venue?.theme || career.style?.stage),
     });
     sceneRef.current = scene;
     let cheered = false;
@@ -150,7 +152,7 @@ export default function ConcertOverlay() {
       <div className="w-full max-w-md flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="flex justify-between items-center px-4 pt-3 font-pixel text-[10px]">
           <span className="animate-press-start" style={{ color: "var(--danger)" }}>● LIVE</span>
-          <span style={{ color: "var(--gold)" }}>{tour.name.toUpperCase()}{diff !== "normal" && <span style={{ color: DIFFICULTIES[diff].color }}> · {DIFFICULTIES[diff].label.toUpperCase()}</span>}</span>
+          <span style={{ color: "var(--gold)" }}>{venueName.toUpperCase()}{diff !== "normal" && <span style={{ color: DIFFICULTIES[diff].color }}> · {DIFFICULTIES[diff].label.toUpperCase()}</span>}</span>
         </div>
         <div className="px-4 pb-2 pt-1 flex justify-between items-baseline text-xs">
           <span className="truncate">
@@ -181,7 +183,7 @@ export default function ConcertOverlay() {
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <div className="font-pixel text-base tabular-nums" style={{ color: "var(--gold)" }}>{crowd.toLocaleString()}</div>
-                <div className="text-[11px] text-muted-fg mt-1">fans · capacity {tour.capacity.toLocaleString()}</div>
+                <div className="text-[11px] text-muted-fg mt-1">fans · capacity {capacity.toLocaleString()}</div>
               </div>
               <button className="btn btn-ghost text-xs" onClick={autoPlay}>Auto-play ▶▶</button>
             </div>

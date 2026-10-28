@@ -22,6 +22,20 @@ export interface PendingShow {
   at: number;
   /** Player's chosen difficulty (older saves: normal). */
   difficulty?: import("./difficulty").Difficulty;
+  /** Featured (sponsored or pack) venue this show is at, copied when booked. */
+  venue?: ShowVenue;
+}
+
+export interface ShowVenue {
+  id: string;
+  name: string;
+  emoji: string;
+  /** Stage theme id from cosmetics. */
+  theme?: string | null;
+  /** Extra fame, percent. */
+  fameBonus: number;
+  /** Real capacity (otherwise the base tour's). */
+  capacity?: number | null;
 }
 
 /** Songs per show by tour size. */

@@ -6,31 +6,33 @@ import { askConfirm, toast } from "../components/ui";
 import { ITEM_TYPES, STAGE_THEMES, itemLabel, type DropItem } from "../game/cosmetics";
 import type { Drop } from "../lib/gold";
 import { Kpi, Section, fail, input, when } from "./kit";
+import { USD_PER_GOLD, licenseState, type Partner } from "./partners";
 
-type Row = Drop & { active: boolean; created_at: string };
+type Row = Drop & { active: boolean; created_at: string; partner_id: string | null };
+interface VenueOpt { id: string; name: string; emoji: string; pack_only: boolean }
 interface Summary { gold_outstanding: number; gold_bought_30d: number; gold_spent_30d: number; holders: number; sales: Record<string, { count: number; gold: number }> }
-type Form = Omit<Row, "id" | "created_at" | "was_gold" | "new_players_days" | "ends_at" | "image_url"> & {
-  id?: string; was_gold: string; new_players_days: string; ends_at: string; image_url: string;
+type Form = Omit<Row, "id" | "created_at" | "was_gold" | "new_players_days" | "ends_at" | "image_url" | "partner_id"> & {
+  id?: string; was_gold: string; new_players_days: string; ends_at: string; image_url: string; partner_id: string;
 };
 
-/** Value of 1 Gold in dollars, from the 1,200-for-$9.99 pack (before Apple's cut). */
-const USD_PER_GOLD = 9.99 / 1200;
 const local = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : "");
 const inDays = (d: number) => local(new Date(Date.now() + d * 864e5).toISOString());
 
 const TEMPLATES: Record<string, () => Form> = {
   "Starter pack": () => ({ name: "Starter Pack", emoji: "🚀", description: "A head start for new artists. One time only.", kind: "starter", price_gold: 100, was_gold: "400",
     items: [{ type: "stage", id: "neon-tokyo" }, { type: "cash", amount: 25000 }, { type: "energy", amount: 100 }, { type: "badge", emoji: "🚀", name: "Early Riser" }],
-    starts_at: local(new Date().toISOString()), ends_at: "", new_players_days: "7", min_level: 1, active: false, sort: 0, image_url: "" }),
+    starts_at: local(new Date().toISOString()), ends_at: "", new_players_days: "7", min_level: 1, active: false, sort: 0, image_url: "", partner_id: "" }),
   "Weekly bundle": () => ({ name: "Inferno Weekend", emoji: "🔥", description: "Turn the stage into a furnace. This weekend only.", kind: "bundle", price_gold: 300, was_gold: "",
     items: [{ type: "stage", id: "inferno" }, { type: "title", name: "Fire Starter" }, { type: "cash", amount: 50000 }],
-    starts_at: local(new Date().toISOString()), ends_at: inDays(3), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "" }),
+    starts_at: local(new Date().toISOString()), ends_at: inDays(3), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "", partner_id: "" }),
   "Artist pack": () => ({ name: "[Artist] Official Tour Pack", emoji: "⭐", description: "The official [Artist] stage, title and badge. Limited to this tour event.", kind: "artist", price_gold: 800, was_gold: "",
     items: [{ type: "stage", id: "royal-gold", name: "[Artist] Tour Stage" }, { type: "title", name: "Opened for [Artist]" }, { type: "badge", emoji: "⭐", name: "[Artist] Crew" }],
-    starts_at: local(new Date().toISOString()), ends_at: inDays(21), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "" }),
+    starts_at: local(new Date().toISOString()), ends_at: inDays(21), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "", partner_id: "" }),
 };
 
-function status(d: Row, now = Date.now()) {
+function status(d: Row, partner?: Partner, now = Date.now()) {
+  const lic = licenseState(partner);
+  if (d.partner_id && !lic.ok) return { label: lic.label, cls: lic.cls };
   if (!d.active) return { label: "HIDDEN", cls: "text-muted-fg border-line" };
   if (Date.parse(d.starts_at) > now) return { label: "SCHEDULED", cls: "text-electric border-electric" };
   if (d.ends_at && Date.parse(d.ends_at) <= now) return { label: "ENDED", cls: "text-muted-fg border-line" };
@@ -44,13 +46,19 @@ export function DropsTab() {
   const [vipGold, setVipGold] = useState("150");
   const [grant, setGrant] = useState({ email: "", amount: "", reason: "" });
   const [busy, setBusy] = useState(false);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [venues, setVenues] = useState<VenueOpt[]>([]);
 
   const load = useCallback(async () => {
-    const [d, s, c] = await Promise.all([
+    const [d, s, c, p, v] = await Promise.all([
       supabase!.from("drops").select("*").order("starts_at", { ascending: false }),
       supabase!.rpc("admin_drops_summary"),
       supabase!.from("app_public_config").select("value").eq("key", "vip_monthly_gold").maybeSingle(),
+      supabase!.from("partners").select("*").order("name"),
+      supabase!.from("venues").select("id, name, emoji, pack_only").order("name"),
     ]);
+    if (!p.error) setPartners(p.data as Partner[]);
+    if (!v.error) setVenues(v.data as VenueOpt[]);
     if (d.error) return fail(d.error);
     setRows(d.data as Row[]);
     if (!s.error) setSum(s.data as Summary);
@@ -61,7 +69,7 @@ export function DropsTab() {
   const edit = (d: Row, copy = false) => setForm({
     ...d, id: copy ? undefined : d.id, name: copy ? `${d.name} (copy)` : d.name, active: copy ? false : d.active,
     was_gold: d.was_gold === null ? "" : String(d.was_gold), new_players_days: d.new_players_days === null ? "" : String(d.new_players_days),
-    starts_at: local(d.starts_at), ends_at: local(d.ends_at), image_url: d.image_url ?? "",
+    starts_at: local(d.starts_at), ends_at: local(d.ends_at), image_url: d.image_url ?? "", partner_id: d.partner_id ?? "",
   });
 
   const save = async () => {
@@ -74,13 +82,15 @@ export function DropsTab() {
       name: form.name.trim(), description: form.description.trim(), emoji: form.emoji || "🎁", image_url: form.image_url.trim() || null,
       kind: form.kind, price_gold: Math.max(0, Math.round(form.price_gold)), was_gold: n(form.was_gold), items: form.items,
       starts_at: new Date(form.starts_at || Date.now()).toISOString(), ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
-      new_players_days: n(form.new_players_days) || null, min_level: form.min_level, active: form.active, sort: form.sort,
+      new_players_days: n(form.new_players_days) || null, min_level: form.min_level, active: form.active, sort: form.sort, partner_id: form.partner_id || null,
     };
+    if (form.items.some((i) => i.type === "venue" && !i.id)) return toast({ ok: false, message: "Pick the venue for each venue item." });
     setBusy(true);
     const { error } = form.id ? await supabase!.from("drops").update(row).eq("id", form.id) : await supabase!.from("drops").insert(row);
     setBusy(false);
     if (error) return fail(error);
-    toast({ ok: true, message: form.active ? "Saved. Players see it at its start time." : "Saved as hidden. Switch on \"Live\" when it's ready." });
+    const lic = licenseState(partners.find((x) => x.id === form.partner_id));
+    toast({ ok: true, message: !lic.ok ? `Saved. Players won't see it until the partner's license is on file (${lic.label.toLowerCase()}).` : form.active ? "Saved. Players see it at its start time." : "Saved as hidden. Switch on \"Live\" when it's ready." });
     setForm(null);
     void load();
   };
@@ -125,7 +135,7 @@ export function DropsTab() {
         <Kpi label="Players holding Gold" value={sum ? sum.holders.toLocaleString() : "—"} />
       </div>
 
-      <Section title="Drops" sub="Limited packs players buy with Gold Records. Each player can buy each drop once. Drops can contain stages, titles, badges, game cash, energy and bonus Gold, never reward points or raffle entries."
+      <Section title="Packs" sub="Limited packs players buy with Gold Records. Each player can buy each pack once. Packs can contain stages, titles, badges, venues, game cash, energy and bonus Gold, never reward points or raffle entries. Packs linked to a partner only show while that partner's license is signed and current (Partners & venues tab)."
         right={<div className="flex flex-wrap gap-2 justify-end">
           {Object.keys(TEMPLATES).map((k) => <button key={k} className="btn btn-ghost text-xs" onClick={() => setForm(TEMPLATES[k]())}>+ {k}</button>)}
         </div>}>
@@ -136,11 +146,12 @@ export function DropsTab() {
                 <tr className="border-b border-line"><th className="py-2">Drop</th><th className="text-right">Price</th><th>Runs</th><th className="text-right">Sold</th><th className="text-right">Gold in</th><th>Status</th><th /></tr>
               </thead>
               <tbody>{rows.map((d) => {
-                const st = status(d);
+                const partner = partners.find((x) => x.id === d.partner_id);
+                const st = status(d, partner);
                 const s = sum?.sales[d.id];
                 return (
                   <tr key={d.id} className="border-b border-line/50">
-                    <td className="py-2"><span className="mr-2">{d.emoji}</span>{d.name}<span className="text-muted-fg text-xs"> · {d.kind}{d.new_players_days ? ` · first ${d.new_players_days}d` : ""}</span></td>
+                    <td className="py-2"><span className="mr-2">{d.emoji}</span>{d.name}<span className="text-muted-fg text-xs"> · {d.kind}{partner ? ` · ${partner.name}` : ""}{d.new_players_days ? ` · first ${d.new_players_days}d` : ""}</span></td>
                     <td className="text-right tabular-nums">💿 {d.price_gold.toLocaleString()}</td>
                     <td className="text-xs text-muted-fg whitespace-nowrap">{when(d.starts_at)} → {d.ends_at ? when(d.ends_at) : "no end"}</td>
                     <td className="text-right tabular-nums">{s?.count ?? 0}</td>
@@ -160,7 +171,7 @@ export function DropsTab() {
         )}
       </Section>
 
-      {form && <DropEditor form={form} setForm={setForm} save={save} busy={busy} />}
+      {form && <DropEditor form={form} setForm={setForm} save={save} busy={busy} partners={partners} venues={venues} />}
 
       <div className="grid lg:grid-cols-2 gap-5">
         <Section title="VIP Gold allowance" sub="Gold Records VIP members get with each monthly payment (12× up front for yearly).">
@@ -183,13 +194,16 @@ export function DropsTab() {
   );
 }
 
-function DropEditor({ form, setForm, save, busy }: { form: Form; setForm: (f: Form | null) => void; save: () => void; busy: boolean }) {
+function DropEditor({ form, setForm, save, busy, partners, venues }: { form: Form; setForm: (f: Form | null) => void; save: () => void; busy: boolean; partners: Partner[]; venues: VenueOpt[] }) {
   const [add, setAdd] = useState<DropItem["type"]>("stage");
   const set = (patch: Partial<Form>) => setForm({ ...form, ...patch });
   const setItem = (i: number, it: DropItem) => set({ items: form.items.map((x, j) => (j === i ? it : x)) });
   const blank = (t: DropItem["type"]): DropItem =>
     t === "stage" ? { type: "stage", id: STAGE_THEMES[1].id } : t === "title" ? { type: "title", name: "" } : t === "badge" ? { type: "badge", emoji: "⭐", name: "" }
-    : t === "energy" ? { type: "energy", amount: 100 } : t === "gold" ? { type: "gold", amount: 50 } : { type: "cash", amount: 25000 };
+    : t === "energy" ? { type: "energy", amount: 100 } : t === "gold" ? { type: "gold", amount: 50 }
+    : t === "venue" ? { type: "venue", id: venues[0]?.id ?? "", name: venues[0]?.name ?? "" } : { type: "cash", amount: 25000 };
+  const partner = partners.find((x) => x.id === form.partner_id);
+  const lic = licenseState(partner);
   const gold = form.price_gold;
 
   return (
@@ -212,6 +226,12 @@ function DropEditor({ form, setForm, save, busy }: { form: Form; setForm: (f: Fo
             <label className="block text-xs text-muted-fg">Starts<input type="datetime-local" className={`${input} mt-1`} value={form.starts_at} onChange={(e) => set({ starts_at: e.target.value })} /></label>
             <label className="block text-xs text-muted-fg">Ends (blank = no end)<input type="datetime-local" className={`${input} mt-1`} value={form.ends_at} onChange={(e) => set({ ends_at: e.target.value })} /></label>
             <label className="block text-xs text-muted-fg">Only for accounts newer than (days)<input type="number" min={1} className={`${input} mt-1`} value={form.new_players_days} onChange={(e) => set({ new_players_days: e.target.value })} placeholder="blank = everyone" /></label>
+            <label className="block text-xs text-muted-fg col-span-2">Partner (artist, venue or brand whose name is on it)<select className={`${input} mt-1`} value={form.partner_id} onChange={(e) => set({ partner_id: e.target.value })}>
+              <option value="">None (TourStar's own pack)</option>
+              {partners.map((x) => <option key={x.id} value={x.id}>{x.name} · {x.kind}</option>)}</select>
+              {partner && <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded border ${lic.cls}`}>{lic.label}</span>}
+              {partner && !lic.ok && <span className="block mt-1">Players won't see this pack until the license is signed and current.</span>}
+              {!partners.length && <span className="block mt-1">Add partners in the Partners & venues tab.</span>}</label>
             <label className="block text-xs text-muted-fg">Sort order<input type="number" className={`${input} mt-1`} value={form.sort} onChange={(e) => set({ sort: Number(e.target.value) })} /></label>
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.active} onChange={(e) => set({ active: e.target.checked })} />Live (shows in the app between the start and end times)</label>
@@ -232,6 +252,12 @@ function DropEditor({ form, setForm, save, busy }: { form: Form; setForm: (f: Fo
                   <input className={`${input} !w-16 text-center`} maxLength={4} value={it.emoji} onChange={(e) => setItem(i, { ...it, emoji: e.target.value })} />
                   <input className={`${input} flex-1`} maxLength={32} placeholder="Badge name" value={it.name ?? ""} onChange={(e) => setItem(i, { ...it, name: e.target.value })} />
                 </>}
+                {it.type === "venue" && (
+                  <select className={`${input} !w-auto`} value={it.id} onChange={(e) => { const v = venues.find((x) => x.id === e.target.value); setItem(i, { type: "venue", id: e.target.value, name: v?.name ?? "" }); }}>
+                    {!venues.length && <option value="">Add a venue first</option>}
+                    {venues.map((v) => <option key={v.id} value={v.id}>{v.emoji} {v.name}{v.pack_only ? "" : " (open to all)"}</option>)}
+                  </select>
+                )}
                 {(it.type === "cash" || it.type === "energy" || it.type === "gold") && (
                   <input type="number" min={1} className={`${input} !w-32`} value={it.amount} onChange={(e) => setItem(i, { ...it, amount: Math.max(1, Math.round(Number(e.target.value) || 0)) })} />
                 )}
