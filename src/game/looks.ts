@@ -49,6 +49,7 @@ export const LOOK_ITEMS: LookItem[] = [
   I("hair-emo", "hair", "Side Fringe", "emo", "cash", { price: 12000, level: 3 }),
   I("hair-spikes", "hair", "Spikes", "spikes", "cash", { price: 30000, level: 4 }),
   I("hair-slick", "hair", "Slicked Back", "slick", "cash", { price: 75000, level: 5 }),
+  I("hair-frosted", "hair", "Frosted Tips", "frosted", "gold"),
 
   // Tops
   I("top-tee-white", "top", "White Tee", "tee", "starter", { c: "#F2F2F2" }),
@@ -95,6 +96,7 @@ export const LOOK_ITEMS: LookItem[] = [
   I("shoes-platforms", "shoes", "Platforms", "platforms", "cash", { c: "#FF42D8", c2: "#1E1E24", price: 15000, level: 3 }),
   I("shoes-stage", "shoes", "Stadium Boots", "boots", "level", { c: "#B8BCC8", c2: "#F2C230", level: 6 }),
   I("shoes-gold", "shoes", "Gold Kicks", "sneakers", "gold", { c: "#E5B83A", c2: "#FFFFFF" }),
+  I("shoes-white-platforms", "shoes", "White Platform Boots", "platforms", "gold", { c: "#F7F7F2", c2: "#C8C8C0" }),
 
   // Accessories
   I("acc-none", "acc", "Nothing", "none", "starter"),
@@ -107,6 +109,8 @@ export const LOOK_ITEMS: LookItem[] = [
   I("acc-bandana", "acc", "Bandana", "bandana", "cash", { c: "#C4372B", price: 1000 }),
   I("acc-flower", "acc", "Hair Flower", "flower", "cash", { c: "#FF7FC4", c2: "#F2C230", price: 800 }),
   I("acc-star-shades", "acc", "Star Shades", "starshades", "gold", { c: "#FF42D8" }),
+  I("acc-silver-shades", "acc", "Silver Shades", "shades", "gold", { c: "#B8C4D6" }),
+  I("acc-silver-chain", "acc", "Silver Chain", "chain", "gold", { c: "#D6DAE2" }),
   I("acc-crown", "acc", "Legend Crown", "crown", "level", { c: "#F2C230", level: 7 }),
 
   // Held
@@ -119,6 +123,7 @@ export const LOOK_ITEMS: LookItem[] = [
   I("held-keytar", "held", "Keytar", "keytar", "cash", { c: "#FF42D8", c2: "#F2F2F2", price: 20000, level: 3 }),
   I("held-flying-v", "held", "Flying V", "flyingv", "cash", { c: "#1A1A1F", c2: "#B8BCC8", price: 80000, level: 5 }),
   I("held-gold-mic", "held", "Gold Mic", "mic", "gold", { c: "#F2C230" }),
+  I("held-headset", "held", "Headset Mic", "headset", "gold", { c: "#1E1E24", c2: "#9AA0A6" }),
   I("held-legend-guitar", "held", "Legend Guitar", "guitar", "level", { c: "#F2C230", c2: "#FFFFFF", level: 7 }),
 ];
 export const lookItem = (id: string) => LOOK_ITEMS.find((i) => i.id === id);
@@ -273,6 +278,7 @@ export function buildAvatar(look: Look, opts: { arms?: boolean; held?: boolean }
     case "mohawk": r(8, 4, 8, 1, shade(skin, -0.12)); r(11, 0, 2, 5, hairC); break;
     case "mullet": r(7, 3, 10, 3, hairC); break;
     case "emo": r(7, 3, 10, 3, hairC); r(8, 5, 6, 4, hairC); r(16, 6, 1, 3, hairC); break;
+    case "frosted": { const tip = "#F2EEDC"; r(8, 3, 8, 3, hairC); for (const [x, h] of [[8, 2], [10, 3], [12, 3], [14, 2]] as const) { r(x, 3 - h, 2, h, hairC); r(x, 3 - h, 2, 1, tip); } r(8, 3, 8, 1, tip); break; }
     case "spikes": r(8, 3, 8, 3, hairC); r(8, 1, 1, 2, hairC); r(10, 0, 1, 3, hairC); r(13, 0, 1, 3, hairC); r(15, 1, 1, 2, hairC); break;
     case "slick": r(7, 3, 10, 3, hairC); r(8, 3, 8, 1, shade(hairC, 0.3)); r(16, 6, 1, 2, hairC); break;
   }
@@ -291,6 +297,9 @@ export function buildAvatar(look: Look, opts: { arms?: boolean; held?: boolean }
     case "flower": r(15, 3, 2, 2, a1); r(15, 3, 1, 1, a2); break;
     case "crown": r(8, 1, 8, 2, a1); r(8, 0, 1, 1, a1); r(11, 0, 2, 1, a1); r(15, 0, 1, 1, a1); r(11, 1, 2, 1, "#C4372B"); break;
   }
+
+  // A headset mic sits on the head, so it shows even when the arms are drawn separately (concerts)
+  if (held.style === "headset") { r(16, 7, 1, 3, held.c ?? "#1E1E24"); r(13, 10, 3, 1, held.c2 ?? "#9AA0A6"); r(13, 10, 1, 1, held.c ?? "#1E1E24"); }
 
   // Held item, in the right hand (x ≈ tR..tR+2, y 25)
   if (withHeld) {

@@ -32,7 +32,7 @@ export type DropItem =
   | { type: "gold"; amount: number }
   | { type: "venue"; id: string; name: string }
   | { type: "skin"; name: string; a: string; b: string; bg: string }
-  | { type: "moves"; id: MoveId; name?: string; members?: number }
+  | { type: "moves"; id: MoveId; name?: string; members?: number; match?: boolean }
   | { type: "perk"; text: string }
   | { type: "look"; id: string };
 
@@ -108,7 +108,7 @@ export function itemLabel(i: DropItem) {
     case "gold": return `💿 ${i.amount.toLocaleString()} bonus Gold`;
     case "venue": return `🏟️ Play ${i.name || "a featured venue"}`;
     case "skin": return `🎨 ${i.name || "Custom"} app colors`;
-    case "moves": return `🕺 ${i.name || moveName(i.id)} moves${(i.members ?? 1) > 1 ? ` · ${i.members}-piece formation` : ""}`;
+    case "moves": return `🕺 ${i.name || moveName(i.id)} moves${(i.members ?? 1) > 1 ? ` · ${i.members}-piece formation${i.match ? " in matching outfits" : ""}` : ""}`;
     case "perk": return `🎁 ${i.text}`;
     case "look": return `👕 ${lookItem(i.id)?.name ?? "Outfit"} (look)`;
   }

@@ -99,7 +99,7 @@ export interface Career {
     /** Whole-app colors from a pack. */
     skin?: import("./cosmetics").Skin;
     /** Performer dance moves and how many performers (formation). */
-    moves?: { id: import("./cosmetics").MoveId; members: number };
+    moves?: { id: import("./cosmetics").MoveId; members: number; match?: boolean };
   };
   /** Create-your-look: the artist's pixel look and the outfits bought with game cash. */
   look?: import("./looks").Look;

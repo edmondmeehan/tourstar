@@ -5,7 +5,9 @@ const hexNum = (h: string) => parseInt(h.slice(1), 16);
 const SHORT = ["tee", "bandtee", "sparkle", "jersey"];
 
 /** A bandmate's look: same vibe, different hair, skin and outfit. */
-function bandmate(lead: Look, i: number): Look {
+function bandmate(lead: Look, i: number, match = false): Look {
+  // Matching outfits (boy-band style): same clothes as the lead, their own face and hair color.
+  if (match) return { ...lead, skin: (lead.skin + 2 + i * 3) % SKIN_TONES.length, hairColor: (lead.hairColor + 1 + i * 2) % 12, held: lead.held === "held-headset" ? lead.held : "held-none" };
   const tops = LOOK_ITEMS.filter((x) => x.slot === "top" && x.source === "starter");
   const hairs = LOOK_ITEMS.filter((x) => x.slot === "hair" && x.source === "starter");
   return { ...lead, skin: (lead.skin + 2 + i * 3) % SKIN_TONES.length, hairColor: (lead.hairColor + 1 + i * 2) % 12, hair: hairs[(i * 3 + 1) % hairs.length].id, top: tops[(i * 2 + 3) % tops.length].id, acc: "acc-none", held: "held-none" };
@@ -26,7 +28,7 @@ export interface ConcertParams {
   /** Stage theme colors (Drops cosmetic). Defaults to the classic pink/blue. */
   theme?: { a: number; b: number; glow: number; sky: [number, number, number] };
   /** Dance moves (pack cosmetic) and how many performers are on stage. */
-  moves?: { id: string; members: number };
+  moves?: { id: string; members: number; match?: boolean };
   /** The player's create-your-look outfit for the lead performer (band members get variations). */
   look?: Look;
 }
@@ -198,7 +200,7 @@ export class ConcertScene extends Phaser.Scene {
       const c1 = hexNum(held.c ?? "#9AA0A6"), c2 = hexNum(held.c2 ?? "#333333");
       if (held.style === "mic") { g.fillStyle(c1, 1); g.fillCircle(hand.ex, hand.ey - 1.2 * u, 1.4 * u); }
       else if (held.style === "sticks") { g.lineStyle(0.8 * u, c1, 1); g.lineBetween(hand.ex, hand.ey, hand.ex + 2 * u, hand.ey - 5 * u); }
-      else {
+      else if (["guitar", "acoustic", "flyingv", "keytar"].includes(held.style)) {
         const gy = y - (GRID_H - 24) * u;
         g.lineStyle(1 * u, 0x3a2410, 1); g.lineBetween(x - 7 * u * sq, gy - 6 * u, x + 3 * u * sq, gy);
         g.fillStyle(c1, 1); g.fillRect(x + 0.5 * u * sq, gy - 2 * u, (held.style === "keytar" ? 10 : 6) * u * sq, 5 * u);
@@ -282,7 +284,7 @@ export class ConcertScene extends Phaser.Scene {
       // A tiny delay across the line reads as a ripple at the end; otherwise everyone is in sync.
       const pose = poseFor(mv.id, this.t, beat, this.progress);
       const isLead = members === 1 || m === Math.floor(members / 2);
-      this.drawFigure(g, x + pose.dx * scale, stageY, scale, pose, members > 1 && isLead, isLead ? leadLook : bandmate(leadLook, m));
+      this.drawFigure(g, x + pose.dx * scale, stageY, scale, pose, members > 1 && isLead, isLead ? leadLook : bandmate(leadLook, m, !!mv.match));
     }
 
     // Floor + crowd

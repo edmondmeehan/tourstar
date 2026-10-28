@@ -160,7 +160,7 @@ export function MyStyle() {
           {moves.map((m) => {
             const members = m.members ?? 1;
             const on = style.moves?.id === m.id && style.moves.members === members;
-            return <button key={`${m.id}:${members}`} className={chip(on)} title={MOVES.find((x) => x.id === m.id)?.blurb} onClick={() => { setStyle({ moves: { id: m.id, members } }); sfx("click"); }}>🕺 {m.name || moveName(m.id)}{members > 1 ? ` ×${members}` : ""}</button>;
+            return <button key={`${m.id}:${members}`} className={chip(on)} title={MOVES.find((x) => x.id === m.id)?.blurb} onClick={() => { setStyle({ moves: { id: m.id, members, match: !!m.match } }); sfx("click"); }}>🕺 {m.name || moveName(m.id)}{members > 1 ? ` ×${members}` : ""}</button>;
           })}
           {!moves.length && <span className="text-xs text-muted-fg self-center">Dance moves come in artist packs.</span>}
         </div>

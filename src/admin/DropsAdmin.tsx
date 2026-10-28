@@ -32,14 +32,15 @@ const TEMPLATES: Record<string, () => Form> = {
   "Weekly bundle": () => ({ name: "Inferno Weekend", emoji: "🔥", description: "Turn the stage into a furnace. This weekend only.", kind: "bundle", price_gold: 300, was_gold: "",
     items: [{ type: "stage", id: "inferno" }, { type: "title", name: "Fire Starter" }, { type: "cash", amount: 50000 }],
     starts_at: local(new Date().toISOString()), ends_at: inDays(3), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "", partner_id: "" }),
-  "Artist pack · major ($9.99)": () => ({ name: "[Artist] Official Tour Pack", emoji: "⭐", description: "The official [Artist] stage, title and badge. Limited to this tour event.", kind: "artist", price_gold: 1200, was_gold: "",
-    items: [{ type: "stage", id: "royal-gold", name: "[Artist] Tour Stage" }, { type: "skin", name: "[Artist] Colors", a: "#F5F7FF", b: "#9FD8FF", bg: "#0E1220" },
-      { type: "moves", id: "boyband", name: "[Artist] 8-Count", members: 5 }, { type: "title", name: "Opened for [Artist]" }, { type: "badge", emoji: "⭐", name: "[Artist] Crew" },
+  "Artist pack · major ($9.99)": () => ({ name: "[Artist] Official Tour Pack", emoji: "⭐", description: "The official [Artist] stage, all-white stage outfit, choreography and perks. Limited to this tour event.", kind: "artist", price_gold: 1200, was_gold: "",
+    items: [{ type: "stage", id: "royal-gold", name: "[Artist] Tour Stage" }, { type: "skin", name: "[Artist] White", a: "#F5F7FF", b: "#9FD8FF", bg: "#0E1220" },
+      { type: "moves", id: "boyband", name: "[Artist] 8-Count", members: 5, match: true }, { type: "title", name: "Opened for [Artist]" }, { type: "badge", emoji: "⭐", name: "[Artist] Crew" },
+      { type: "look", id: "top-white-suit" }, { type: "look", id: "bottom-white" }, { type: "look", id: "shoes-white-platforms" }, { type: "look", id: "hair-frosted" }, { type: "look", id: "held-headset" },
       { type: "perk", text: "15% off the official [Artist] store" }, { type: "perk", text: "Access to [Artist] presale codes" }],
     starts_at: local(new Date().toISOString()), ends_at: inDays(21), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "", partner_id: "" }),
   "Artist pack · emerging ($4.99)": () => ({ name: "[Artist] Official Tour Pack", emoji: "⭐", description: "The official [Artist] stage, title and badge. Limited to this tour event.", kind: "artist", price_gold: 500, was_gold: "",
-    items: [{ type: "stage", id: "royal-gold", name: "[Artist] Tour Stage" }, { type: "skin", name: "[Artist] Colors", a: "#F5F7FF", b: "#9FD8FF", bg: "#0E1220" },
-      { type: "moves", id: "boyband", name: "[Artist] 8-Count", members: 5 }, { type: "title", name: "Opened for [Artist]" }, { type: "badge", emoji: "⭐", name: "[Artist] Crew" },
+    items: [{ type: "stage", id: "royal-gold", name: "[Artist] Tour Stage" }, { type: "skin", name: "[Artist] White", a: "#F5F7FF", b: "#9FD8FF", bg: "#0E1220" },
+      { type: "moves", id: "boyband", name: "[Artist] 8-Count", members: 5, match: true }, { type: "title", name: "Opened for [Artist]" }, { type: "badge", emoji: "⭐", name: "[Artist] Crew" },
       { type: "perk", text: "15% off the official [Artist] store" }, { type: "perk", text: "Access to [Artist] presale codes" }],
     starts_at: local(new Date().toISOString()), ends_at: inDays(21), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "", partner_id: "" }),
 };
@@ -320,6 +321,7 @@ function DropEditor({ form, setForm, save, busy, partners, venues, perkStats }: 
                   <select className={`${input} !w-auto`} value={it.members ?? 1} onChange={(e) => setItem(i, { ...it, members: Number(e.target.value) })}>
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 1 ? "Solo" : `${n} performers`}</option>)}</select>
                   <input className={`${input} flex-1 min-w-[8rem]`} maxLength={32} placeholder="Custom name (optional)" value={it.name ?? ""} onChange={(e) => setItem(i, { ...it, name: e.target.value || undefined })} />
+                  {(it.members ?? 1) > 1 && <label className="flex items-center gap-1 text-[11px] text-muted-fg"><input type="checkbox" checked={!!it.match} onChange={(e) => setItem(i, { ...it, match: e.target.checked || undefined })} />Band wears matching outfits</label>}
                 </>}
                 {it.type === "look" && (
                   <select className={`${input} !w-auto`} value={it.id} onChange={(e) => setItem(i, { type: "look", id: e.target.value })}>
