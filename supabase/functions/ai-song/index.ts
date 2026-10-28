@@ -1,8 +1,7 @@
 // Generates a real AI song clip for a player's release with ElevenLabs Music.
 // The ElevenLabs key comes from Supabase Vault (admin → Integrations → ElevenLabs) and never
 // leaves the server. The prompt is built here from fixed style lists, so players can't send
-// arbitrary prompts. Limits: on/off switch + daily cap per player (admin → AI music).
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// arbitrary prompts. Limits: on/off switch, unlock level, daily cap per player (admin → AI audio).
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
@@ -64,7 +63,7 @@ Deno.serve(async (req) => {
   const user = who?.user;
   if (!user) return json({ error: "Sign in to record AI songs." }, 401);
 
-  const { data: cfg } = await svc.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_music_daily_limit", "ai_music_vip_bonus"]);
+  const { data: cfg } = await svc.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_music_daily_limit", "ai_music_vip_bonus", "ai_music_min_level"]);
   const conf = Object.fromEntries((cfg ?? []).map((r) => [r.key, r.value]));
   if (conf.ai_music_enabled !== "true") return json({ error: "AI songs are switched off right now." }, 403);
   // Daily free songs (+ more for VIP members). Past that, a purchased Studio credit is used.
@@ -74,13 +73,25 @@ Deno.serve(async (req) => {
   const since = new Date(Date.now() - 864e5).toISOString();
   const { count } = await svc.from("ai_generations").select("id", { count: "exact", head: true })
     .eq("user_id", user.id).eq("kind", "song").eq("status", "ok").gte("created_at", since);
+  // Level gate: free daily songs unlock at a set level (admin → AI audio). Everyone gets one free
+  // debut recording first, and VIP members and purchased Studio credits skip the gate.
+  const minLevel = Math.max(1, Math.min(7, Math.round(Number(conf.ai_music_min_level ?? 3)) || 1));
+  const { data: save } = await svc.from("saves").select("career").eq("user_id", user.id).maybeSingle();
+  const level = Number((save?.career as { peakLevel?: number } | null)?.peakLevel) || 1;
+  let gated = !vip && level < minLevel;
+  if (gated) {
+    const { count: ever } = await svc.from("ai_generations").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).eq("kind", "song").eq("status", "ok");
+    if ((ever ?? 0) === 0) gated = false; // the free debut recording
+  }
   let usedCredit = false;
-  if ((count ?? 0) >= limit) {
+  if (gated || (count ?? 0) >= limit) {
     if ((perks?.ai_credits ?? 0) > 0) {
       const { data: took } = await svc.from("player_perks").update({ ai_credits: perks!.ai_credits - 1, updated_at: new Date().toISOString() })
         .eq("user_id", user.id).eq("ai_credits", perks!.ai_credits).select("ai_credits");
       usedCredit = !!took?.length;
     }
+    if (!usedCredit && gated) return json({ error: `Real AI songs unlock at level ${minLevel}. Keep touring, or get a Studio Session in Premium.`, locked: true, minLevel }, 403);
     if (!usedCredit) return json({ error: `You've used today's ${limit} free AI songs. Get a Studio Session in Premium, or come back tomorrow.`, outOfSongs: true }, 429);
   }
   const refund = async () => {

@@ -8,22 +8,36 @@ import { masterVolume } from "./fx";
 import { useGame } from "../game/store";
 import type { ReleaseKind, Song } from "../game/types";
 
-interface AiFlags { music: boolean; voice: boolean; dailyLimit: number; vipBonus: number; loaded: boolean; credits: number; vip: boolean }
-export const useAiFlags = create<AiFlags>(() => ({ music: false, voice: false, dailyLimit: 3, vipBonus: 3, loaded: false, credits: 0, vip: false }));
+interface AiFlags { music: boolean; voice: boolean; dailyLimit: number; vipBonus: number; minLevel: number; loaded: boolean; credits: number; vip: boolean; songsTotal: number }
+export const useAiFlags = create<AiFlags>(() => ({ music: false, voice: false, dailyLimit: 3, vipBonus: 3, minLevel: 3, loaded: false, credits: 0, vip: false, songsTotal: 0 }));
 
 /** Purchased AI Studio credits and server-side VIP status (signed-in players). */
 export async function refreshPerks() {
   if (!supabase || !useCloud.getState().session) return useAiFlags.setState({ credits: 0, vip: false });
   const { data } = await supabase.rpc("my_perks");
-  if (data) useAiFlags.setState({ credits: Number(data.ai_credits) || 0, vip: !!data.vip });
+  if (data) useAiFlags.setState({ credits: Number(data.ai_credits) || 0, vip: !!data.vip, songsTotal: Number(data.ai_songs_total) || 0 });
 }
 
 export async function refreshAiFlags() {
   if (!supabase) return;
-  const { data } = await supabase.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_voice_enabled", "ai_music_daily_limit", "ai_music_vip_bonus"]);
+  const { data } = await supabase.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_voice_enabled", "ai_music_daily_limit", "ai_music_vip_bonus", "ai_music_min_level"]);
   if (!data) return;
   const m = Object.fromEntries(data.map((r) => [r.key, r.value as string]));
-  useAiFlags.setState({ music: m.ai_music_enabled === "true", voice: m.ai_voice_enabled === "true", dailyLimit: Number(m.ai_music_daily_limit ?? 3) || 0, vipBonus: Number(m.ai_music_vip_bonus ?? 3) || 0, loaded: true });
+  useAiFlags.setState({ music: m.ai_music_enabled === "true", voice: m.ai_voice_enabled === "true", dailyLimit: Number(m.ai_music_daily_limit ?? 3) || 0, vipBonus: Number(m.ai_music_vip_bonus ?? 3) || 0, minLevel: Math.max(1, Math.min(7, Number(m.ai_music_min_level ?? 3) || 1)), loaded: true });
+}
+
+/**
+ * Whether this player can record a real AI song at their level (the server checks the same rules):
+ * one free debut recording for everyone, daily free songs from the unlock level, and VIP members or
+ * players with purchased Studio credits at any level.
+ */
+export function aiSongAccess(peakLevel: number): { ok: boolean; why: "debut" | "level" | "vip" | "credits" | "locked"; minLevel: number } {
+  const f = useAiFlags.getState();
+  if (f.vip) return { ok: true, why: "vip", minLevel: f.minLevel };
+  if (peakLevel >= f.minLevel) return { ok: true, why: "level", minLevel: f.minLevel };
+  if (f.songsTotal === 0) return { ok: true, why: "debut", minLevel: f.minLevel };
+  if (f.credits > 0) return { ok: true, why: "credits", minLevel: f.minLevel };
+  return { ok: false, why: "locked", minLevel: f.minLevel };
 }
 
 /** Can this player record AI songs right now? (Needs an account: songs are tied to it and capped per day.) */
@@ -51,6 +65,7 @@ export async function recordAiSong(song: Song, kind: ReleaseKind, persona: strin
     return { ok: false, message: `${r.error ?? "The AI studio couldn't record this one."} "${song.title}" keeps its synth version.` };
   }
   set(song.id, { ai: undefined, audioUrl: r.data.url });
+  useAiFlags.setState((s) => ({ songsTotal: s.songsTotal + 1 }));
   void refreshPerks();
   return { ok: true, message: `🎧 "${song.title}" is mixed and mastered. It's in your Locker.` };
 }

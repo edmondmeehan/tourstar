@@ -21,7 +21,8 @@ export default function Distribute() {
         : list.length === 0 ? (
           <Card><p className="text-sm text-muted-fg text-center py-4">The first TourStar Monthly is on the way. Record real AI songs on your releases for a chance to be on it.</p></Card>
         ) : <div className="space-y-4">{list.map((r) => <ReleaseCard key={r.id} r={r} />)}</div>}
-      <Link to="/album" className="btn btn-ghost w-full mt-5 block text-center">🎧 Record a new song</Link>
+      <Link to="/radio" className="btn btn-pink w-full mt-5 block text-center">📻 Listen to TourStar Radio</Link>
+      <Link to="/album" className="btn btn-ghost w-full mt-2 block text-center">🎧 Record a new song</Link>
       <p className="text-[11px] text-muted-fg text-center mt-4 leading-relaxed">
         Songs made in TourStar belong to TourStar, LLC. TourStar picks which songs are released and may credit your artist name. Players aren't paid for songs or names used.{" "}
         <a className="underline" href="https://tourstarapp.com/terms#content" target="_blank" rel="noreferrer">Terms</a>

@@ -9,7 +9,7 @@ import { GENRES } from "../game/data";
 import { LINK_KEYS, monthLabel, type LinkKey } from "../lib/monthly";
 import { Kpi, Section, fail, input } from "./kit";
 
-interface Song { id: string; path: string; created_at: string; genre: string; kind: string; title: string; artist: string; email: string | null }
+interface Song { id: string; path: string; created_at: string; genre: string; kind: string; title: string; artist: string; email: string | null; likes?: number; reports?: number }
 interface Track { gen_id: string; title: string; artist: string; genre: string; path: string }
 interface ReleaseRow {
   id?: string; month: string; title: string; status: "draft" | "submitted" | "live"; cover_url: string | null;
@@ -204,12 +204,13 @@ export function MonthlyTab() {
             <div className="flex flex-wrap gap-3 mb-2 text-xs">
               <button className="underline" onClick={() => setPicked(songs.map((s) => s.id))}>Select all</button>
               <button className="underline" onClick={() => setPicked([])}>Clear</button>
+              <button className="underline" onClick={() => setPicked([...songs].sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0)).slice(0, 15).map((s) => s.id))}>Top 15 by radio likes</button>
               {dupes.size > 0 && <span style={{ color: "var(--gold)" }}>⚠ {dupes.size} duplicate title{dupes.size > 1 ? "s" : ""}: stores may reject repeats on one album.</span>}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[860px] [&_th]:px-2 [&_td]:px-2">
                 <thead className="text-[11px] uppercase tracking-wider text-muted-fg text-left">
-                  <tr className="border-b border-line"><th className="py-2 w-8" /><th className="w-10">#</th><th>Title</th><th>Player artist</th><th>Genre</th><th>Recorded</th><th>Listen</th><th /></tr>
+                  <tr className="border-b border-line"><th className="py-2 w-8" /><th className="w-10">#</th><th>Title</th><th>Player artist</th><th>Genre</th><th className="text-right">❤️</th><th>Recorded</th><th>Listen</th><th /></tr>
                 </thead>
                 <tbody>
                   {[...tracks.map((t) => songs.find((s) => s.id === t.gen_id)!), ...songs.filter((s) => !picked.includes(s.id))].map((s) => {
@@ -222,6 +223,7 @@ export function MonthlyTab() {
                         <td className={dupes.has(s.title.toLowerCase()) && on ? "text-gold" : ""}>{s.title}</td>
                         <td className="text-xs">{s.artist}<span className="text-muted-fg">{s.email ? ` · ${s.email}` : ""}</span></td>
                         <td className="text-xs">{genreName(s.genre)}</td>
+                        <td className="text-xs text-right tabular-nums">{s.likes ?? 0}{s.reports ? <span className="text-danger" title="Radio reports"> ⚑{s.reports}</span> : null}</td>
                         <td className="text-xs text-muted-fg whitespace-nowrap">{new Date(s.created_at).toLocaleDateString()}</td>
                         <td><audio controls preload="none" src={audioUrl(s.path)} className="h-8 w-48" /></td>
                         <td className="whitespace-nowrap text-xs space-x-2">{on && <><button className="underline" onClick={() => move(s.id, -1)}>↑</button><button className="underline" onClick={() => move(s.id, 1)}>↓</button></>}</td>

@@ -14,13 +14,14 @@ export function AiTab() {
   const [key, setKey] = useState<{ last4: string; last_test_ok: boolean | null; last_test_message: string | null } | null | undefined>(undefined);
   const [gens, setGens] = useState<Gen[]>([]);
   const [limit, setLimit] = useState("3");
+  const [minLevel, setMinLevel] = useState("3");
   const playing = useRef<ClipHandle | null>(null);
   const [nowId, setNowId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const since = new Date(Date.now() - 30 * 864e5).toISOString();
     const [c, s, g] = await Promise.all([
-      supabase!.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_voice_enabled", "ai_music_daily_limit"]),
+      supabase!.from("app_public_config").select("key, value").in("key", ["ai_music_enabled", "ai_voice_enabled", "ai_music_daily_limit", "ai_music_min_level"]),
       supabase!.rpc("admin_list_secrets"),
       supabase!.from("ai_generations").select("id, kind, path, status, detail, created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(500),
     ]);
@@ -28,6 +29,7 @@ export function AiTab() {
     const m = Object.fromEntries((c.data ?? []).map((r) => [r.key, r.value as string]));
     setCfg(m);
     setLimit(m.ai_music_daily_limit ?? "3");
+    setMinLevel(m.ai_music_min_level ?? "3");
     if (!s.error) setKey((s.data as { name: string; last4: string; last_test_ok: boolean | null; last_test_message: string | null }[]).find((r) => r.name === "elevenlabs_api_key") ?? null);
     if (g.error) fail(g.error); else setGens(g.data as Gen[]);
   }, []);
@@ -102,6 +104,12 @@ export function AiTab() {
           <input className={`${input} max-w-[90px]`} type="number" min={0} max={50} value={limit} onChange={(e) => setLimit(e.target.value)} />
           <button className="btn btn-ghost text-xs" disabled={limit === (cfg.ai_music_daily_limit ?? "3") || !(Number(limit) >= 0)} onClick={() => save("ai_music_daily_limit", String(Math.floor(Number(limit))))}>Save</button>
         </div>
+        <div className="flex items-center gap-3 py-3 pl-14 flex-wrap">
+          <label className="text-xs text-muted-fg whitespace-nowrap">Daily free songs unlock at level</label>
+          <select className={`${input} max-w-[90px]`} value={minLevel} onChange={(e) => setMinLevel(e.target.value)}>{[1, 2, 3, 4, 5, 6, 7].map((l) => <option key={l} value={l}>LV{l}</option>)}</select>
+          <button className="btn btn-ghost text-xs" disabled={minLevel === (cfg.ai_music_min_level ?? "3")} onClick={() => save("ai_music_min_level", minLevel)}>Save</button>
+          <span className="text-[11px] text-muted-fg basis-full">Everyone gets one free debut recording. VIP members and players with Studio Session credits can record at any level.</span>
+        </div>
         <Toggle on={voiceOn} onChange={(v) => save("ai_voice_enabled", String(v))} title="AI voices"
           note="Mo the manager talks through the tutorial, and a stadium announcer introduces each signed-in player's artist before their shows." />
         {voiceOn && <button className="btn btn-ghost text-xs mt-2 ml-14" onClick={previewMo}>{nowId === "mo-preview" ? "■ Stop" : "▶ Hear Mo's first line"}</button>}
@@ -124,6 +132,7 @@ export function AiTab() {
           </ul>
         )}
       </Section>
+      <RadioReports />
     </>
   );
 }
@@ -137,5 +146,63 @@ function Toggle({ on, onChange, title, note }: { on: boolean; onChange: (v: bool
       </button>
       <div><div className="text-sm font-semibold">{title}</div><div className="text-xs text-muted-fg mt-0.5">{note}</div></div>
     </div>
+  );
+}
+
+interface Reported { id: string; path: string; hidden: boolean; title: string; artist: string; email: string | null; reports: number; reasons: string[] | null; last: string | null }
+
+/** Songs players reported on TourStar Radio (3 reports take a song off the air until reviewed). */
+function RadioReports() {
+  const [rows, setRows] = useState<Reported[] | null>(null);
+  const playing = useRef<ClipHandle | null>(null);
+  const [nowId, setNowId] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const { data, error } = await supabase!.rpc("admin_radio_reports");
+    if (error) { setRows([]); if (!error.message.includes("admin_radio_reports")) fail(error); return; }
+    setRows(data as Reported[]);
+  }, []);
+  useEffect(() => { void load(); return () => playing.current?.stop(); }, [load]);
+
+  const set = async (r: Reported, hidden: boolean, clear: boolean) => {
+    const { error } = await supabase!.rpc("admin_set_song_hidden", { p_gen: r.id, p_hidden: hidden, p_clear_reports: clear });
+    if (error) return fail(error);
+    toast({ ok: true, message: hidden ? `"${r.title}" is off the radio and out of TourStar Monthly.` : `"${r.title}" is back on the radio.` });
+    void load();
+  };
+  const listen = (r: Reported) => {
+    playing.current?.stop();
+    if (nowId === r.id) { setNowId(null); return; }
+    setNowId(r.id);
+    playing.current = playClip(supabase!.storage.from("ai-audio").getPublicUrl(r.path).data.publicUrl, { onEnd: () => setNowId(null) });
+  };
+
+  return (
+    <Section title="Radio reports" sub="Songs players reported on TourStar Radio. Three reports take a song off the air automatically. Hide keeps it off the radio and out of the monthly release; Restore puts it back and clears the reports.">
+      {!rows ? <p className="text-sm text-muted-fg">Loading…</p> : rows.length === 0 ? <p className="text-sm text-muted-fg text-center py-4">No reports.</p> : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[720px] [&_th]:px-2 [&_td]:px-2">
+            <thead className="text-[11px] uppercase tracking-wider text-muted-fg text-left">
+              <tr className="border-b border-line"><th className="py-2">Song</th><th>Player</th><th className="text-right">Reports</th><th>Reasons</th><th>Status</th><th /></tr>
+            </thead>
+            <tbody>{rows.map((r) => (
+              <tr key={r.id} className="border-b border-line/50">
+                <td className="py-2">{r.title}</td>
+                <td className="text-xs">{r.artist}<span className="text-muted-fg">{r.email ? ` · ${r.email}` : ""}</span></td>
+                <td className="text-right tabular-nums">{r.reports}</td>
+                <td className="text-xs text-muted-fg">{(r.reasons ?? []).join(", ") || "—"}</td>
+                <td className="text-xs">{r.hidden ? "Hidden" : r.reports >= 3 ? "Off air (reports)" : "On air"}</td>
+                <td className="text-right whitespace-nowrap space-x-3">
+                  <button className="text-xs underline" onClick={() => listen(r)}>{nowId === r.id ? "■ Stop" : "▶ Listen"}</button>
+                  {r.hidden || r.reports >= 3
+                    ? <button className="text-xs underline" onClick={() => void set(r, false, true)}>Restore</button>
+                    : null}
+                  {!r.hidden && <button className="text-xs underline text-danger" onClick={() => askConfirm(`Hide "${r.title}" from the radio and the monthly release?`, () => void set(r, true, false), { yes: "Hide", danger: true })}>Hide</button>}
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </Section>
   );
 }

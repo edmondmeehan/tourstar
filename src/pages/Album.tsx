@@ -6,7 +6,7 @@ import { useGame } from "../game/store";
 import type { ReleaseKind } from "../game/types";
 import { Card, Modal, PageTitle, Tag, toast } from "../components/ui";
 import { songTitle } from "../lib/chiptune";
-import { aiSongsAvailable, recordAiSong, useAiFlags } from "../lib/ai";
+import { aiSongAccess, aiSongsAvailable, recordAiSong, useAiFlags } from "../lib/ai";
 import { useCloud } from "../lib/cloud";
 
 export default function Album() {
@@ -21,6 +21,8 @@ export default function Album() {
   const signedIn = useCloud((s) => !!s.session);
   const aiLimit = useAiFlags((s) => s.dailyLimit + (s.vip ? s.vipBonus : 0));
   const aiCredits = useAiFlags((s) => s.credits);
+  useAiFlags((s) => `${s.minLevel}:${s.songsTotal}:${s.vip}:${s.credits}`); // re-check access when these change
+  const access = aiSongAccess(c.peakLevel ?? lvl);
   const def = RELEASES.find((r) => r.kind === pick);
 
   const open = (k: ReleaseKind) => {
@@ -34,7 +36,7 @@ export default function Album() {
     toast(r);
     if (!r.ok) return;
     setPick(null);
-    if (withSong && useAi && aiSongsAvailable()) {
+    if (withSong && useAi && aiSongsAvailable() && access.ok) {
       const after = useGame.getState().career;
       const rel = after?.releases[0];
       const song = after?.songs.find((x) => x.id === rel?.songId);
@@ -80,13 +82,23 @@ export default function Album() {
               <input type="checkbox" checked={withSong} onChange={(e) => setWithSong(e.target.checked)} className="mt-1 accent-[var(--neon-pink)]" />
               <span>Generate a song for this release <span className="block text-xs text-muted-fg">Saved to your Locker. Free.</span></span>
             </label>
-            {withSong && aiOn && (
+            {withSong && aiOn && (access.ok ? (
               <label className="flex items-start gap-3 mb-3 text-sm">
                 <input type="checkbox" checked={useAi && signedIn} disabled={!signedIn} onChange={(e) => setUseAi(e.target.checked)} className="mt-1 accent-[var(--gold)]" />
-                <span>🎧 Record a real AI song <span className="block text-xs text-muted-fg">{signedIn ? `A real ~30s track in your genre, made by the AI studio. ${aiLimit} free a day${aiCredits ? `, plus ${aiCredits} extra from your studio packs` : ""}.` : "Sign in to record real AI songs."}</span>
+                <span>🎧 Record a real AI song <span className="block text-xs text-muted-fg">{!signedIn ? "Sign in to record real AI songs."
+                  : access.why === "debut" ? `Your free debut recording: a real ~30s track in your genre. Daily AI songs unlock at level ${access.minLevel}.`
+                  : access.why === "credits" ? `Uses 1 of your ${aiCredits} Studio Session songs. Daily free AI songs unlock at level ${access.minLevel}.`
+                  : `A real ~30s track in your genre, made by the AI studio. ${aiLimit} free a day${aiCredits ? `, plus ${aiCredits} extra from your studio packs` : ""}.`}</span>
                   <span className="block text-[11px] text-muted-fg mt-1">AI songs belong to TourStar, LLC and may be released on streaming services in the TourStar Monthly with your artist name. You won't be paid for them. <a className="underline" href="https://tourstarapp.com/terms#content" target="_blank" rel="noreferrer">Terms</a></span></span>
               </label>
-            )}
+            ) : (
+              <div className="flex items-start gap-3 mb-3 text-sm opacity-80">
+                <span className="text-lg leading-none mt-0.5">🔒</span>
+                <span>Real AI songs unlock at level {access.minLevel}
+                  <span className="block text-xs text-muted-fg">You're level {c.peakLevel ?? lvl}. Keep touring to unlock daily AI songs, or <Link to="/premium" className="underline" style={{ color: "var(--gold)" }}>get a Studio Session</Link> to record now.</span>
+                  <span className="block h-1.5 rounded bg-black/40 mt-2 overflow-hidden"><span className="block h-full" style={{ width: `${Math.min(100, ((c.peakLevel ?? lvl) / access.minLevel) * 100)}%`, background: "var(--gold)" }} /></span></span>
+              </div>
+            ))}
             <div className="text-xs text-muted-fg mb-4">Costs {def.cost ? fmtMoney(def.cost) : "nothing"} and {def.energy} energy. You have {fmtMoney(c.stats.cash)} / ⚡{c.stats.energy}.</div>
             <div className="flex gap-2">
               <button className="btn btn-ghost flex-1" onClick={() => setPick(null)}>Cancel</button>
