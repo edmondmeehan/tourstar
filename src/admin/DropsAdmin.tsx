@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/cloud";
 import { askConfirm, toast } from "../components/ui";
-import { ITEM_TYPES, STAGE_THEMES, itemLabel, type DropItem } from "../game/cosmetics";
+import { ITEM_TYPES, MOVES, SKIN_PRESETS, STAGE_THEMES, itemLabel, type DropItem, type MoveId } from "../game/cosmetics";
 import type { Drop } from "../lib/gold";
 import { Kpi, Section, fail, input, when } from "./kit";
 import { USD_PER_GOLD, licenseState, type Partner } from "./partners";
@@ -13,7 +13,13 @@ interface VenueOpt { id: string; name: string; emoji: string; pack_only: boolean
 interface Summary { gold_outstanding: number; gold_bought_30d: number; gold_spent_30d: number; holders: number; sales: Record<string, { count: number; gold: number }> }
 type Form = Omit<Row, "id" | "created_at" | "was_gold" | "new_players_days" | "ends_at" | "image_url" | "partner_id"> & {
   id?: string; was_gold: string; new_players_days: string; ends_at: string; image_url: string; partner_id: string;
+  perk?: PerkForm;
 };
+/** Real-world perks for a pack (stored apart from the pack so codes stay private until bought). */
+interface PerkForm { merch_url: string; merch_label: string; discount_text: string; code_mode: "none" | "shared" | "unique"; shared_code: string; new_codes: string }
+interface PerkRow { drop_id: string; merch_url: string | null; merch_label: string; discount_text: string; code_mode: PerkForm["code_mode"]; shared_code: string | null }
+type PerkStats = Record<string, { codes: number; codes_left: number; revealed: number; taps: number }>;
+const blankPerk = (): PerkForm => ({ merch_url: "", merch_label: "Official store", discount_text: "", code_mode: "none", shared_code: "", new_codes: "" });
 
 const local = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : "");
 const inDays = (d: number) => local(new Date(Date.now() + d * 864e5).toISOString());
@@ -26,7 +32,9 @@ const TEMPLATES: Record<string, () => Form> = {
     items: [{ type: "stage", id: "inferno" }, { type: "title", name: "Fire Starter" }, { type: "cash", amount: 50000 }],
     starts_at: local(new Date().toISOString()), ends_at: inDays(3), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "", partner_id: "" }),
   "Artist pack": () => ({ name: "[Artist] Official Tour Pack", emoji: "⭐", description: "The official [Artist] stage, title and badge. Limited to this tour event.", kind: "artist", price_gold: 800, was_gold: "",
-    items: [{ type: "stage", id: "royal-gold", name: "[Artist] Tour Stage" }, { type: "title", name: "Opened for [Artist]" }, { type: "badge", emoji: "⭐", name: "[Artist] Crew" }],
+    items: [{ type: "stage", id: "royal-gold", name: "[Artist] Tour Stage" }, { type: "skin", name: "[Artist] Colors", a: "#F5F7FF", b: "#9FD8FF", bg: "#0E1220" },
+      { type: "moves", id: "boyband", name: "[Artist] 8-Count", members: 5 }, { type: "title", name: "Opened for [Artist]" }, { type: "badge", emoji: "⭐", name: "[Artist] Crew" },
+      { type: "perk", text: "15% off the official [Artist] store" }, { type: "perk", text: "Access to [Artist] presale codes" }],
     starts_at: local(new Date().toISOString()), ends_at: inDays(21), new_players_days: "", min_level: 1, active: false, sort: 0, image_url: "", partner_id: "" }),
 };
 
@@ -48,6 +56,8 @@ export function DropsTab() {
   const [busy, setBusy] = useState(false);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [venues, setVenues] = useState<VenueOpt[]>([]);
+  const [perks, setPerks] = useState<PerkRow[]>([]);
+  const [perkStats, setPerkStats] = useState<PerkStats>({});
 
   const load = useCallback(async () => {
     const [d, s, c, p, v] = await Promise.all([
@@ -58,6 +68,9 @@ export function DropsTab() {
       supabase!.from("venues").select("id, name, emoji, pack_only").order("name"),
     ]);
     if (!p.error) setPartners(p.data as Partner[]);
+    const [pp, ps] = await Promise.all([supabase!.from("pack_perks").select("*"), supabase!.rpc("admin_pack_perk_stats")]);
+    if (!pp.error) setPerks(pp.data as PerkRow[]);
+    if (!ps.error) setPerkStats(ps.data as PerkStats);
     if (!v.error) setVenues(v.data as VenueOpt[]);
     if (d.error) return fail(d.error);
     setRows(d.data as Row[]);
@@ -70,6 +83,10 @@ export function DropsTab() {
     ...d, id: copy ? undefined : d.id, name: copy ? `${d.name} (copy)` : d.name, active: copy ? false : d.active,
     was_gold: d.was_gold === null ? "" : String(d.was_gold), new_players_days: d.new_players_days === null ? "" : String(d.new_players_days),
     starts_at: local(d.starts_at), ends_at: local(d.ends_at), image_url: d.image_url ?? "", partner_id: d.partner_id ?? "",
+    perk: (() => {
+      const r = perks.find((x) => x.drop_id === d.id);
+      return r ? { merch_url: r.merch_url ?? "", merch_label: r.merch_label, discount_text: r.discount_text, code_mode: r.code_mode, shared_code: r.shared_code ?? "", new_codes: "" } : blankPerk();
+    })(),
   });
 
   const save = async () => {
@@ -85,10 +102,29 @@ export function DropsTab() {
       new_players_days: n(form.new_players_days) || null, min_level: form.min_level, active: form.active, sort: form.sort, partner_id: form.partner_id || null,
     };
     if (form.items.some((i) => i.type === "venue" && !i.id)) return toast({ ok: false, message: "Pick the venue for each venue item." });
+    if (form.items.some((i) => i.type === "perk" && !i.text.trim())) return toast({ ok: false, message: "Write the text for each perk line." });
+    const perk = form.perk ?? blankPerk();
+    if (perk.merch_url.trim() && !perk.merch_url.trim().startsWith("https://")) return toast({ ok: false, message: "The store link must start with https://" });
+    if (perk.code_mode === "shared" && !perk.shared_code.trim()) return toast({ ok: false, message: "Enter the shared discount code, or choose no code." });
+    const codes = [...new Set(perk.new_codes.split(/[\s,;]+/).map((c) => c.trim()).filter(Boolean))];
+    if (perk.code_mode === "unique" && !codes.length && !(form.id && perkStats[form.id]?.codes)) return toast({ ok: false, message: "Paste the unique discount codes (one per line), or switch to one shared code." });
     setBusy(true);
-    const { error } = form.id ? await supabase!.from("drops").update(row).eq("id", form.id) : await supabase!.from("drops").insert(row);
+    const res = form.id ? await supabase!.from("drops").update(row).eq("id", form.id).select("id") : await supabase!.from("drops").insert(row).select("id");
+    if (res.error) { setBusy(false); return fail(res.error); }
+    const id = res.data?.[0]?.id as string;
+    const hasPerk = !!perk.merch_url.trim() || perk.code_mode !== "none" || !!perk.discount_text.trim();
+    const pr = hasPerk
+      ? await supabase!.from("pack_perks").upsert({ drop_id: id, merch_url: perk.merch_url.trim() || null, merch_label: perk.merch_label.trim() || "Official store",
+          discount_text: perk.discount_text.trim(), code_mode: perk.code_mode, shared_code: perk.code_mode === "shared" ? perk.shared_code.trim() : null, updated_at: new Date().toISOString() })
+      : await supabase!.from("pack_perks").delete().eq("drop_id", id);
+    if (pr.error) { setBusy(false); return fail(pr.error); }
+    if (hasPerk && perk.code_mode === "unique" && codes.length) {
+      for (let i = 0; i < codes.length; i += 500) {
+        const { error } = await supabase!.from("pack_perk_codes").upsert(codes.slice(i, i + 500).map((code) => ({ drop_id: id, code })), { onConflict: "drop_id,code", ignoreDuplicates: true });
+        if (error) { setBusy(false); return fail(error); }
+      }
+    }
     setBusy(false);
-    if (error) return fail(error);
     const lic = licenseState(partners.find((x) => x.id === form.partner_id));
     toast({ ok: true, message: !lic.ok ? `Saved. Players won't see it until the partner's license is on file (${lic.label.toLowerCase()}).` : form.active ? "Saved. Players see it at its start time." : "Saved as hidden. Switch on \"Live\" when it's ready." });
     setForm(null);
@@ -171,7 +207,7 @@ export function DropsTab() {
         )}
       </Section>
 
-      {form && <DropEditor form={form} setForm={setForm} save={save} busy={busy} partners={partners} venues={venues} />}
+      {form && <DropEditor form={form} setForm={setForm} save={save} busy={busy} partners={partners} venues={venues} perkStats={form.id ? perkStats[form.id] : undefined} />}
 
       <div className="grid lg:grid-cols-2 gap-5">
         <Section title="VIP Gold allowance" sub="Gold Records VIP members get with each monthly payment (12× up front for yearly).">
@@ -194,14 +230,18 @@ export function DropsTab() {
   );
 }
 
-function DropEditor({ form, setForm, save, busy, partners, venues }: { form: Form; setForm: (f: Form | null) => void; save: () => void; busy: boolean; partners: Partner[]; venues: VenueOpt[] }) {
+function DropEditor({ form, setForm, save, busy, partners, venues, perkStats }: { form: Form; setForm: (f: Form | null) => void; save: () => void; busy: boolean; partners: Partner[]; venues: VenueOpt[]; perkStats?: PerkStats[string] }) {
+  const perk = form.perk ?? blankPerk();
+  const setPerk = (patch: Partial<PerkForm>) => setForm({ ...form, perk: { ...perk, ...patch } });
   const [add, setAdd] = useState<DropItem["type"]>("stage");
   const set = (patch: Partial<Form>) => setForm({ ...form, ...patch });
   const setItem = (i: number, it: DropItem) => set({ items: form.items.map((x, j) => (j === i ? it : x)) });
   const blank = (t: DropItem["type"]): DropItem =>
     t === "stage" ? { type: "stage", id: STAGE_THEMES[1].id } : t === "title" ? { type: "title", name: "" } : t === "badge" ? { type: "badge", emoji: "⭐", name: "" }
     : t === "energy" ? { type: "energy", amount: 100 } : t === "gold" ? { type: "gold", amount: 50 }
-    : t === "venue" ? { type: "venue", id: venues[0]?.id ?? "", name: venues[0]?.name ?? "" } : { type: "cash", amount: 25000 };
+    : t === "venue" ? { type: "venue", id: venues[0]?.id ?? "", name: venues[0]?.name ?? "" }
+    : t === "skin" ? { type: "skin", ...SKIN_PRESETS[0] } : t === "moves" ? { type: "moves", id: "boyband", members: 5 } : t === "perk" ? { type: "perk", text: "" }
+    : { type: "cash", amount: 25000 };
   const partner = partners.find((x) => x.id === form.partner_id);
   const lic = licenseState(partner);
   const gold = form.price_gold;
@@ -258,6 +298,23 @@ function DropEditor({ form, setForm, save, busy, partners, venues }: { form: For
                     {venues.map((v) => <option key={v.id} value={v.id}>{v.emoji} {v.name}{v.pack_only ? "" : " (open to all)"}</option>)}
                   </select>
                 )}
+                {it.type === "skin" && <>
+                  <input className={`${input} flex-1 min-w-[8rem]`} maxLength={32} placeholder="Name, e.g. BSB White" value={it.name} onChange={(e) => setItem(i, { ...it, name: e.target.value })} />
+                  <select className={`${input} !w-auto`} value="" onChange={(e) => { const p = SKIN_PRESETS[Number(e.target.value)]; if (p) setItem(i, { ...it, a: p.a, b: p.b, bg: p.bg }); }}>
+                    <option value="">Presets…</option>{SKIN_PRESETS.map((p, j) => <option key={p.name} value={j}>{p.name}</option>)}
+                  </select>
+                  {(["a", "b", "bg"] as const).map((k) => (
+                    <label key={k} className="flex items-center gap-1 text-[11px] text-muted-fg">{k === "a" ? "Main" : k === "b" ? "Second" : "Background"}
+                      <input type="color" className="w-8 h-7 rounded bg-transparent" value={it[k]} onChange={(e) => setItem(i, { ...it, [k]: e.target.value.toUpperCase() })} /></label>
+                  ))}
+                </>}
+                {it.type === "moves" && <>
+                  <select className={`${input} !w-auto`} value={it.id} onChange={(e) => setItem(i, { ...it, id: e.target.value as MoveId })}>{MOVES.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
+                  <select className={`${input} !w-auto`} value={it.members ?? 1} onChange={(e) => setItem(i, { ...it, members: Number(e.target.value) })}>
+                    {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 1 ? "Solo" : `${n} performers`}</option>)}</select>
+                  <input className={`${input} flex-1 min-w-[8rem]`} maxLength={32} placeholder="Custom name (optional)" value={it.name ?? ""} onChange={(e) => setItem(i, { ...it, name: e.target.value || undefined })} />
+                </>}
+                {it.type === "perk" && <input className={`${input} flex-1`} maxLength={80} placeholder="15% off the official store" value={it.text} onChange={(e) => setItem(i, { ...it, text: e.target.value })} />}
                 {(it.type === "cash" || it.type === "energy" || it.type === "gold") && (
                   <input type="number" min={1} className={`${input} !w-32`} value={it.amount} onChange={(e) => setItem(i, { ...it, amount: Math.max(1, Math.round(Number(e.target.value) || 0)) })} />
                 )}
@@ -270,7 +327,28 @@ function DropEditor({ form, setForm, save, busy, partners, venues }: { form: For
             <select className={`${input} !w-auto`} value={add} onChange={(e) => setAdd(e.target.value as DropItem["type"])}>{ITEM_TYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select>
             <button className="btn btn-ghost text-sm" onClick={() => set({ items: [...form.items, blank(add)] })}>+ Add item</button>
           </div>
-          <p className="text-[11px] text-muted-fg mt-3">For an official artist pack you need the artist's written approval for their name, image and any music before it goes live.</p>
+          <div className="panel p-3 mt-5 space-y-2">
+            <div className="text-sm font-semibold">Real-world perks for buyers</div>
+            <p className="text-[11px] text-muted-fg">Shown only to players who own this pack, under Store → Drops → My pack perks. Add a matching "Perk line" item above so shoppers see it before buying. Presale access is set on the presale itself (Presales tab → "Also owners of").</p>
+            <label className="block text-xs text-muted-fg">Merch store link (https)<input className={`${input} mt-1`} value={perk.merch_url} onChange={(e) => setPerk({ merch_url: e.target.value })} placeholder="https://shop.artist.com" /></label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-xs text-muted-fg">Button text<input className={`${input} mt-1`} maxLength={60} value={perk.merch_label} onChange={(e) => setPerk({ merch_label: e.target.value })} /></label>
+              <label className="block text-xs text-muted-fg">Discount (shown to owners)<input className={`${input} mt-1`} maxLength={80} value={perk.discount_text} onChange={(e) => setPerk({ discount_text: e.target.value })} placeholder="15% off everything" /></label>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              {(["none", "shared", "unique"] as const).map((m) => (
+                <label key={m} className="flex items-center gap-2"><input type="radio" checked={perk.code_mode === m} onChange={() => setPerk({ code_mode: m })} />{m === "none" ? "No code" : m === "shared" ? "One shared code" : "Unique codes (one per buyer)"}</label>
+              ))}
+            </div>
+            {perk.code_mode === "shared" && <input className={input} maxLength={80} placeholder="BSBTOURSTAR" value={perk.shared_code} onChange={(e) => setPerk({ shared_code: e.target.value })} />}
+            {perk.code_mode === "unique" && <>
+              <textarea className={`${input} h-24 font-mono text-xs`} placeholder="Paste single-use codes from the store, one per line" value={perk.new_codes} onChange={(e) => setPerk({ new_codes: e.target.value })} />
+              {perkStats && <p className="text-[11px] text-muted-fg">{perkStats.codes_left.toLocaleString()} of {perkStats.codes.toLocaleString()} codes left · {perkStats.revealed.toLocaleString()} claimed · {perkStats.taps.toLocaleString()} store taps</p>}
+            </>}
+            {perk.code_mode !== "unique" && perkStats && <p className="text-[11px] text-muted-fg">{perkStats.revealed.toLocaleString()} codes revealed · {perkStats.taps.toLocaleString()} store taps</p>}
+            <p className="text-[11px] text-muted-fg">Single-use codes can't be passed around online. The artist's store creates them (Shopify: Discounts → bulk codes).</p>
+          </div>
+          <p className="text-[11px] text-muted-fg mt-3">For an official artist pack you need the artist's written approval for their name, image, colors, any signature moves and any music before it goes live.</p>
           <button className="btn btn-pink mt-5" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save drop"}</button>
         </div>
       </div>

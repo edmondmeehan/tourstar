@@ -7,7 +7,7 @@ import { supabase, useCloud } from "./cloud";
 
 export interface Presale {
   id: string; artist: string; title: string; description: string; emoji: string; ticket_url: string;
-  starts_at: string; ends_at: string; for_vip: boolean; min_level: number | null;
+  starts_at: string; ends_at: string; for_vip: boolean; min_level: number | null; pack_id?: string | null; pack_name?: string | null;
   eligible: boolean; code: string | null; sold_out: boolean;
 }
 export const usePresales = create<{ list: Presale[]; loaded: boolean }>(() => ({ list: [], loaded: false }));
@@ -32,5 +32,9 @@ export async function openTickets(url: string) {
 }
 
 /** Who can get this presale, in plain words. */
-export const presaleAudience = (p: Pick<Presale, "for_vip" | "min_level">) =>
-  p.for_vip && p.min_level ? `TourStar VIP members and players at level ${p.min_level}+` : p.for_vip ? "TourStar VIP members" : `Players at level ${p.min_level}+`;
+export function presaleAudience(p: Pick<Presale, "for_vip" | "min_level" | "pack_id" | "pack_name">) {
+  const pack = p.pack_id ? `owners of ${p.pack_name && /pack$/i.test(p.pack_name) ? p.pack_name : `the ${p.pack_name ?? "artist"} pack`}` : null;
+  const who = [p.for_vip && "TourStar VIP members", p.min_level && `players at level ${p.min_level}+`, pack].filter(Boolean) as string[];
+  const s = who.length > 1 ? `${who.slice(0, -1).join(", ")} and ${who[who.length - 1]}` : who[0] ?? "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}

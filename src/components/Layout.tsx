@@ -9,6 +9,7 @@ import { fmtMoney, levelFor } from "../game/engine";
 import { AnnouncementBanner, AnnouncementPopup, SavePrompt, SyncPill } from "./CloudUI";
 import { CelebrationOverlay, EventModal, LockoutOverlay, OutcomeModal } from "./Overlays";
 import { sfx } from "../lib/fx";
+import { applySkin } from "../game/cosmetics";
 import Coach, { coachTarget } from "./Coach";
 
 const NAV = [
@@ -51,6 +52,8 @@ export default function Layout() {
   const coach = coachTarget(career?.tutorial?.step);
   useGameTick();
   useEffect(() => setMenu(false), [loc.pathname]);
+  const skinKey = JSON.stringify(career?.style?.skin ?? null);
+  useEffect(() => { applySkin(JSON.parse(skinKey)); }, [skinKey]);
   if (!career) return <Navigate to="/create" replace />;
   const lvl = levelFor(career.stats.fame);
 

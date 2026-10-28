@@ -14,6 +14,54 @@ export interface ConcertParams {
   onPyro?: () => void;
   /** Stage theme colors (Drops cosmetic). Defaults to the classic pink/blue. */
   theme?: { a: number; b: number; glow: number; sky: [number, number, number] };
+  /** Dance moves (pack cosmetic) and how many performers are on stage. */
+  moves?: { id: string; members: number };
+}
+
+/** One frame of a performer: offsets in px and arm angles in radians (0 = straight out to the side, -PI/2 = up). */
+interface Pose { dx: number; lift: number; armR: number; armL: number; legs: number; squash: number }
+
+/** Where each move puts the body at time t (seconds). progress 0..1 is how far through the show we are. */
+function poseFor(id: string, t: number, beat: number, progress: number): Pose {
+  const b = t / beat; // beats elapsed
+  const ph = b % 1;
+  const hit = Math.abs(Math.sin(Math.PI * b)); // 0 on the beat, 1 between
+  const bob = hit * 8;
+  const finale = progress > 0.97;
+  switch (id) {
+    case "step": {
+      const side = Math.sin(Math.PI * b);
+      return { dx: side * 10, lift: bob * 0.6, armR: 0.9 - side * 0.7, armL: Math.PI - 0.9 - side * 0.7, legs: side * 6, squash: 1 };
+    }
+    case "spin": {
+      const inSpin = Math.floor(b) % 4 === 3;
+      const sq = inSpin ? Math.abs(Math.cos(Math.PI * ph)) * 0.8 + 0.2 : 1;
+      return { dx: 0, lift: bob, armR: inSpin ? -0.2 : 0.6, armL: inSpin ? Math.PI + 0.2 : Math.PI - 0.6, legs: 0, squash: sq };
+    }
+    case "point": {
+      const on = ph < 0.35;
+      return { dx: 0, lift: bob * 0.5, armR: on ? -0.15 : 0.8, armL: Math.PI - 1.1, legs: on ? 4 : 0, squash: 1 };
+    }
+    case "jump": {
+      const up = Math.floor(b) % 2 === 0 ? Math.sin(Math.PI * ph) : 0;
+      return { dx: 0, lift: up * 26, armR: up ? -1.2 : 0.7, armL: up ? Math.PI + 1.2 : Math.PI - 0.7, legs: up * 5, squash: 1 };
+    }
+    case "boyband": {
+      if (finale) return { dx: 0, lift: 0, armR: -0.9, armL: Math.PI + 0.9, legs: 6, squash: 1 }; // the freeze
+      const count = Math.floor(b) % 8;
+      if (count < 4) { // step-touch with arm pops
+        const side = count % 2 === 0 ? 1 : -1;
+        return { dx: side * 8 * (1 - ph), lift: bob * 0.4, armR: ph < 0.5 ? -0.3 : 0.9, armL: ph < 0.5 ? Math.PI + 0.3 : Math.PI - 0.9, legs: side * 5, squash: 1 };
+      }
+      if (count < 6) return { dx: 0, lift: 2, armR: -1.35, armL: Math.PI - 1.0, legs: 3, squash: 1 }; // point up
+      if (count === 6) return { dx: 0, lift: bob * 0.5, armR: 0.2, armL: Math.PI - 0.2, legs: 0, squash: Math.abs(Math.cos(Math.PI * ph)) * 0.8 + 0.2 }; // spin
+      return { dx: 0, lift: 0, armR: 1.2, armL: Math.PI - 1.2, legs: 7, squash: 1 }; // hit the pose
+    }
+    default: {
+      const arm = Math.sin(t * 3) * 0.6 + (progress > 0.6 ? -1.2 : -0.3);
+      return { dx: 0, lift: bob, armR: arm, armL: -2.2, legs: 0, squash: 1 };
+    }
+  }
 }
 
 const PINK = 0xff42d8;
@@ -95,6 +143,29 @@ export class ConcertScene extends Phaser.Scene {
     this.draw();
   }
 
+  private drawFigure(g: Phaser.GameObjects.Graphics, x: number, floor: number, s: number, p: Pose, lead: boolean) {
+    const body = 0x05030c;
+    const y = floor - p.lift * s;
+    const w = 18 * s * p.squash;
+    g.fillStyle(body, 1);
+    g.fillRect(x - w / 2, y - 44 * s, w, 30 * s);
+    // legs
+    const leg = 7 * s * p.squash;
+    g.fillRect(x - w / 2 - p.legs * s * 0.3, y - 16 * s, leg, 16 * s + p.lift * s * 0.3);
+    g.fillRect(x + w / 2 - leg + p.legs * s * 0.3, y - 16 * s, leg, 16 * s + p.lift * s * 0.3);
+    g.fillCircle(x, y - 54 * s, 10 * s);
+    // arms
+    const sh = y - 40 * s, len = 22 * s;
+    g.lineStyle(6 * s, body, 1);
+    g.lineBetween(x + w / 2 - 1, sh, x + w / 2 - 1 + Math.cos(p.armR) * len * Math.max(0.3, p.squash), sh + Math.sin(p.armR) * len);
+    g.lineBetween(x - w / 2 + 1, sh, x - w / 2 + 1 + Math.cos(p.armL) * len * Math.max(0.3, p.squash), sh + Math.sin(p.armL) * len);
+    if (lead || this.p.moves === undefined || (this.p.moves.members ?? 1) <= 1) {
+      // mic in the lead's hand
+      g.fillStyle(0x888888, 1);
+      g.fillCircle(x + w / 2 - 1 + Math.cos(p.armR) * len * Math.max(0.3, p.squash), sh + Math.sin(p.armR) * len, 3 * s);
+    }
+  }
+
   private draw() {
     const g = this.g;
     const { width: W, height: H } = this.scale;
@@ -159,20 +230,17 @@ export class ConcertScene extends Phaser.Scene {
     g.fillStyle(th.glow, 0.12 + pulse * 0.08);
     g.fillTriangle(fx, H * 0.07, fx - 46, stageY, fx + 46, stageY);
 
-    // Performer
-    const bob = Math.abs(Math.sin((t * Math.PI) / beat)) * 8;
-    const body = 0x05030c;
-    g.fillStyle(body, 1);
-    g.fillRect(fx - 9, stageY - 44 - bob, 18, 30);
-    g.fillRect(fx - 9, stageY - 16 - bob * 0.5, 7, 16 + bob * 0.5);
-    g.fillRect(fx + 2, stageY - 16 - bob * 0.5, 7, 16 + bob * 0.5);
-    g.fillCircle(fx, stageY - 54 - bob, 10);
-    const arm = Math.sin(t * 3) * 0.6 + (this.progress > 0.6 ? -1.2 : -0.3);
-    g.lineStyle(6, body, 1);
-    g.lineBetween(fx + 8, stageY - 40 - bob, fx + 8 + Math.cos(arm) * 22, stageY - 40 - bob + Math.sin(arm) * 22);
-    g.lineBetween(fx - 8, stageY - 40 - bob, fx - 14, stageY - 52 - bob);
-    g.fillStyle(0x888888, 1);
-    g.fillCircle(fx - 14, stageY - 56 - bob, 3);
+    // Performer(s)
+    const mv = p.moves ?? { id: "classic", members: 1 };
+    const members = Math.max(1, Math.min(5, Math.round(mv.members || 1)));
+    const scale = members >= 4 ? 0.8 : members >= 2 ? 0.9 : 1;
+    const gap = Math.min(W * 0.16, 44) * scale;
+    for (let m = 0; m < members; m++) {
+      const x = fx + (m - (members - 1) / 2) * gap;
+      // A tiny delay across the line reads as a ripple at the end; otherwise everyone is in sync.
+      const pose = poseFor(mv.id, this.t, beat, this.progress);
+      this.drawFigure(g, x + pose.dx * scale, stageY, scale, pose, members > 1 && m === Math.floor(members / 2));
+    }
 
     // Floor + crowd
     const floorTop = H * 0.6;

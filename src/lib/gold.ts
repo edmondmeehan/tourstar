@@ -32,6 +32,7 @@ export async function refreshGold() {
   const { data } = await supabase.rpc("my_gold");
   const owned = (data?.owned ?? []) as Owned[];
   useGold.setState({ gold: Number(data?.gold) || 0, owned, accountDays: Number(data?.account_days) || 0, drops: (drops ?? []) as Drop[], loaded: true });
+  void import("./packperks").then((m) => m.refreshPackPerks());
   // Unpack game cash/energy from drops bought on another device (each purchase only once).
   for (const o of owned) useGame.getState().claimDrop(o.id, o.items as { type: string; amount?: number }[], o.name);
 }
@@ -47,7 +48,8 @@ export async function buyDrop(d: Drop): Promise<{ ok: boolean; message: string }
   const { error } = await supabase.rpc("buy_drop", { p_drop: d.id });
   if (error) return { ok: false, message: error.message };
   await refreshGold();
-  return { ok: true, message: `${d.emoji} ${d.name} is yours! Equip it from My style.` };
+  const perks = d.items.some((i) => i.type === "perk");
+  return { ok: true, message: `${d.emoji} ${d.name} is yours! Equip it from My style.${perks ? " Your perks are below." : ""}` };
 }
 
 let started = false;

@@ -8,16 +8,16 @@ import { Kpi, Section, errMsg, fail, input, when } from "./kit";
 interface Presale {
   id: string; artist: string; title: string; description: string; emoji: string; ticket_url: string;
   presale_starts_at: string; presale_ends_at: string; code_mode: "shared" | "unique"; shared_code: string | null;
-  for_vip: boolean; min_level: number | null; active: boolean; notified_at: string | null; created_at: string;
+  for_vip: boolean; min_level: number | null; pack_id: string | null; active: boolean; notified_at: string | null; created_at: string;
 }
-type Stats = Record<string, { revealed: number; codes: number; codes_left: number; vip_now: number; level_ok: number }>;
-type Form = Omit<Presale, "id" | "created_at" | "notified_at" | "shared_code" | "min_level"> & { id?: string; shared_code: string; min_level: string; new_codes: string };
+type Stats = Record<string, { revealed: number; codes: number; codes_left: number; vip_now: number; level_ok: number; pack_owners?: number }>;
+type Form = Omit<Presale, "id" | "created_at" | "notified_at" | "shared_code" | "min_level" | "pack_id"> & { id?: string; shared_code: string; min_level: string; new_codes: string; pack_id: string };
 
 const local = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : "");
 const blank = (): Form => ({
   artist: "", title: "", description: "", emoji: "🎟️", ticket_url: "https://www.ticketmaster.com/",
   presale_starts_at: local(new Date(Date.now() + 3 * 864e5).toISOString()), presale_ends_at: local(new Date(Date.now() + 4 * 864e5).toISOString()),
-  code_mode: "unique", shared_code: "", new_codes: "", for_vip: true, min_level: "", active: false,
+  code_mode: "unique", shared_code: "", new_codes: "", for_vip: true, min_level: "", pack_id: "", active: false,
 });
 
 async function invokePush(body: Record<string, unknown>) {
@@ -36,8 +36,10 @@ export function PresalesTab() {
   const [stats, setStats] = useState<Stats>({});
   const [form, setForm] = useState<Form | null>(null);
   const [busy, setBusy] = useState(false);
+  const [packs, setPacks] = useState<{ id: string; name: string; emoji: string }[]>([]);
 
   const load = useCallback(async () => {
+    void supabase!.from("drops").select("id, name, emoji").order("name").then((r) => { if (!r.error) setPacks(r.data as typeof packs); });
     const [p, s] = await Promise.all([
       supabase!.from("presales").select("*").order("presale_starts_at", { ascending: false }),
       supabase!.rpc("admin_presale_stats"),
@@ -48,21 +50,21 @@ export function PresalesTab() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  const edit = (p: Presale) => setForm({ ...p, shared_code: p.shared_code ?? "", min_level: p.min_level ? String(p.min_level) : "", new_codes: "",
+  const edit = (p: Presale) => setForm({ ...p, shared_code: p.shared_code ?? "", min_level: p.min_level ? String(p.min_level) : "", pack_id: p.pack_id ?? "", new_codes: "",
     presale_starts_at: local(p.presale_starts_at), presale_ends_at: local(p.presale_ends_at) });
 
   const save = async () => {
     if (!form) return;
     if (!form.artist.trim() || !form.title.trim()) return toast({ ok: false, message: "Add the artist and the tour or show." });
     if (!/^https:\/\//.test(form.ticket_url.trim())) return toast({ ok: false, message: "The ticket link must start with https://" });
-    if (!form.for_vip && !form.min_level) return toast({ ok: false, message: "Choose who gets it: VIP members, a level, or both." });
+    if (!form.for_vip && !form.min_level && !form.pack_id) return toast({ ok: false, message: "Choose who gets it: VIP members, a level, pack owners, or a mix." });
     const codes = form.new_codes.split(/[\s,;]+/).map((c) => c.trim()).filter(Boolean);
     if (form.code_mode === "unique" && !form.id && !codes.length) return toast({ ok: false, message: "Paste the unique codes (one per line), or switch to one shared code." });
     const row = {
       artist: form.artist.trim(), title: form.title.trim(), description: form.description.trim(), emoji: form.emoji || "🎟️", ticket_url: form.ticket_url.trim(),
       presale_starts_at: new Date(form.presale_starts_at).toISOString(), presale_ends_at: new Date(form.presale_ends_at).toISOString(),
       code_mode: form.code_mode, shared_code: form.code_mode === "shared" ? form.shared_code.trim() || null : null,
-      for_vip: form.for_vip, min_level: form.min_level ? Number(form.min_level) : null, active: form.active,
+      for_vip: form.for_vip, min_level: form.min_level ? Number(form.min_level) : null, pack_id: form.pack_id || null, active: form.active,
     };
     setBusy(true);
     const res = form.id ? await supabase!.from("presales").update(row).eq("id", form.id).select("id") : await supabase!.from("presales").insert(row).select("id");
@@ -132,8 +134,8 @@ export function PresalesTab() {
                   <tr key={p.id} className="border-b border-line/50">
                     <td className="py-2">{p.emoji} <b>{p.artist}</b> <span className="text-muted-fg">· {p.title}</span></td>
                     <td className="text-xs text-muted-fg whitespace-nowrap">{when(p.presale_starts_at)} → {when(p.presale_ends_at)}</td>
-                    <td className="text-xs">{[p.for_vip && "VIP", p.min_level && `LV${p.min_level}+`].filter(Boolean).join(" + ")}
-                      {s && <span className="text-muted-fg"> · ~{(p.for_vip ? s.vip_now : 0) + s.level_ok} eligible</span>}</td>
+                    <td className="text-xs">{[p.for_vip && "VIP", p.min_level && `LV${p.min_level}+`, p.pack_id && `${packs.find((x) => x.id === p.pack_id)?.name ?? "pack"} owners`].filter(Boolean).join(" + ")}
+                      {s && <span className="text-muted-fg"> · ~{(p.for_vip ? s.vip_now : 0) + s.level_ok + (s.pack_owners ?? 0)} eligible</span>}</td>
                     <td className="text-right tabular-nums">{s?.revealed ?? 0}</td>
                     <td className="text-right tabular-nums">{p.code_mode === "shared" ? "shared" : s ? s.codes_left : "—"}</td>
                     <td><span className={`text-[10px] px-2 py-0.5 rounded border ${ended ? "text-muted-fg border-line" : p.active ? "text-success border-success" : "text-muted-fg border-line"}`}>{ended ? "ENDED" : p.active ? "LIVE" : "HIDDEN"}</span>
@@ -176,7 +178,11 @@ export function PresalesTab() {
                 <select className={`${input} !w-auto`} value={form.min_level} onChange={(e) => setForm({ ...form, min_level: e.target.value })}>
                   <option value="">— (VIP only)</option>{[2, 3, 4, 5, 6, 7].map((l) => <option key={l} value={l}>LV{l}+</option>)}
                 </select></label>
-              <p className="text-[11px] text-muted-fg">Adding a level gives non-paying players a way to earn access too.</p>
+              <label className="flex items-center gap-2 text-sm">Also owners of
+                <select className={`${input} !w-auto`} value={form.pack_id} onChange={(e) => setForm({ ...form, pack_id: e.target.value })}>
+                  <option value="">— (no pack)</option>{packs.map((d) => <option key={d.id} value={d.id}>{d.emoji} {d.name}</option>)}
+                </select></label>
+              <p className="text-[11px] text-muted-fg">Adding a level gives non-paying players a way to earn access too. A pack gate rewards buyers of that artist's pack; make sure the artist agreed to it.</p>
 
               <div className="text-xs text-muted-fg pt-2">Codes</div>
               <div className="flex gap-4 text-sm">

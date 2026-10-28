@@ -94,7 +94,13 @@ export interface Career {
   announcerUrl?: string;
   announcerFor?: string;
   /** Equipped cosmetics from Drops. */
-  style?: { stage?: string; title?: string; badge?: string };
+  style?: {
+    stage?: string; title?: string; badge?: string;
+    /** Whole-app colors from a pack. */
+    skin?: import("./cosmetics").Skin;
+    /** Performer dance moves and how many performers (formation). */
+    moves?: { id: import("./cosmetics").MoveId; members: number };
+  };
   /** Drop purchases whose cash/energy has been added to this career (each only once). */
   claimedDrops?: string[];
   queue: string[]; // song ids, locker order

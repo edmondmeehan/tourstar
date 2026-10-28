@@ -29,7 +29,58 @@ export type DropItem =
   | { type: "cash"; amount: number }
   | { type: "energy"; amount: number }
   | { type: "gold"; amount: number }
-  | { type: "venue"; id: string; name: string };
+  | { type: "venue"; id: string; name: string }
+  | { type: "skin"; name: string; a: string; b: string; bg: string }
+  | { type: "moves"; id: MoveId; name?: string; members?: number }
+  | { type: "perk"; text: string };
+
+// ------------------------------------------------------------------ app colors ("skins")
+
+/** A whole-app color scheme: a = main accent (buttons, glows), b = second accent, bg = background tint. Hex colors. */
+export interface Skin { name: string; a: string; b: string; bg: string }
+
+export const SKIN_PRESETS: Skin[] = [
+  { name: "Pure White", a: "#F5F7FF", b: "#9FD8FF", bg: "#0E1220" },
+  { name: "Silver & Ice", a: "#D9E2F2", b: "#6FC3FF", bg: "#0B1422" },
+  { name: "Millennium Gold", a: "#F5D36B", b: "#FFFFFF", bg: "#15110A" },
+  { name: "Soul Train", a: "#FF9F1C", b: "#2EC4B6", bg: "#140D07" },
+  { name: "Neon Red", a: "#FF3B5C", b: "#FFD166", bg: "#16070C" },
+  { name: "Emerald", a: "#3DFFA2", b: "#7AE7FF", bg: "#06140F" },
+];
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+export const validSkin = (s: unknown): s is Skin =>
+  !!s && typeof s === "object" && ["a", "b", "bg"].every((k) => HEX.test(String((s as Record<string, unknown>)[k])));
+
+/** Recolor the app with CSS variables (null = back to the TourStar default). */
+export function applySkin(s: Skin | null | undefined) {
+  const r = document.documentElement.style;
+  const keys = ["--neon-pink", "--accent", "--electric", "--primary", "--glow-pink", "--glow-blue", "--gradient-hero", "--background", "--card", "--border"];
+  if (!validSkin(s)) { keys.forEach((k) => r.removeProperty(k)); return; }
+  r.setProperty("--neon-pink", s.a);
+  r.setProperty("--accent", s.a);
+  r.setProperty("--electric", s.b);
+  r.setProperty("--primary", s.b);
+  r.setProperty("--glow-pink", `0 0 30px color-mix(in oklab, ${s.a} 45%, transparent)`);
+  r.setProperty("--glow-blue", `0 0 24px color-mix(in oklab, ${s.b} 45%, transparent)`);
+  r.setProperty("--background", s.bg);
+  r.setProperty("--card", `color-mix(in oklab, ${s.bg} 88%, ${s.b})`);
+  r.setProperty("--border", `color-mix(in oklab, ${s.bg} 72%, ${s.a})`);
+  r.setProperty("--gradient-hero", `linear-gradient(135deg, ${s.bg} 0%, color-mix(in oklab, ${s.bg} 82%, ${s.b}) 50%, color-mix(in oklab, ${s.bg} 88%, ${s.a}) 100%)`);
+}
+
+// ------------------------------------------------------------------ dance moves
+
+export type MoveId = "classic" | "step" | "spin" | "point" | "jump" | "boyband";
+export const MOVES: { id: MoveId; name: string; blurb: string }[] = [
+  { id: "classic", name: "Classic", blurb: "Bob and wave." },
+  { id: "step", name: "Step-Touch", blurb: "Side to side on every beat." },
+  { id: "spin", name: "Spin", blurb: "A full turn every four beats." },
+  { id: "point", name: "Point to the Crowd", blurb: "Hits the beat with a point." },
+  { id: "jump", name: "Jump", blurb: "Up on every other beat, arms high." },
+  { id: "boyband", name: "Boy Band 8-Count", blurb: "Step, pop, point, spin, freeze. Best in formation." },
+];
+export const moveName = (id?: string) => MOVES.find((m) => m.id === id)?.name ?? "Classic";
 
 export const ITEM_TYPES: { type: DropItem["type"]; label: string }[] = [
   { type: "stage", label: "Stage theme" },
@@ -39,6 +90,9 @@ export const ITEM_TYPES: { type: DropItem["type"]; label: string }[] = [
   { type: "energy", label: "Energy refill" },
   { type: "gold", label: "Bonus Gold Records" },
   { type: "venue", label: "Venue (unlocks a pack-only venue on the Tour page)" },
+  { type: "skin", label: "App colors (recolors the whole game)" },
+  { type: "moves", label: "Dance moves / formation" },
+  { type: "perk", label: "Perk line (shown in the pack, e.g. merch discount)" },
 ];
 
 export function itemLabel(i: DropItem) {
@@ -50,5 +104,8 @@ export function itemLabel(i: DropItem) {
     case "energy": return `⚡ +${i.amount} energy`;
     case "gold": return `💿 ${i.amount.toLocaleString()} bonus Gold`;
     case "venue": return `🏟️ Play ${i.name || "a featured venue"}`;
+    case "skin": return `🎨 ${i.name || "Custom"} app colors`;
+    case "moves": return `🕺 ${i.name || moveName(i.id)} moves${(i.members ?? 1) > 1 ? ` · ${i.members}-piece formation` : ""}`;
+    case "perk": return `🎁 ${i.text}`;
   }
 }

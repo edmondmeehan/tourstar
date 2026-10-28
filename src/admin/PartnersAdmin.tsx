@@ -13,6 +13,7 @@ type VenueRow = Venue & { active: boolean; created_at: string };
 interface Report {
   packs: { partner_id: string | null; drop_id: string; name: string; sold: number; gold: number }[];
   venues: { partner_id: string | null; venue_id: string; name: string; views: number; plays: number; tickets: number }[];
+  merch?: { partner_id: string | null; drop_id: string; name: string; taps: number; codes: number }[];
 }
 
 const BASE_TOURS = TOURS.filter((t) => t.id !== "open-mic");
@@ -306,19 +307,21 @@ function Statements({ partners }: { partners: Partner[] }) {
     return partners.map((p) => {
       const pk = rep.packs.filter((x) => x.partner_id === p.id);
       const vn = rep.venues.filter((x) => x.partner_id === p.id);
+      const mc = (rep.merch ?? []).filter((x) => x.partner_id === p.id);
       const gold = pk.reduce((a, x) => a + x.gold, 0);
       const gross = gold * USD_PER_GOLD;
       const net = gross * AFTER_STORE_FEE;
       return {
         p, pk, vn, sold: pk.reduce((a, x) => a + x.sold, 0), gold, gross, net, owed: net * (p.rev_share_pct / 100),
         views: vn.reduce((a, x) => a + x.views, 0), plays: vn.reduce((a, x) => a + x.plays, 0), tickets: vn.reduce((a, x) => a + x.tickets, 0),
+        storeTaps: mc.reduce((a, x) => a + x.taps, 0), codes: mc.reduce((a, x) => a + x.codes, 0),
       };
-    }).filter((r) => r.sold || r.views || r.plays || r.tickets || r.pk.length || r.vn.length);
+    }).filter((r) => r.sold || r.views || r.plays || r.tickets || r.storeTaps || r.codes || r.pk.length || r.vn.length);
   }, [rep, partners]);
 
   const csv = () => {
-    const head = ["Partner", "Type", "Packs sold", "Gold spent", "Est. gross $", "Est. net after store fee $", "Rev share %", "Owed to partner $", "Venue views", "Venue plays", "Ticket taps", "Flat fee they pay $"];
-    const lines = rows.map((r) => [r.p.name, r.p.kind, r.sold, r.gold, r.gross.toFixed(2), r.net.toFixed(2), r.p.rev_share_pct, r.owed.toFixed(2), r.views, r.plays, r.tickets, r.p.flat_fee_usd.toFixed(2)]);
+    const head = ["Partner", "Type", "Packs sold", "Gold spent", "Est. gross $", "Est. net after store fee $", "Rev share %", "Owed to partner $", "Venue views", "Venue plays", "Ticket taps", "Merch store taps", "Discount codes claimed", "Flat fee they pay $"];
+    const lines = rows.map((r) => [r.p.name, r.p.kind, r.sold, r.gold, r.gross.toFixed(2), r.net.toFixed(2), r.p.rev_share_pct, r.owed.toFixed(2), r.views, r.plays, r.tickets, r.storeTaps, r.codes, r.p.flat_fee_usd.toFixed(2)]);
     const text = [head, ...lines].map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
@@ -332,6 +335,7 @@ function Statements({ partners }: { partners: Partner[] }) {
       `TourStar partner statement: ${r.p.name}`, `Period: ${from} to ${to}`, "",
       ...(r.pk.length ? ["Packs", ...r.pk.map((x) => `  ${x.name}: ${x.sold} sold, ${x.gold.toLocaleString()} Gold`),
         `  Estimated net sales (after app store fee): ${money(r.net)}`, `  Revenue share (${r.p.rev_share_pct}%): ${money(r.owed)}`, ""] : []),
+      ...(r.storeTaps || r.codes ? ["Merch", `  ${r.codes.toLocaleString()} discount codes claimed, ${r.storeTaps.toLocaleString()} taps to your store`, ""] : []),
       ...(r.vn.length ? ["Featured venues", ...r.vn.map((x) => `  ${x.name}: ${x.views.toLocaleString()} players saw it, ${x.plays.toLocaleString()} shows played, ${x.tickets.toLocaleString()} ticket-link taps`), ""] : []),
       "Figures are estimates from in-game Gold spend; final amounts follow the app store payout report.",
     ];
@@ -352,7 +356,7 @@ function Statements({ partners }: { partners: Partner[] }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[860px] [&_th]:px-3 [&_td]:px-3">
             <thead className="text-[11px] uppercase tracking-wider text-muted-fg text-left">
-              <tr className="border-b border-line"><th className="py-2">Partner</th><th className="text-right">Packs sold</th><th className="text-right">Gold</th><th className="text-right">Est. net $</th><th className="text-right">Owed to them</th><th className="text-right">Views</th><th className="text-right">Plays</th><th className="text-right">Ticket taps</th><th /></tr>
+              <tr className="border-b border-line"><th className="py-2">Partner</th><th className="text-right">Packs sold</th><th className="text-right">Gold</th><th className="text-right">Est. net $</th><th className="text-right">Owed to them</th><th className="text-right">Views</th><th className="text-right">Plays</th><th className="text-right">Ticket taps</th><th className="text-right">Store taps</th><th /></tr>
             </thead>
             <tbody>{rows.map((r) => (
               <tr key={r.p.id} className="border-b border-line/50">
@@ -364,10 +368,11 @@ function Statements({ partners }: { partners: Partner[] }) {
                 <td className="text-right tabular-nums">{r.views.toLocaleString()}</td>
                 <td className="text-right tabular-nums">{r.plays.toLocaleString()}</td>
                 <td className="text-right tabular-nums">{r.tickets.toLocaleString()}</td>
+                <td className="text-right tabular-nums">{r.storeTaps.toLocaleString()}<span className="text-muted-fg text-xs">{r.codes ? ` · ${r.codes} codes` : ""}</span></td>
                 <td className="text-right"><button className="text-xs underline" onClick={() => void copy(r)}>Copy statement</button></td>
               </tr>
             ))}</tbody>
-            <tfoot><tr><td className="py-2 font-semibold" colSpan={4}>Total owed to partners</td><td className="text-right font-semibold tabular-nums">{money(totalOwed)}</td><td colSpan={4} /></tr></tfoot>
+            <tfoot><tr><td className="py-2 font-semibold" colSpan={4}>Total owed to partners</td><td className="text-right font-semibold tabular-nums">{money(totalOwed)}</td><td colSpan={5} /></tr></tfoot>
           </table>
         </div>
       )}

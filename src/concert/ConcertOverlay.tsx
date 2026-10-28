@@ -78,6 +78,7 @@ export default function ConcertOverlay() {
       sellout: show.sellout,
       onPyro: () => sfx("coin", "pyro"),
       theme: stageTheme(show.venue?.theme || career.style?.stage),
+      moves: career.style?.moves,
     });
     sceneRef.current = scene;
     let cheered = false;

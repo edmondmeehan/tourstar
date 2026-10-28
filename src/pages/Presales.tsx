@@ -54,7 +54,7 @@ export function PresaleCard({ p, now }: { p: Presale; now: number }) {
         ) : (
           <div className="text-xs text-muted-fg">
             For {presaleAudience(p)}.{" "}
-            {!signedIn ? <Link to="/login" className="underline">Sign in</Link> : p.for_vip ? <Link to="/premium" className="underline" style={{ color: "var(--gold)" }}>Become a VIP</Link> : null}
+            {!signedIn ? <Link to="/login" className="underline">Sign in</Link> : p.pack_id ? <Link to="/store?tab=drops" className="underline" style={{ color: "var(--gold)" }}>Get the pack</Link> : p.for_vip ? <Link to="/premium" className="underline" style={{ color: "var(--gold)" }}>Become a VIP</Link> : null}
           </div>
         )}
       </div>
