@@ -9,6 +9,7 @@ import { haptic } from "../lib/haptics";
 import { playClip, useAiFlags, type ClipHandle } from "../lib/ai";
 import { DeltaChips, toast } from "../components/ui";
 import { startConcert } from "./ConcertScene";
+import { DIFFICULTIES, showTuning } from "../game/difficulty";
 import { stageTheme } from "../game/cosmetics";
 import { useConcert } from "./useConcert";
 import NoteHighway, { type HighwayResult, type Judge } from "./NoteHighway";
@@ -30,7 +31,9 @@ export default function ConcertOverlay() {
     return show.setlist.map((k) => pool.find((p) => p.key === k)).filter((s): s is NonNullable<typeof s> => !!s);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const medley = useMemo(() => makeMedley(songs.map((s) => s.seed), career.genre, Math.min(1, (tour.level - 1) / 5)),
+  const diff = show.difficulty ?? "normal";
+  const tuning = useMemo(() => showTuning(tour.level, diff), [tour.level, diff]);
+  const medley = useMemo(() => makeMedley(songs.map((s) => s.seed), career.genre, tuning.density),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []);
 
@@ -147,7 +150,7 @@ export default function ConcertOverlay() {
       <div className="w-full max-w-md flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="flex justify-between items-center px-4 pt-3 font-pixel text-[10px]">
           <span className="animate-press-start" style={{ color: "var(--danger)" }}>● LIVE</span>
-          <span style={{ color: "var(--gold)" }}>{tour.name.toUpperCase()}</span>
+          <span style={{ color: "var(--gold)" }}>{tour.name.toUpperCase()}{diff !== "normal" && <span style={{ color: DIFFICULTIES[diff].color }}> · {DIFFICULTIES[diff].label.toUpperCase()}</span>}</span>
         </div>
         <div className="px-4 pb-2 pt-1 flex justify-between items-baseline text-xs">
           <span className="truncate">
@@ -168,7 +171,7 @@ export default function ConcertOverlay() {
           )}
           {phase === "play" && clock && (
             <div className="absolute inset-x-0 bottom-0 h-[62%]">
-              <NoteHighway medley={medley} now={clock} onJudge={onJudge} onDone={onDone} />
+              <NoteHighway medley={medley} now={clock} onJudge={onJudge} onDone={onDone} tuning={tuning} />
             </div>
           )}
         </div>
@@ -212,6 +215,7 @@ export default function ConcertOverlay() {
                 <div className="min-w-0">
                   <div className="font-pixel text-[11px] leading-relaxed" style={{ color: GRADE_COLOR[gig.grade] }}>{GRADE_LABEL[gig.grade]}</div>
                   {gig.sellout && <div className="font-pixel text-[9px] mt-1" style={{ color: "var(--neon-pink)" }}>SOLD OUT!</div>}
+                  {gig.difficulty !== "normal" && <div className="font-pixel text-[9px] mt-1" style={{ color: DIFFICULTIES[gig.difficulty].color }}>{DIFFICULTIES[gig.difficulty].emoji} {DIFFICULTIES[gig.difficulty].label.toUpperCase()}{gig.difficulty === "hard" ? " · +25% PAY & FAME" : ""}</div>}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 mt-3 text-center">

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { TourDef } from "../game/data";
 import { useGame } from "../game/store";
+import { DIFFICULTIES, showTuning, type Difficulty } from "../game/difficulty";
 import { SET_SLOTS, autoSetlist, fanRequest, setlistScore, songPool, type SetSong } from "../game/setlist";
 import { Modal, toast } from "./ui";
 import { useConcert } from "../concert/useConcert";
@@ -24,6 +25,8 @@ export default function SetlistSheet({ tour, onClose }: { tour: TourDef; onClose
     const last = (c.lastSetlist ?? []).filter((k) => pool.some((p) => p.key === k)).slice(0, slots);
     return last.length ? last : autoSetlist(pool, slots, requestKey);
   });
+  const [diff, setDiff] = useState<Difficulty>(c.tutorial ? "normal" : c.lastDifficulty ?? "normal");
+  const tuning = showTuning(tour.level, diff);
   const byKey = (k: string) => pool.find((p) => p.key === k)!;
   const score = setlistScore(keys, pool, requestKey, slots);
   const request = requestKey ? byKey(requestKey) : null;
@@ -39,7 +42,7 @@ export default function SetlistSheet({ tour, onClose }: { tour: TourDef; onClose
   };
 
   const go = () => {
-    const r = startShow(tour.id, keys);
+    const r = startShow(tour.id, keys, diff);
     if (!r.ok || !r.show) { toast(r); return; }
     onClose();
     startConcert(r.show);
@@ -107,6 +110,25 @@ export default function SetlistSheet({ tour, onClose }: { tour: TourDef; onClose
         ))}
       </ul>
       {ownSongs < slots && <p className="text-[11px] text-muted-fg mb-3">Short on originals? Release music on the Album screen, or debut a song during an encore.</p>}
+
+      {!c.tutorial && (
+        <div className="mb-3">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <span className="font-pixel text-[8px] text-muted-fg">DIFFICULTY</span>
+            <span className="text-[10px] text-muted-fg">Notes fall at {tuning.speedLabel} speed here</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Difficulty">
+            {(Object.keys(DIFFICULTIES) as Difficulty[]).map((d) => (
+              <button key={d} role="radio" aria-checked={diff === d} onClick={() => { setDiff(d); sfx("click"); }}
+                className={`rounded border py-2 text-xs font-bold ${diff === d ? "bg-black/40" : "border-line text-muted-fg"}`}
+                style={diff === d ? { borderColor: DIFFICULTIES[d].color, color: DIFFICULTIES[d].color } : undefined}>
+                {DIFFICULTIES[d].emoji} {DIFFICULTIES[d].label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-fg mt-1.5">{DIFFICULTIES[diff].blurb}</p>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button className="btn btn-ghost flex-1" onClick={onClose}>Cancel</button>

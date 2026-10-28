@@ -4,9 +4,8 @@ import type { ChartNote, Medley } from "../lib/chiptune";
 export type Judge = "perfect" | "good" | "miss";
 export interface HighwayResult { perfect: number; good: number; miss: number; total: number; maxCombo: number; accuracy: number }
 
-const PERFECT = 0.075;
-const GOOD = 0.15;
-const APPROACH = 1.35; // seconds a note takes to fall to the line
+/** Defaults (open mic, Normal). The concert passes venue/difficulty-tuned values. */
+const DEFAULT_TUNING = { approach: 1.35, perfect: 0.075, good: 0.15 };
 const LANE_COLORS = ["#ff42d8", "#1aa3ff", "#f2c230"];
 const KEYS: Record<string, number> = {
   ArrowLeft: 0, ArrowDown: 1, ArrowRight: 2, a: 0, s: 1, d: 2, j: 0, k: 1, l: 2, "1": 0, "2": 1, "3": 2,
@@ -20,8 +19,10 @@ interface Pop { text: string; color: string; lane: number; born: number }
  * ← ↓ → / A S D) as a note crosses the line. Empty taps aren't punished, so phones
  * with a little touch lag still feel fair.
  */
-export default function NoteHighway({ medley, now, onJudge, onDone }: {
+export default function NoteHighway({ medley, now, onJudge, onDone, tuning = DEFAULT_TUNING }: {
   medley: Medley;
+  /** approach = seconds a note takes to fall to the line; perfect/good = timing windows in seconds. */
+  tuning?: { approach: number; perfect: number; good: number };
   now: () => number;
   onJudge: (j: Judge, combo: number) => void;
   onDone: (r: HighwayResult) => void;
@@ -31,6 +32,7 @@ export default function NoteHighway({ medley, now, onJudge, onDone }: {
   cb.current = { onJudge, onDone };
 
   useEffect(() => {
+    const { approach: APPROACH, perfect: PERFECT, good: GOOD } = tuning;
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
     const notes: Live[] = medley.notes.map((n) => ({ ...n, state: "open" }));

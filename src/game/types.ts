@@ -111,6 +111,10 @@ export interface Career {
   /** Times each setlist song has been played live (keys from game/setlist.ts). */
   setPlays?: Record<string, number>;
   lastSetlist?: string[];
+  /** Difficulty picked for the last show (remembered as the default). */
+  lastDifficulty?: import("./difficulty").Difficulty;
+  /** S ranks earned on Hard. */
+  hardS?: number;
   /** Lifetime reward points earned by playing. Spending is tracked on the server. */
   pointsEarned?: number;
   /** Shows/releases that earned points today (daily cap). */

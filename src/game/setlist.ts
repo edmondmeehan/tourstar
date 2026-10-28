@@ -20,6 +20,8 @@ export interface PendingShow {
   sellout: boolean;
   requestKey: string | null;
   at: number;
+  /** Player's chosen difficulty (older saves: normal). */
+  difficulty?: import("./difficulty").Difficulty;
 }
 
 /** Songs per show by tour size. */
