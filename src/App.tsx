@@ -11,6 +11,8 @@ import { startAi } from "./lib/ai";
 import { startGold } from "./lib/gold";
 import { startPush } from "./lib/push";
 import { startLeaderboard } from "./lib/leaderboard";
+import { startPress } from "./lib/press";
+import Press from "./pages/Press";
 import { OPEN_PATHS, WEB_BASE, refreshSite, useSite, COPYRIGHT } from "./lib/site";
 import { ConflictModal } from "./components/CloudUI";
 import Login, { AuthCallback, ResetPassword } from "./pages/Login";
@@ -72,6 +74,7 @@ export default function App() {
     startAi();
     startGold();
     startLeaderboard();
+    startPress();
     startPush((path) => nav(path));
     void refreshSite();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,6 +119,7 @@ export default function App() {
           <Route path="/how-to-play" element={<HowToPlay />} />
           <Route path="/look" element={<LookPage />} />
           <Route path="/drums" element={<DrumSchool />} />
+          <Route path="/press" element={<Press />} />
           <Route path="/premium" element={<Premium />} />
           <Route path="/presales" element={<Presales />} />
           <Route path="/account" element={<Account />} />

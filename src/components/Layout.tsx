@@ -31,6 +31,7 @@ const MORE = [
   { to: "/releases", label: "Releases", icon: "📀" },
   { to: "/log", label: "Career Log", icon: "📜" },
   { to: "/look", label: "My Look", icon: "🧑‍🎤" },
+  { to: "/press", label: "The Press", icon: "📰" },
   { to: "/drums", label: "Drum School", icon: "🥁" },
   { to: "/how-to-play", label: "How to Play", icon: "❓" },
   { to: "/radio", label: "TourStar Radio", icon: "📻" },

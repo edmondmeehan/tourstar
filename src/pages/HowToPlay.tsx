@@ -84,6 +84,11 @@ export default function HowToPlay() {
         <p>Flip a sample into a release for a quality boost: {Object.values(RARITY).map((r) => `${r.name} +${r.boost}`).join(", ")}. Samples that fit your genre give {GENRE_FIT}×. Each sample is used up when you flip it.</p>
       </Section>
 
+      <Section id="press" emoji="📰" title="The Press and your manager" open={open === "press"} toggle={toggle}>
+        <p>Sign in and <Link to="/press" className="underline">The Press</Link> covers your career: news stories after sellouts, level-ups, scandals and label deals, a critic review of every release with tips for next time, and a recap of your week every Monday.</p>
+        <p>Stuck? <b>Ask your manager</b> on the same page for straight advice based on your real numbers. Stories and chats have a daily limit, and VIP members get more.</p>
+      </Section>
+
       <Section id="crew" emoji="🧑‍🤝‍🧑" title="Crew and gear: do they make more money?" open={open === "crew"} toggle={toggle}>
         <p>Yes. Crew and gear <b>multiply</b> what every show earns, so they're worth the most at big venues.</p>
         <ul className="space-y-1">{CREW.map((x) => <li key={x.id}>{x.emoji} <b>{x.name}</b> ({fmtMoney(x.cost)}, LV{x.level}): {x.effect}</li>)}</ul>

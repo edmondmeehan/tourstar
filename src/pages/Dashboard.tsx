@@ -13,6 +13,7 @@ import { sfx } from "../lib/fx";
 import { useMyRank } from "../lib/leaderboard";
 import { Avatar } from "../components/Avatar";
 import { normalizeLook } from "../game/looks";
+import { usePress } from "../lib/press";
 
 function untilMidnight(now: number) {
   const d = new Date(now); d.setHours(24, 0, 0, 0);
@@ -81,20 +82,23 @@ function RoyaltiesCard({ c, now }: { c: Career; now: number }) {
 }
 
 function NewsTicker({ name }: { name: string }) {
+  const press = usePress((s) => s.items);
   const items = useMemo(() => {
     const pick = () => RIVALS[Math.floor(Math.random() * RIVALS.length)].name;
-    return [...GOSSIP].sort(() => Math.random() - 0.5).map((g) => g.replace("{name}", name).replace("{rival}", pick()).replace("{rival2}", pick()));
-  }, [name]);
+    const ai = press.filter((x) => x.kind === "story" || x.kind === "review").slice(0, 5).map((x) => `${x.outlet ? `${x.outlet}: ` : ""}${x.headline}`);
+    return [...ai, ...[...GOSSIP].sort(() => Math.random() - 0.5).map((g) => g.replace("{name}", name).replace("{rival}", pick()).replace("{rival2}", pick()))];
+  }, [name, press]);
   const line = items.join("   ✦   ");
+  const hasPress = press.some((x) => x.kind === "story" || x.kind === "review");
   return (
-    <div className="panel overflow-hidden py-2 mb-4" style={{ borderColor: "var(--neon-pink)" }}>
+    <Link to="/press" className="panel overflow-hidden py-2 mb-4 block" style={{ borderColor: "var(--neon-pink)" }} aria-label="Open The Press">
       <div className="flex items-center">
-        <span className="font-pixel text-[8px] px-2 shrink-0" style={{ color: "var(--neon-pink)" }}>GOSSIP</span>
+        <span className="font-pixel text-[8px] px-2 shrink-0" style={{ color: "var(--neon-pink)" }}>{hasPress ? "PRESS" : "GOSSIP"}</span>
         <div className="overflow-hidden flex-1">
           <div className="whitespace-nowrap animate-ticker text-xs text-fg/80 inline-block">{line}   ✦   {line}</div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

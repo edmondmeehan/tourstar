@@ -132,6 +132,7 @@ export function AiTab() {
           </ul>
         )}
       </Section>
+      <PressAdmin />
       <RadioReports />
     </>
   );
@@ -202,6 +203,77 @@ function RadioReports() {
             ))}</tbody>
           </table>
         </div>
+      )}
+    </Section>
+  );
+}
+
+const PRESS_KEYS = ["press_enabled", "press_daily_limit", "press_vip_bonus", "press_chat_daily_limit", "press_model"] as const;
+interface PressSummary { today: number; week: number; players_week: number; tokens_week: number; by_kind: Record<string, number>; recent: { kind: string; outlet: string; headline: string; body: string; player: string | null; at: string }[] }
+
+/** The Press (Claude): stories, reviews, recaps and manager chat. Caps keep the Anthropic bill predictable. */
+function PressAdmin() {
+  const [cfg, setCfg] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [sum, setSum] = useState<PressSummary | null>(null);
+  const [err, setErr] = useState("");
+  const load = useCallback(async () => {
+    const [c, s] = await Promise.all([
+      supabase!.from("app_public_config").select("key, value").in("key", PRESS_KEYS as unknown as string[]),
+      supabase!.rpc("admin_press_summary"),
+    ]);
+    const m = Object.fromEntries((c.data ?? []).map((r) => [r.key, String(r.value ?? "")]));
+    setCfg(m); setDraft(m);
+    if (s.error) setErr(s.error.message.includes("admin_press_summary") ? "Run the AI press SQL in Supabase first." : s.error.message);
+    else setSum(s.data as PressSummary);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+  const save = async (k: string, v: string) => {
+    const { error } = await supabase!.from("app_public_config").upsert({ key: k, value: v, updated_at: new Date().toISOString() });
+    if (error) return fail(error);
+    toast({ ok: true, message: "Saved." });
+    void load();
+  };
+  const on = cfg.press_enabled === "true";
+  // Haiku-class pricing, about $0.10 in / $0.50 out per million tokens: stories average ~1,200 tokens.
+  const estCost = sum ? (sum.tokens_week / 1e6) * 0.3 : 0;
+  const field = (k: string, label: string, note: string) => (
+    <div className="flex items-end gap-2">
+      <label className="flex-1 text-xs text-muted-fg">{label}<input className={`${input} mt-1`} value={draft[k] ?? ""} onChange={(e) => setDraft({ ...draft, [k]: e.target.value })} /><span className="block text-[10px] mt-1">{note}</span></label>
+      <button className="btn btn-ghost text-xs mb-5" disabled={(draft[k] ?? "") === (cfg[k] ?? "")} onClick={() => void save(k, (draft[k] ?? "").trim())}>Save</button>
+    </div>
+  );
+  return (
+    <Section title="The Press (Claude)" sub="AI news stories after big moments, a critic review of every release, a weekly recap and manager advice chat. Uses the Anthropic key in Integrations. Signed-in players only.">
+      {err && <p className="text-xs text-danger mb-3">{err}</p>}
+      <Toggle on={on} onChange={(v) => void save("press_enabled", String(v))} title="Press coverage" note="Off = no AI calls at all; the home ticker falls back to the built-in gossip lines." />
+      <div className="grid sm:grid-cols-2 gap-3 mt-2">
+        {field("press_daily_limit", "Stories + reviews per player per day", "Recaps count too. Reviews of the same release are never paid twice.")}
+        {field("press_vip_bonus", "Extra per day for VIP", "Added on top for TourStar VIP members.")}
+        {field("press_chat_daily_limit", "Manager chat messages per day", "VIP gets double.")}
+        {field("press_model", "Claude model", "Fast and cheap is best here, e.g. claude-haiku-5-5.")}
+      </div>
+      {sum && (
+        <>
+          <div className="grid sm:grid-cols-4 gap-3 mt-4">
+            <Kpi label="Written today" value={sum.today} />
+            <Kpi label="Last 7 days" value={sum.week} />
+            <Kpi label="Players (7 days)" value={sum.players_week} />
+            <Kpi label="Est. cost (7 days)" value={`$${estCost.toFixed(2)}`} />
+          </div>
+          <p className="text-[11px] text-muted-fg mt-2">{Object.entries(sum.by_kind).map(([k, n]) => `${n} ${k}${n === 1 ? "" : "s"}`).join(" · ") || "Nothing written yet."} Cost is an estimate from token counts; check console.anthropic.com for the real bill.</p>
+          {sum.recent.length > 0 && (
+            <ul className="divide-y divide-line mt-3">
+              {sum.recent.slice(0, 12).map((r, i) => (
+                <li key={i} className="py-2 text-sm">
+                  <div className="flex justify-between gap-2 text-[11px] text-muted-fg"><span>{r.kind} · {r.outlet} · {r.player ?? "player"}</span><span>{when(r.at)}</span></div>
+                  <div className="font-semibold">{r.headline}</div>
+                  <div className="text-xs text-muted-fg line-clamp-2">{r.body}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </Section>
   );
