@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useConcert } from "../concert/useConcert";
+import { useLiveCorner } from "../lib/corner";
 
 const ConcertOverlay = lazy(() => import("../concert/ConcertOverlay"));
 import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
@@ -60,6 +61,7 @@ export default function Layout() {
   const coach = coachTarget(career?.tutorial?.step);
   const radioOn = useRadio((s) => !!s.station && !!s.queue?.length);
   useGameTick();
+  const corner = useLiveCorner();
   useEffect(() => setMenu(false), [loc.pathname]);
   const skinKey = JSON.stringify(career?.style?.skin ?? null);
   useEffect(() => { applySkin(JSON.parse(skinKey)); }, [skinKey]);
@@ -87,7 +89,7 @@ export default function Layout() {
           <nav className="absolute right-3 top-full mt-2 panel p-2 w-56 animate-pop z-50">
             {MORE.map((m) => (
               <NavLink key={m.to} to={m.to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded text-sm ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}>
-                <span>{m.icon}</span>{m.label}
+                <span>{m.icon}</span>{m.to === "/drums" && corner ? corner.title : m.label}
               </NavLink>
             ))}
           </nav>

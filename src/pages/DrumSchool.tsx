@@ -12,7 +12,7 @@ import NoteHighway, { type HighwayResult, type Judge } from "../concert/NoteHigh
 import { playLesson, type DrumHandle } from "../lib/drumkit";
 import { haptic } from "../lib/haptics";
 import { sfx } from "../lib/fx";
-import { useAiFlags } from "../lib/ai";
+import { useLiveCorner, type DrumCorner } from "../lib/corner";
 import type { ActionResult } from "../game/store";
 
 const GRADE_COLOR: Record<string, string> = { S: "var(--gold)", A: "var(--neon-pink)", B: "var(--electric)", C: "var(--muted-foreground)", D: "var(--danger)" };
@@ -21,7 +21,7 @@ const TUNING = { approach: 1.5, perfect: 0.07, good: 0.14 };
 export default function DrumSchool() {
   const c = useGame((s) => s.career)!;
   const start = useGame((s) => s.startDrumLesson);
-  const curator = useAiFlags((s) => s.curator);
+  const corner = useLiveCorner();
   const [playing, setPlaying] = useState<{ lesson: Lesson; practice: boolean } | null>(null);
   const lvl = Math.max(c.peakLevel, levelFor(c.stats.fame).level);
   const best = c.drums?.best ?? {};
@@ -39,7 +39,8 @@ export default function DrumSchool() {
 
   return (
     <div>
-      <PageTitle title="DRUM SCHOOL" sub={curator ? `Lessons from the kit, curated by ${curator}.` : "Learn real grooves on the kit. Kick, snare, hi-hat."} right={<Link to="/how-to-play" className="font-pixel text-[8px] text-electric underline">HOW IT WORKS</Link>} />
+      <PageTitle title={corner ? corner.title.toUpperCase() : "DRUM SCHOOL"} sub={corner?.tagline || "Learn real grooves on the kit. Kick, snare, hi-hat."} right={<Link to="/how-to-play" className="font-pixel text-[8px] text-electric underline">HOW IT WORKS</Link>} />
+      {corner && <HostCard corner={corner} />}
 
       <Card glow="gold" className="mb-4">
         <div className="flex items-center gap-3">
@@ -67,7 +68,9 @@ export default function DrumSchool() {
                     <Tag>{l.style}</Tag>
                     <Tag>{l.bpm} BPM</Tag>
                   </div>
-                  <p className="text-xs text-muted-fg mt-1">{l.tip}</p>
+                  {corner?.tips[l.id]
+                    ? <p className="text-xs mt-1"><b style={{ color: "var(--gold)" }}>{corner.host}:</b> <span className="text-muted-fg">"{corner.tips[l.id]}"</span></p>
+                    : <p className="text-xs text-muted-fg mt-1">{l.tip}</p>}
                   <Groove l={l} />
                 </div>
                 {g && <div className="font-pixel text-xl" style={{ color: GRADE_COLOR[g] }} title="Best grade">{g}</div>}
@@ -84,7 +87,7 @@ export default function DrumSchool() {
       </div>
       <p className="text-[11px] text-muted-fg text-center mt-4">Tap the lanes, or use ← ↓ → / A S D on a keyboard. Two notes at once? Tap with two fingers.</p>
 
-      {playing && createPortal(<LessonPlayer lesson={playing.lesson} practice={playing.practice} onClose={() => setPlaying(null)} />, document.body)}
+      {playing && createPortal(<LessonPlayer lesson={playing.lesson} practice={playing.practice} corner={corner} onClose={() => setPlaying(null)} />, document.body)}
     </div>
   );
 }
@@ -105,7 +108,26 @@ function Groove({ l }: { l: Lesson }) {
   );
 }
 
-function LessonPlayer({ lesson, practice, onClose }: { lesson: Lesson; practice: boolean; onClose: () => void }) {
+function HostCard({ corner }: { corner: DrumCorner }) {
+  return (
+    <Card glow="pink" className="mb-4">
+      <div className="flex gap-3">
+        {corner.photo_url
+          ? <img src={corner.photo_url} alt={corner.host} className="w-20 h-20 rounded-lg object-cover shrink-0 border border-line" loading="lazy" />
+          : <div className="w-20 h-20 rounded-lg shrink-0 bg-black/40 flex items-center justify-center text-4xl">🥁</div>}
+        <div className="min-w-0">
+          <div className="font-pixel text-[8px]" style={{ color: "var(--neon-pink)" }}>YOUR HOST</div>
+          <div className="font-bold text-lg leading-tight mt-1">{corner.host}</div>
+          {corner.bio && <p className="text-xs text-muted-fg mt-1 leading-relaxed">{corner.bio}</p>}
+        </div>
+      </div>
+      {corner.quote && <p className="text-sm italic mt-3 border-l-2 pl-3" style={{ borderColor: "var(--gold)" }}>"{corner.quote}"</p>}
+      {corner.link_url && <a href={corner.link_url} target="_blank" rel="noreferrer" className="btn btn-ghost w-full text-xs mt-3 block text-center">{corner.link_label || `More from ${corner.host}`} ↗</a>}
+    </Card>
+  );
+}
+
+function LessonPlayer({ lesson, practice, corner, onClose }: { lesson: Lesson; practice: boolean; corner: DrumCorner | null; onClose: () => void }) {
   const finish = useGame((s) => s.finishDrumLesson);
   const chart = useMemo(() => lessonChart(lesson), [lesson]);
   const kit = useRef<DrumHandle | null>(null);
@@ -166,6 +188,7 @@ function LessonPlayer({ lesson, practice, onClose }: { lesson: Lesson; practice:
                   <div className="text-xs text-muted-fg mt-1">{res.hw.perfect} perfect · {res.hw.good} good · {res.hw.miss} missed</div>
                 </div>
               </div>
+              {corner?.sign_off && (res.grade === "S" || res.grade === "A") && <p className="text-sm italic mt-3" style={{ color: "var(--gold)" }}>"{corner.sign_off}" <span className="not-italic text-muted-fg text-xs">— {corner.host}</span></p>}
               {res.r ? <p className="text-xs text-muted-fg mt-3">{res.r.message}</p>
                 : <p className="text-xs text-muted-fg mt-3">Practice run. Take a paid lesson to earn rewards and chops.</p>}
               {res.r?.delta && Object.keys(res.r.delta).length > 0 && <DeltaChips delta={res.r.delta} className="justify-center mt-3" />}

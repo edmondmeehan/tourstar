@@ -8,6 +8,7 @@ import { STAGE_THEMES } from "../game/cosmetics";
 import type { Venue } from "../lib/venues";
 import { Kpi, Section, fail, input, when } from "./kit";
 import { AFTER_STORE_FEE, USD_PER_GOLD, licenseState, type Partner } from "./partners";
+import { DrumCornerAdmin } from "./DrumCornerAdmin";
 
 type VenueRow = Venue & { active: boolean; created_at: string };
 interface Report {
@@ -211,6 +212,8 @@ export function PartnersTab() {
       </Section>
 
       {vForm && <VenueEditor form={vForm} set={setVForm} save={saveVenue} busy={busy} partners={partners ?? []} />}
+
+      <DrumCornerAdmin partners={partners} />
 
       <Statements partners={partners ?? []} />
     </>

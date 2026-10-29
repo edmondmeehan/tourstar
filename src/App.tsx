@@ -12,6 +12,7 @@ import { startGold } from "./lib/gold";
 import { startPush } from "./lib/push";
 import { startLeaderboard } from "./lib/leaderboard";
 import { startPress } from "./lib/press";
+import { loadCorner } from "./lib/corner";
 import Press from "./pages/Press";
 import { OPEN_PATHS, WEB_BASE, refreshSite, useSite, COPYRIGHT } from "./lib/site";
 import { ConflictModal } from "./components/CloudUI";
@@ -75,6 +76,7 @@ export default function App() {
     startGold();
     startLeaderboard();
     startPress();
+    void loadCorner();
     startPush((path) => nav(path));
     void refreshSite();
     // eslint-disable-next-line react-hooks/exhaustive-deps

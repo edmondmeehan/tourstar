@@ -5,6 +5,7 @@ import { crewBonuses, fmtMoney, fmtNum, labelOf, levelFor } from "../game/engine
 import { useGame } from "../game/store";
 import { Card, PageTitle, Tag } from "../components/ui";
 import { drumChops } from "../game/drums";
+import { useLiveCorner } from "../lib/corner";
 import SetlistSheet from "../components/SetlistSheet";
 import { SET_SLOTS } from "../game/setlist";
 import { useConcert } from "../concert/useConcert";
@@ -14,6 +15,7 @@ import { useGold } from "../lib/gold";
 import { stageTheme } from "../game/cosmetics";
 
 export default function Tour() {
+  const corner = useLiveCorner();
   const c = useGame((s) => s.career)!;
   const payMultiplier = useConfig((s) => s.config.tourPayMultiplier);
   const resume = useConcert((s) => s.start);
@@ -37,7 +39,7 @@ export default function Tour() {
       )}
       <Link to="/drums" className="panel flex items-center gap-3 px-4 py-3 mb-4 hover:border-pink">
         <span className="text-2xl">🥁</span>
-        <span className="flex-1 text-sm"><b>Drum School</b><span className="block text-xs text-muted-fg">Learn real grooves. Chops boost every show: +{drumChops(c.drums?.best)}% now.</span></span>
+        <span className="flex-1 text-sm"><b>{corner ? corner.title : "Drum School"}</b><span className="block text-xs text-muted-fg">{corner ? `Learn grooves with ${corner.host}.` : "Learn real grooves."} Chops boost every show: +{drumChops(c.drums?.best)}% now.</span></span>
         <span className="text-muted-fg">›</span>
       </Link>
       {venues.length > 0 && (
