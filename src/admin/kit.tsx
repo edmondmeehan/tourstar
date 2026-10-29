@@ -9,8 +9,8 @@ export function Section({ title, sub, right, children }: { title: string; sub?: 
   return (
     <section className="panel p-5 mb-5">
       <div className="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <h2 className="text-base font-bold">{title}</h2>
+        <div className="border-l-[3px] pl-3" style={{ borderColor: "var(--grp, var(--neon-pink))" }}>
+          <h2 className="text-lg font-bold leading-tight" style={{ color: "color-mix(in oklab, var(--grp, var(--neon-pink)) 35%, white)" }}>{title}</h2>
           {sub && <p className="text-xs text-muted-fg mt-1 max-w-prose">{sub}</p>}
         </div>
         {right}

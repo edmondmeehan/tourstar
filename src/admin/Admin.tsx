@@ -29,39 +29,39 @@ import { refreshSite, useSite } from "../lib/site";
 
 type Tab = "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "leaderboard" | "merch" | "presales" | "push" | "raffles" | "traffic" | "music" | "integrations" | "admins";
 /** Admin sections, grouped by what you're there to do. Order inside a group = most used first. */
-const GROUPS: { title: string; tabs: { id: Tab; label: string; about: string }[] }[] = [
-  { title: "Overview", tabs: [
+const GROUPS: { title: string; icon: string; color: string; tabs: { id: Tab; label: string; about: string }[] }[] = [
+  { title: "Overview", icon: "📊", color: "#1aa3ff", tabs: [
     { id: "insights", label: "Dashboard", about: "Players, activity and the health of the game at a glance." },
     { id: "finance", label: "Revenue", about: "App Store sales, subscriptions and refunds from RevenueCat." },
     { id: "traffic", label: "Traffic sources", about: "Where new players come from, and tagged links for campaigns." },
   ] },
-  { title: "Players", tabs: [
+  { title: "Players", icon: "🎤", color: "#ff42d8", tabs: [
     { id: "players", label: "Players", about: "Look up a player, see their save, and handle support." },
     { id: "beta", label: "Waitlist", about: "Early-access signups, referrals and waitlist emails." },
     { id: "leaderboard", label: "Leaderboard", about: "Weekly charts, rewards for the top 10, and removing cheaters." },
   ] },
-  { title: "Engage players", tabs: [
+  { title: "Engage players", icon: "📣", color: "#ff9f1c", tabs: [
     { id: "push", label: "Notifications & emails", about: "Push messages, the daily admin report and win-back emails." },
     { id: "marketing", label: "In-game announcements", about: "Banners and pop-ups players see when they open the game." },
     { id: "events", label: "Events & gifts", about: "Trigger an event or send a gift to every player." },
   ] },
-  { title: "Store & money", tabs: [
+  { title: "Store & money", icon: "💰", color: "#f2c230", tabs: [
     { id: "drops", label: "Packs & Gold", about: "Limited packs and artist packs, giving packs or Gold to a player, and VIP Gold." },
     { id: "merch", label: "Merch", about: "The Shopify merch store and the in-game items merch unlocks." },
     { id: "rewards", label: "Rewards store", about: "Real rewards players buy with points, and orders to ship." },
     { id: "raffles", label: "Raffles", about: "Prize raffles, entries and drawing winners." },
     { id: "economy", label: "Points economy", about: "Reward points earned and spent, and what they're worth." },
   ] },
-  { title: "Artists & partners", tabs: [
+  { title: "Artists & partners", icon: "🤝", color: "#3dd68c", tabs: [
     { id: "partners", label: "Partners & venues", about: "Licensed artists and venues, sponsored stages, the Drum School host, and partner statements." },
     { id: "presales", label: "Presales", about: "VIP ticket presales and their codes." },
     { id: "monthly", label: "Monthly release & picks", about: "The TourStar Monthly album, Curator's Picks and the curator name." },
   ] },
-  { title: "Game", tabs: [
+  { title: "Game", icon: "🎮", color: "#b46bff", tabs: [
     { id: "balance", label: "Game balance", about: "Pay, fame, energy and level settings, with the climb simulator." },
     { id: "music", label: "AI audio & press", about: "AI songs and voices, The Press (Claude) and radio reports." },
   ] },
-  { title: "Setup", tabs: [
+  { title: "Setup", icon: "⚙️", color: "#9aa0a6", tabs: [
     { id: "integrations", label: "Integrations", about: "API keys for Apple, RevenueCat, Shopify, Resend, Claude and ElevenLabs." },
     { id: "admins", label: "Admins", about: "Who can open this admin." },
   ] },
@@ -86,7 +86,7 @@ export default function Admin() {
 
   useEffect(() => { sessionStorageSet("tourstar-admin-tab", tab); }, [tab]);
   const current = TABS.find((t) => t.id === tab);
-  const currentGroup = GROUPS.find((g) => g.tabs.some((t) => t.id === tab))?.title;
+  const group = GROUPS.find((g) => g.tabs.some((t) => t.id === tab));
 
   if (!supabase) return <Center>Accounts aren't configured in this build.</Center>;
   if (!session) return <Center>Sign in with an admin account to open the admin. <Link className="underline text-electric" to="/login?mode=signin">Sign in</Link></Center>;
@@ -110,27 +110,34 @@ export default function Admin() {
           <select className={`${input} lg:hidden`} value={tab} onChange={(e) => setTab(e.target.value as Tab)} aria-label="Admin section">
             {GROUPS.map((g) => <optgroup key={g.title} label={g.title}>{g.tabs.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>)}
           </select>
-          <div className="hidden lg:block space-y-4 sticky top-20">
+          <div className="hidden lg:block space-y-5 sticky top-20">
             {GROUPS.map((g) => (
               <div key={g.title}>
-                <div className="font-pixel text-[7px] tracking-wider text-muted-fg px-3 mb-1">{g.title.toUpperCase()}</div>
-                {g.tabs.map((t) => (
-                  <button key={t.id} onClick={() => setTab(t.id)} aria-current={tab === t.id ? "page" : undefined}
-                    className={`block w-full text-left text-sm px-3 py-1.5 rounded ${tab === t.id ? "bg-white/10 text-fg font-semibold" : "text-muted-fg hover:bg-white/5"}`}>
-                    {t.label}
-                  </button>
-                ))}
+                <div className="flex items-center gap-2 px-2 pb-1.5 mb-1 border-b" style={{ borderColor: `${g.color}55` }}>
+                  <span className="w-6 h-6 rounded-md flex items-center justify-center text-sm" style={{ background: `${g.color}26` }}>{g.icon}</span>
+                  <span className="font-pixel text-[9px] tracking-wide" style={{ color: g.color }}>{g.title.toUpperCase()}</span>
+                </div>
+                {g.tabs.map((t) => {
+                  const on = tab === t.id;
+                  return (
+                    <button key={t.id} onClick={() => setTab(t.id)} aria-current={on ? "page" : undefined}
+                      className={`block w-full text-left text-sm pl-3 pr-2 py-1.5 rounded-r border-l-2 ${on ? "text-fg font-semibold" : "text-muted-fg hover:bg-white/5 hover:text-fg"}`}
+                      style={{ borderColor: on ? g.color : "transparent", background: on ? `${g.color}1f` : undefined }}>
+                      {t.label}
+                    </button>
+                  );
+                })}
               </div>
             ))}
             <p className="text-[10px] text-muted-fg px-3 pt-2">{COPYRIGHT}</p>
           </div>
         </nav>
-        <main className="flex-1 min-w-0">
-          {current && (
-            <div className="mb-5">
-              <div className="text-[11px] text-muted-fg">{currentGroup}</div>
-              <h1 className="text-xl font-bold">{current.label}</h1>
-              <p className="text-sm text-muted-fg mt-0.5">{current.about}</p>
+        <main className="flex-1 min-w-0" style={{ ["--grp" as string]: group?.color } as React.CSSProperties}>
+          {current && group && (
+            <div className="mb-6 rounded-xl border p-5" style={{ borderColor: `${group.color}66`, background: `linear-gradient(135deg, ${group.color}24, transparent 70%)` }}>
+              <span className="inline-flex items-center gap-1.5 font-pixel text-[8px] px-2 py-1 rounded-full" style={{ color: group.color, background: `${group.color}22` }}>{group.icon} {group.title.toUpperCase()}</span>
+              <h1 className="text-2xl sm:text-3xl font-extrabold mt-2 leading-tight">{current.label}</h1>
+              <p className="text-sm text-muted-fg mt-1 max-w-prose">{current.about}</p>
             </div>
           )}
           {tab === "insights" && <Insights />}
