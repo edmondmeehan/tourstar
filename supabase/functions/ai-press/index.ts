@@ -66,7 +66,8 @@ Player says: ${JSON.stringify(message)}
 JSON: {"body": string (max 90 words, talk directly to the player)}`;
 }
 
-const MAX_TOKENS: Record<Kind, number> = { story: 320, review: 420, recap: 480, chat: 300 };
+// Generous ceilings: newer models may spend part of the budget reasoning before they write.
+const MAX_TOKENS: Record<Kind, number> = { story: 1500, review: 1800, recap: 1800, chat: 1500 };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -146,7 +147,11 @@ Deno.serve(async (req) => {
   try { parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)); } catch { parsed = { body: text }; }
   const s = (v: unknown, n: number) => String(v ?? "").replace(/[*#_`]/g, "").trim().slice(0, n);
   const bodyText = s(parsed.body, 1800);
-  if (!bodyText) { await refund(); return json({ error: "The story didn't come through. Try again." }, 502); }
+  if (!bodyText) {
+    await refund();
+    console.error("empty", JSON.stringify({ stop: out.stop_reason, model: out.model, blocks: (out.content ?? []).map((b: { type: string }) => b.type), usage: out.usage, text: text.slice(0, 300) }));
+    return json({ error: "The story didn't come through. Try again." }, 502);
+  }
 
   const meta: Record<string, unknown> = {};
   if (kind === "review") {
