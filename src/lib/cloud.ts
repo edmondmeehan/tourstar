@@ -53,6 +53,8 @@ interface CloudState {
   promptDismissed: boolean;
   isAdmin: boolean;
   localUpdatedAt: number;
+  /** client_updated_at of the newest cloud save this device has seen (pulled or pushed). */
+  cloudSeenAt: number;
   set: (p: Partial<CloudState>) => void;
 }
 
@@ -68,12 +70,13 @@ export const useCloud = create<CloudState>()(
       promptDismissed: false,
       isAdmin: false,
       localUpdatedAt: 0,
+      cloudSeenAt: 0,
       set: (p) => set(p),
     }),
     {
       name: "tourstar-cloud",
       storage: createJSONStorage(() => gameStorage),
-      partialize: (s) => ({ pendingEmail: s.pendingEmail, promptDismissed: s.promptDismissed, localUpdatedAt: s.localUpdatedAt, lastSyncedAt: s.lastSyncedAt }),
+      partialize: (s) => ({ pendingEmail: s.pendingEmail, promptDismissed: s.promptDismissed, localUpdatedAt: s.localUpdatedAt, lastSyncedAt: s.lastSyncedAt, cloudSeenAt: s.cloudSeenAt }),
     },
   ),
 );
@@ -197,17 +200,44 @@ function snapshot() {
   };
 }
 
+/**
+ * Another device saved this career after this device last synced? Then that save is newer: load it
+ * instead of overwriting it (otherwise a stale tab left open could undo progress, jail time, etc.).
+ * Returns true if the newer cloud save was loaded.
+ */
+async function pullIfNewer(): Promise<boolean> {
+  const { session, cloudSeenAt } = useCloud.getState();
+  if (!supabase || !session) return false;
+  const { data, error } = await supabase.from("saves").select("career, settings, membership, client_updated_at").eq("user_id", session.user.id).maybeSingle();
+  if (error || !data?.career) return false;
+  const cloud = data.career as Career;
+  const local = useGame.getState().career;
+  const cloudTime = Date.parse(data.client_updated_at as string) || 0;
+  if (!local || cloud.id !== local.id || !cloudSeenAt || cloudTime <= cloudSeenAt + 500) return false;
+  applyCloudSave(data, cloudTime);
+  void import("../components/ui").then((m) => m.toast({ ok: true, message: "Loaded your newer progress from another device." })).catch(() => {});
+  return true;
+}
+
+let pushing = false;
 async function push() {
   const { session } = useCloud.getState();
-  if (!supabase || !session) return;
-  useCloud.getState().set({ sync: "syncing" });
-  const snap = snapshot();
-  const { error } = await supabase.from("saves").upsert({
-    user_id: session.user.id,
-    ...snap,
-    client_updated_at: new Date(useCloud.getState().localUpdatedAt || Date.now()).toISOString(),
-  });
-  useCloud.getState().set(error ? { sync: navigator.onLine === false ? "offline" : "error" } : { sync: "synced", lastSyncedAt: Date.now() });
+  if (!supabase || !session || pushing) return;
+  pushing = true;
+  try {
+    useCloud.getState().set({ sync: "syncing" });
+    if (await pullIfNewer()) return;
+    const snap = snapshot();
+    const at = useCloud.getState().localUpdatedAt || Date.now();
+    const { error } = await supabase.from("saves").upsert({
+      user_id: session.user.id,
+      ...snap,
+      client_updated_at: new Date(at).toISOString(),
+    });
+    useCloud.getState().set(error ? { sync: navigator.onLine === false ? "offline" : "error" } : { sync: "synced", lastSyncedAt: Date.now(), cloudSeenAt: Math.max(at, useCloud.getState().cloudSeenAt) });
+  } finally {
+    pushing = false;
+  }
 }
 
 /** Upload the save right now (before spending points, so the server sees the latest earnings). */
@@ -222,12 +252,18 @@ function schedulePush() {
 }
 
 /** Replace local state with the cloud save. */
-export function applyCloudSave(row: { career: Career | null; settings: unknown; membership: unknown }) {
+export function applyCloudSave(row: { career: Career | null; settings: unknown; membership: unknown; client_updated_at?: unknown }, cloudTime?: number) {
   applyingRemote = true;
   useGame.setState({ career: row.career, celebrations: [], lastOutcome: null });
   if (row.settings) useSettings.setState(row.settings as Partial<ReturnType<typeof useSettings.getState>>);
   if (row.membership) useMembership.setState(row.membership as Partial<ReturnType<typeof useMembership.getState>>);
   applyingRemote = false;
+  const seen = cloudTime ?? (Date.parse(String(row.client_updated_at ?? "")) || 0);
+  if (seen) {
+    // Same save as the cloud: nothing new to upload.
+    useCloud.getState().set({ conflict: null, localUpdatedAt: seen, cloudSeenAt: seen, sync: "synced", lastSyncedAt: Date.now() });
+    return;
+  }
   useCloud.getState().set({ conflict: null, localUpdatedAt: Date.now() });
   void push();
 }
@@ -249,8 +285,11 @@ async function reconcile() {
   if (!cloud) return void push();
   if (!local) return applyCloudSave(data!);
   if (cloud.id === local.id) {
-    const cloudTime = Date.parse(data!.client_updated_at as string);
-    if (cloudTime > (useCloud.getState().localUpdatedAt || 0)) return applyCloudSave(data!);
+    const cloudTime = Date.parse(data!.client_updated_at as string) || 0;
+    const { localUpdatedAt, cloudSeenAt } = useCloud.getState();
+    // Cloud is newer than our last change, or another device saved after we last synced: take the cloud save.
+    if (cloudTime > (localUpdatedAt || 0) || (cloudSeenAt && cloudTime > cloudSeenAt + 500)) return applyCloudSave(data!, cloudTime);
+    useCloud.getState().set({ cloudSeenAt: Math.max(cloudSeenAt, cloudTime) });
     return void push();
   }
   // Two different careers: let the player choose.
@@ -295,6 +334,10 @@ export function startCloud(onDeepLink: (path: string) => void) {
   void supabase.auth.getSession().then(({ data }) => onSession(data.session));
 
   window.addEventListener("online", () => { if (useCloud.getState().session) schedulePush(); });
+  // Coming back to the app (another tab or device may have played meanwhile): check for a newer save first.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && useCloud.getState().session && !useCloud.getState().conflict) void pullIfNewer();
+  });
 
   if (isNative) {
     // OAuth, email confirmation and password-reset links come back as co.please.tourstar://… deep links.

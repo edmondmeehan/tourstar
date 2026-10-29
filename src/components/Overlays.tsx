@@ -69,11 +69,18 @@ export function LockoutOverlay() {
     return () => clearInterval(t);
   }, []);
   const concert = useConcert((s) => s.open);
-  if (!lock || lock.until <= now || hidden === lock.until || concert) return null;
+  if (!lock || lock.until <= now || concert) return null;
   const m = LOCK_META[lock.kind];
   const left = Math.max(0, Math.ceil((lock.until - now) / 1000));
   const mm = Math.floor(left / 60);
   const ss = String(left % 60).padStart(2, "0");
+  // While looking around: a countdown pill stays on screen so it's clear you can't play yet.
+  if (hidden === lock.until) return (
+    <button onClick={() => setHidden(null)} className="fixed left-1/2 -translate-x-1/2 z-[45] px-4 py-2 rounded-full border-2 font-pixel text-[9px] shadow-lg flex items-center gap-2 bg-black/90"
+      style={{ borderColor: m.color, color: m.color, bottom: "calc(env(safe-area-inset-bottom) + 76px)" }} aria-label={`${m.title}, ${mm} minutes ${ss} seconds left`}>
+      <span className="text-base">{m.emoji}</span>{m.title} · {mm}:{ss}
+    </button>
+  );
   return (
     <div className="fixed inset-0 z-[55] flex items-center justify-center p-6 bg-black/85 backdrop-blur scanlines">
       <div className="text-center max-w-xs relative z-10">
@@ -86,6 +93,7 @@ export function LockoutOverlay() {
             Pay bail · {fmtMoney(lock.bail)}
           </button>
         )}
+        <p className="text-[11px] text-muted-fg mb-3">No shows, releases, lessons, crew or label moves until the timer runs out{lock.bail ? " or you pay bail" : ""}.</p>
         <button className="btn btn-ghost w-full" onClick={() => setHidden(lock.until)}>Look around (can't play)</button>
       </div>
     </div>

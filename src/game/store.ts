@@ -109,7 +109,12 @@ interface GameState {
 }
 
 const isLocked = (c: Career) => !!c.lockout && c.lockout.until > Date.now();
-const lockMsg = (c: Career): ActionResult => ({ ok: false, message: c.lockout?.reason ?? "You're locked out right now." });
+const LOCK_WHERE: Record<string, string> = { jail: "in jail", rehab: "in rehab", dropped: "between labels", cancelled: "cancelled" };
+const lockMsg = (c: Career): ActionResult => {
+  const mins = Math.max(1, Math.ceil(((c.lockout?.until ?? 0) - Date.now()) / 60000));
+  const where = LOCK_WHERE[c.lockout?.kind ?? ""] ?? "locked out";
+  return { ok: false, title: `You're ${where}`, message: `${mins} more minute${mins === 1 ? "" : "s"}.${c.lockout?.bail ? " Pay bail to get out now." : " Hang tight."}` };
+};
 
 function newLog(c: Career, type: LogType, text: string) {
   c.log = [{ id: uid(), at: Date.now(), week: c.week, type, text }, ...c.log].slice(0, 400);
