@@ -230,6 +230,7 @@ export function DropsTab() {
             <button className="btn btn-ghost text-sm" onClick={saveVipGold}>Save</button>
           </div>
         </Section>
+        <GivePacks packs={rows ?? []} />
         <Section title="Give or remove Gold" sub="For support: a refund, a make-good, or a giveaway winner. Logged on the player's Gold history.">
           <div className="grid grid-cols-[1fr_6rem] gap-2">
             <input className={input} placeholder="player@email.com" value={grant.email} onChange={(e) => setGrant({ ...grant, email: e.target.value })} />
@@ -372,6 +373,57 @@ function DropEditor({ form, setForm, save, busy, partners, venues, perkStats }: 
           <button className="btn btn-pink mt-5" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save drop"}</button>
         </div>
       </div>
+    </Section>
+  );
+}
+
+/** Everything in the game's cosmetic catalog, as pack items (for the team and partners). */
+function everythingItems(): DropItem[] {
+  return [
+    ...STAGE_THEMES.map((t) => ({ type: "stage" as const, id: t.id })),
+    ...SKIN_PRESETS.map((k) => ({ type: "skin" as const, ...k })),
+    ...MOVES.filter((m) => m.id !== "classic").map((m) => ({ type: "moves" as const, id: m.id, members: m.id === "boyband" ? 5 : m.id === "drummer" ? 3 : 1, match: m.id === "boyband" })),
+    ...LOOK_ITEMS.filter((i) => i.source !== "starter").map((i) => ({ type: "look" as const, id: i.id })),
+  ];
+}
+
+/** Admin → Packs & Gold: give one pack, every pack, or everything to a player by email. Free; not counted as sales. */
+function GivePacks({ packs }: { packs: Row[] }) {
+  const [email, setEmail] = useState("");
+  const [what, setWhat] = useState("everything");
+  const [busy, setBusy] = useState(false);
+  const label = what === "everything" ? "every pack plus every stage, outfit, dance move and app color" : what === "all" ? `all ${packs.length} packs` : `"${packs.find((p) => p.id === what)?.name ?? "this pack"}"`;
+  const give = () => {
+    if (!email.includes("@")) return toast({ ok: false, message: "Enter the player's account email." });
+    askConfirm(`Give ${label} to ${email.trim()}? It's free for them and doesn't count as a sale.`, async () => {
+      setBusy(true);
+      const args = what === "everything"
+        ? { p_email: email.trim(), p_all: true, p_name: "TourStar collection", p_items: everythingItems() }
+        : what === "all" ? { p_email: email.trim(), p_all: true } : { p_email: email.trim(), p_drop: what };
+      let res = await supabase!.rpc("admin_grant_packs", args);
+      // "Everything" also needs every pack: the custom grant above skips packs, so add them too.
+      if (!res.error && what === "everything") {
+        const packsRes = await supabase!.rpc("admin_grant_packs", { p_email: email.trim(), p_all: true });
+        if (packsRes.error) res = packsRes;
+        else res = { ...res, data: { added: Number((res.data as { added: number }).added) + Number((packsRes.data as { added: number }).added), skipped: Number((packsRes.data as { skipped: number }).skipped) } };
+      }
+      setBusy(false);
+      if (res.error) return fail(res.error.message.includes("admin_grant_packs") ? { message: "Run the grant packs SQL in Supabase first." } : res.error);
+      const r = res.data as { added: number; skipped: number };
+      toast({ ok: true, message: `Done. ${r.added} added${r.skipped ? `, ${r.skipped} they already had` : ""}. They'll see it next time they open the Store or My Look.` });
+    }, { yes: "Give" });
+  };
+  return (
+    <Section title="Give packs" sub="For the team, partners, giveaway winners or a support make-good. Free for the player and left out of sales and partner statements. They need a TourStar account with this email.">
+      <div className="grid gap-2">
+        <input className={input} placeholder="player@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <select className={input} value={what} onChange={(e) => setWhat(e.target.value)}>
+          <option value="everything">Everything: every pack + all stages, outfits, moves and app colors</option>
+          <option value="all">Every pack ({packs.length})</option>
+          {packs.map((p) => <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>)}
+        </select>
+      </div>
+      <button className="btn btn-ghost text-sm mt-2" disabled={busy} onClick={give}>{busy ? "Giving…" : "Give"}</button>
     </Section>
   );
 }

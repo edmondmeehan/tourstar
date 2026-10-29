@@ -337,6 +337,7 @@ export function buildAvatar(look: Look, opts: { arms?: boolean; held?: boolean }
 
 /** Is this item in the player's closet? `dropLooks` = look items from Gold drops, packs and merch orders. */
 export function lookOwned(item: LookItem, c: { peakLevel: number; ownedLooks?: string[] }, dropLooks: Set<string>): boolean {
+  if (dropLooks.has(item.id)) return true; // given in a pack or by an admin
   switch (item.source) {
     case "starter": return true;
     case "cash": return (c.ownedLooks ?? []).includes(item.id);
