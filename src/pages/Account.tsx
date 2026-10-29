@@ -1,5 +1,5 @@
 import { COPYRIGHT } from "../lib/site";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { openTickets } from "../lib/presales";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../game/store";
@@ -13,7 +13,7 @@ import { restore } from "../lib/purchases";
 import { askNotificationPermission, scheduleReminders, useNotify } from "../lib/notify";
 import { disablePush, enablePush } from "../lib/push";
 import { isNative } from "../lib/native";
-import { cloudConfigured, deleteAccount, resendConfirmation, signOut, useCloud } from "../lib/cloud";
+import { cloudConfigured, deleteAccount, resendConfirmation, signOut, supabase, useCloud } from "../lib/cloud";
 
 function CloudCard() {
   const { session, email, pendingEmail, sync, lastSyncedAt, isAdmin } = useCloud();
@@ -85,6 +85,33 @@ function RemindersCard() {
   );
 }
 
+/** Signed-in players: reminder emails when they've been away a few days (on by default, one tap to stop). */
+function EmailRemindersCard() {
+  const signedIn = useCloud((s) => !!s.session);
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!signedIn || !supabase) return;
+    void supabase.from("player_email_prefs").select("winback").maybeSingle().then(({ data, error }) => setOn(error ? null : data ? data.winback !== false : true));
+  }, [signedIn]);
+  if (!signedIn || on === null) return null;
+  const toggle = async (v: boolean) => {
+    setOn(v);
+    const { error } = await supabase!.rpc("set_winback_emails", { p_on: v });
+    if (error) { setOn(!v); toast({ ok: false, message: "Couldn't save that. Try again." }); }
+  };
+  return (
+    <Card className="mb-4">
+      <label className="flex items-center justify-between text-sm gap-3">
+        <span>
+          <span className="font-pixel text-[8px] text-muted-fg block mb-1">EMAIL REMINDERS</span>
+          A friendly email if you haven't played in a few days
+        </span>
+        <input type="checkbox" checked={on} onChange={(e) => void toggle(e.target.checked)} className="w-5 h-5 accent-[var(--neon-pink)] shrink-0" />
+      </label>
+    </Card>
+  );
+}
+
 export default function Account() {
   const c = useGame((s) => s.career)!;
   const retire = useGame((s) => s.retire);
@@ -142,6 +169,7 @@ export default function Account() {
       </Card>
 
       {isNative && <RemindersCard />}
+      <EmailRemindersCard />
 
       <div className="text-xs text-muted-fg text-center mb-4 space-x-3">
         <a className="underline" href="https://tourstarapp.com/privacy">Privacy</a>

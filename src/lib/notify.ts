@@ -22,7 +22,7 @@ export const useNotify = create<{ enabled: boolean; status: Status; asked: boole
   ),
 );
 
-const IDS = { energy: 101, royalties: 102, streak: 103, quests: 104 };
+const IDS = { energy: 101, royalties: 102, streak: 103, quests: 104, miss3: 105, miss7: 106, drums: 107 };
 
 /** Ask for permission once, at a good moment (after the first show), never on launch. */
 export async function askNotificationPermission() {
@@ -77,6 +77,13 @@ export async function scheduleReminders() {
     }
     // New quests tomorrow morning
     list.push({ id: IDS.quests, title: "🎯 New quests are in", body: "Three fresh quests and bonus points are waiting.", schedule: { at: at(10, 0, 1), allowWhileIdle: true } });
+    // Drum School: a nudge in the early evening the day after, if they've started lessons but haven't maxed chops.
+    if (c.drums && Object.keys(c.drums.best ?? {}).length > 0) {
+      list.push({ id: IDS.drums, title: "🥁 Your sticks are getting cold", body: "One Drum School lesson today keeps your chops sharp for every show.", schedule: { at: at(17, 30, 2), allowWhileIdle: true } });
+    }
+    // Come back: 3 and 7 days after they last left the app (replaced every time they leave again).
+    list.push({ id: IDS.miss3, title: `🎤 The crowd keeps chanting "${c.name}"`, body: "Your energy is full and the next stage is open. One show keeps the hype alive.", schedule: { at: at(18, 0, 3), allowWhileIdle: true } });
+    list.push({ id: IDS.miss7, title: "📰 The press is asking where you went", body: `${c.name}'s hype is fading and your rivals are booking your stages. Time for a comeback.`, schedule: { at: at(18, 0, 7), allowWhileIdle: true } });
 
     await LocalNotifications.schedule({ notifications: list });
   } catch {

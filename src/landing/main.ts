@@ -284,6 +284,22 @@ function unsubscribe() {
   history.replaceState(null, "", location.pathname);
 }
 
+/** One-click stop for player reminder emails (?stop=<token>). */
+function stopReminders() {
+  const t = new URLSearchParams(location.search).get("stop");
+  if (!t) return;
+  const bar = document.createElement("div");
+  bar.className = "unsub-bar";
+  bar.setAttribute("role", "status");
+  bar.textContent = "Updating your email settings…";
+  document.body.prepend(bar);
+  const fail = "That link didn't work. Turn reminders off in the game under Account, or email help@please.co.";
+  rpc<boolean>("player_email_unsubscribe", { p_token: t })
+    .then((ok) => { bar.textContent = ok ? "Done. You won't get TourStar reminder emails anymore. You can turn them back on in the game under Account." : fail; })
+    .catch(() => { bar.textContent = fail; });
+  history.replaceState(null, "", location.pathname);
+}
+
 // ================================================================= scroll effects
 function scrollFx() {
   const nav = $<HTMLElement>(".nav");
@@ -464,6 +480,7 @@ heroStage();
 crowdCounter();
 waitlist();
 unsubscribe();
+stopReminders();
 scrollFx();
 demo();
 

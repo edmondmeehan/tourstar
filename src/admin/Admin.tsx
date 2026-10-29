@@ -17,6 +17,7 @@ import { RafflesTab, RewardsTab } from "./RewardsAdmin";
 import { BetaSignupsTab } from "./WaitlistAdmin";
 import { IntegrationsTab } from "./IntegrationsAdmin";
 import { AiTab } from "./AiAdmin";
+import { EmailJobsAdmin } from "./EmailJobsAdmin";
 import { EconomyTab } from "./EconomyAdmin";
 import { DropsTab } from "./DropsAdmin";
 import { PartnersTab } from "./PartnersAdmin";
@@ -43,7 +44,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "leaderboard", label: "Leaderboard" },
   { id: "merch", label: "Merch" },
   { id: "presales", label: "Presales" },
-  { id: "push", label: "Notifications" },
+  { id: "push", label: "Notifications & emails" },
   { id: "raffles", label: "Raffles" },
   { id: "traffic", label: "Traffic" },
   { id: "music", label: "AI (audio & press)" },
@@ -110,7 +111,7 @@ export default function Admin() {
           {tab === "leaderboard" && <LeaderboardTab />}
           {tab === "merch" && <MerchAdminTab />}
           {tab === "presales" && <PresalesTab />}
-          {tab === "push" && <NotificationsTab />}
+          {tab === "push" && <><NotificationsTab /><EmailJobsAdmin /></>}
           {tab === "raffles" && <RafflesTab />}
           {tab === "traffic" && <Traffic />}
           {tab === "music" && <AiTab />}
