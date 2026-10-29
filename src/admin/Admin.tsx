@@ -46,7 +46,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "push", label: "Notifications" },
   { id: "raffles", label: "Raffles" },
   { id: "traffic", label: "Traffic" },
-  { id: "music", label: "AI audio" },
+  { id: "music", label: "AI (audio & press)" },
   { id: "integrations", label: "Integrations" },
   { id: "admins", label: "Admins" },
 ];
