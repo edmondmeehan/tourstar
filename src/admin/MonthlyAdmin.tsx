@@ -194,7 +194,7 @@ export function MonthlyTab() {
     "3. Add the tracks in order (the numbers in the file names). Titles are in tracklist.csv.",
     "4. Songwriter: TourStar, LLC. Tick that the tracks were made with AI.",
     "5. Don't add player names as featured artists; that creates new artist profiles under their names.",
-    "6. After it's live, paste the store links and the HyperFollow link into Admin → Monthly release and set the status to Live.",
+    "6. After it's live, paste the store links and the HyperFollow link into Admin → Artists & partners → Monthly release & picks and set the status to Live.",
     "",
     "Audio is the AI studio's MP3. DistroKid prefers WAV; MP3 is accepted.",
   ].join("\n");

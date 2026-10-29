@@ -71,7 +71,7 @@ export function RewardsTab() {
     const error = res.error;
     const itemId = res.data?.[0]?.id as string | undefined;
     if (!error && itemId) {
-      // Your cost (admin-only; players never see it) powers the Economy tab.
+      // Your cost (admin-only; players never see it) powers Store & money → Points economy.
       const usd = form.cost_usd.trim() === "" ? null : Math.max(0, Number(form.cost_usd));
       const c = usd === null || !Number.isFinite(usd)
         ? await supabase!.from("reward_costs").delete().eq("item_id", itemId)

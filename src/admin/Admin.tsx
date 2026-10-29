@@ -28,29 +28,46 @@ import { NotificationsTab, PresalesTab } from "./PresalesAdmin";
 import { refreshSite, useSite } from "../lib/site";
 
 type Tab = "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "leaderboard" | "merch" | "presales" | "push" | "raffles" | "traffic" | "music" | "integrations" | "admins";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "insights", label: "Insights" },
-  { id: "beta", label: "Beta signups" },
-  { id: "players", label: "Players" },
-  { id: "finance", label: "Finance" },
-  { id: "economy", label: "Economy" },
-  { id: "marketing", label: "Marketing" },
-  { id: "balance", label: "Balance" },
-  { id: "events", label: "Events & gifts" },
-  { id: "rewards", label: "Rewards store" },
-  { id: "drops", label: "Packs & Gold" },
-  { id: "partners", label: "Partners & venues" },
-  { id: "monthly", label: "Monthly release" },
-  { id: "leaderboard", label: "Leaderboard" },
-  { id: "merch", label: "Merch" },
-  { id: "presales", label: "Presales" },
-  { id: "push", label: "Notifications & emails" },
-  { id: "raffles", label: "Raffles" },
-  { id: "traffic", label: "Traffic" },
-  { id: "music", label: "AI (audio & press)" },
-  { id: "integrations", label: "Integrations" },
-  { id: "admins", label: "Admins" },
+/** Admin sections, grouped by what you're there to do. Order inside a group = most used first. */
+const GROUPS: { title: string; tabs: { id: Tab; label: string; about: string }[] }[] = [
+  { title: "Overview", tabs: [
+    { id: "insights", label: "Dashboard", about: "Players, activity and the health of the game at a glance." },
+    { id: "finance", label: "Revenue", about: "App Store sales, subscriptions and refunds from RevenueCat." },
+    { id: "traffic", label: "Traffic sources", about: "Where new players come from, and tagged links for campaigns." },
+  ] },
+  { title: "Players", tabs: [
+    { id: "players", label: "Players", about: "Look up a player, see their save, and handle support." },
+    { id: "beta", label: "Waitlist", about: "Early-access signups, referrals and waitlist emails." },
+    { id: "leaderboard", label: "Leaderboard", about: "Weekly charts, rewards for the top 10, and removing cheaters." },
+  ] },
+  { title: "Engage players", tabs: [
+    { id: "push", label: "Notifications & emails", about: "Push messages, the daily admin report and win-back emails." },
+    { id: "marketing", label: "In-game announcements", about: "Banners and pop-ups players see when they open the game." },
+    { id: "events", label: "Events & gifts", about: "Trigger an event or send a gift to every player." },
+  ] },
+  { title: "Store & money", tabs: [
+    { id: "drops", label: "Packs & Gold", about: "Limited packs and artist packs, giving packs or Gold to a player, and VIP Gold." },
+    { id: "merch", label: "Merch", about: "The Shopify merch store and the in-game items merch unlocks." },
+    { id: "rewards", label: "Rewards store", about: "Real rewards players buy with points, and orders to ship." },
+    { id: "raffles", label: "Raffles", about: "Prize raffles, entries and drawing winners." },
+    { id: "economy", label: "Points economy", about: "Reward points earned and spent, and what they're worth." },
+  ] },
+  { title: "Artists & partners", tabs: [
+    { id: "partners", label: "Partners & venues", about: "Licensed artists and venues, sponsored stages, the Drum School host, and partner statements." },
+    { id: "presales", label: "Presales", about: "VIP ticket presales and their codes." },
+    { id: "monthly", label: "Monthly release & picks", about: "The TourStar Monthly album, Curator's Picks and the curator name." },
+  ] },
+  { title: "Game", tabs: [
+    { id: "balance", label: "Game balance", about: "Pay, fame, energy and level settings, with the climb simulator." },
+    { id: "music", label: "AI audio & press", about: "AI songs and voices, The Press (Claude) and radio reports." },
+  ] },
+  { title: "Setup", tabs: [
+    { id: "integrations", label: "Integrations", about: "API keys for Apple, RevenueCat, Shopify, Resend, Claude and ElevenLabs." },
+    { id: "admins", label: "Admins", about: "Who can open this admin." },
+  ] },
 ];
+const TABS = GROUPS.flatMap((g) => g.tabs);
+
 
 const levelName = (fame: number) => levelFor(fame);
 
@@ -59,7 +76,7 @@ const levelName = (fame: number) => levelFor(fame);
 export default function Admin() {
   const session = useCloud((s) => s.session);
   const [state, setState] = useState<"checking" | "yes" | "no">("checking");
-  const [tab, setTab] = useState<Tab>(() => (sessionStorageGet("tourstar-admin-tab") as Tab) || "insights");
+  const [tab, setTab] = useState<Tab>(() => { const t = sessionStorageGet("tourstar-admin-tab") as Tab; return TABS.some((x) => x.id === t) ? t : "insights"; });
 
   useEffect(() => {
     if (!supabase || !session) { setState("no"); return; }
@@ -68,6 +85,8 @@ export default function Admin() {
   }, [session]);
 
   useEffect(() => { sessionStorageSet("tourstar-admin-tab", tab); }, [tab]);
+  const current = TABS.find((t) => t.id === tab);
+  const currentGroup = GROUPS.find((g) => g.tabs.some((t) => t.id === tab))?.title;
 
   if (!supabase) return <Center>Accounts aren't configured in this build.</Center>;
   if (!session) return <Center>Sign in with an admin account to open the admin. <Link className="underline text-electric" to="/login?mode=signin">Sign in</Link></Center>;
@@ -87,15 +106,33 @@ export default function Admin() {
         </div>
       </header>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 lg:flex gap-6">
-        <nav className="lg:w-48 shrink-0 mb-5 lg:mb-0 flex lg:flex-col gap-1 overflow-x-auto no-scrollbar">
-          {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`text-left text-sm px-3 py-2 rounded whitespace-nowrap ${tab === t.id ? "bg-white/10 text-fg font-semibold" : "text-muted-fg hover:bg-white/5"}`}>
-              {t.label}
-            </button>
-          ))}
-          <p className="hidden lg:block text-[10px] text-muted-fg px-3 mt-6">{COPYRIGHT}</p>
+        <nav className="lg:w-52 shrink-0 mb-5 lg:mb-0" aria-label="Admin sections">
+          <select className={`${input} lg:hidden`} value={tab} onChange={(e) => setTab(e.target.value as Tab)} aria-label="Admin section">
+            {GROUPS.map((g) => <optgroup key={g.title} label={g.title}>{g.tabs.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>)}
+          </select>
+          <div className="hidden lg:block space-y-4 sticky top-20">
+            {GROUPS.map((g) => (
+              <div key={g.title}>
+                <div className="font-pixel text-[7px] tracking-wider text-muted-fg px-3 mb-1">{g.title.toUpperCase()}</div>
+                {g.tabs.map((t) => (
+                  <button key={t.id} onClick={() => setTab(t.id)} aria-current={tab === t.id ? "page" : undefined}
+                    className={`block w-full text-left text-sm px-3 py-1.5 rounded ${tab === t.id ? "bg-white/10 text-fg font-semibold" : "text-muted-fg hover:bg-white/5"}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+            <p className="text-[10px] text-muted-fg px-3 pt-2">{COPYRIGHT}</p>
+          </div>
         </nav>
         <main className="flex-1 min-w-0">
+          {current && (
+            <div className="mb-5">
+              <div className="text-[11px] text-muted-fg">{currentGroup}</div>
+              <h1 className="text-xl font-bold">{current.label}</h1>
+              <p className="text-sm text-muted-fg mt-0.5">{current.about}</p>
+            </div>
+          )}
           {tab === "insights" && <Insights />}
           {tab === "beta" && <BetaSignupsTab />}
           {tab === "players" && <Players />}
