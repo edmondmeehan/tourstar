@@ -345,6 +345,7 @@ export function RafflesTab() {
 
   return (
     <>
+      <RafflesSwitch />
       <div className="panel p-4 mb-5 text-xs leading-relaxed" style={{ borderColor: "var(--gold)" }}>
         <b>Before you run a raffle for real prizes:</b> sweepstakes rules vary by state. Points here can't be bought and every raffle can offer a free daily entry,
         which keeps it a no-purchase-necessary sweepstakes, and the app shows that Apple isn't a sponsor (App Store rule 5.3).
@@ -416,5 +417,27 @@ export function RafflesTab() {
         </Section>
       )}
     </>
+  );
+}
+
+/** Show or hide raffles for players (the Store tab and mentions in How to Play). */
+function RafflesSwitch() {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    void supabase!.from("app_public_config").select("value").eq("key", "raffles_enabled").maybeSingle().then(({ data }) => setOn(data?.value === "true"));
+  }, []);
+  if (on === null) return null;
+  const set = async (v: boolean) => {
+    const { error } = await supabase!.from("app_public_config").upsert({ key: "raffles_enabled", value: String(v), updated_at: new Date().toISOString() });
+    if (error) return fail(error);
+    setOn(v);
+    toast({ ok: true, message: v ? "Raffles are visible to players (on their next launch)." : "Raffles are hidden from players. Nothing is deleted." });
+  };
+  return (
+    <label className="panel p-4 mb-5 flex items-start gap-3 cursor-pointer" style={{ borderColor: on ? "var(--success)" : "var(--border)" }}>
+      <input type="checkbox" className="mt-1 accent-[var(--neon-pink)]" checked={on} onChange={(e) => void set(e.target.checked)} />
+      <span><b className="text-sm">Show raffles to players</b>
+        <span className="block text-xs text-muted-fg">{on ? "On: the Raffles tab shows in the Store." : "Hidden: no Raffles tab in the Store and no raffle mentions in How to Play. You can still set raffles up here."}</span></span>
+    </label>
   );
 }

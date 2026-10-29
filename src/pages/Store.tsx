@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useSite } from "../lib/site";
 import { STORE, LEVELS, type StoreItem } from "../game/data";
 import { fmtMoney, levelFor } from "../game/engine";
 import { useGame } from "../game/store";
@@ -21,7 +22,10 @@ const STATUS: Record<string, { label: string; color: string }> = {
 
 export default function Store() {
   const [params] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(() => (["rewards", "raffles", "drops", "merch", "shop"].includes(params.get("tab") ?? "") ? params.get("tab") as Tab : "rewards"));
+  const rafflesOn = useSite((s) => s.raffles);
+  const [picked, setTab] = useState<Tab>(() => (["rewards", "raffles", "drops", "merch", "shop"].includes(params.get("tab") ?? "") ? params.get("tab") as Tab : "rewards"));
+  const tab: Tab = picked === "raffles" && !rafflesOn ? "rewards" : picked;
+  const tabs = ([["rewards", "🎁 Rewards"], ["raffles", "🎟️ Raffles"], ["drops", "💿 Drops"], ["merch", "👕 Merch"], ["shop", "🛒 Shop"]] as const).filter(([id]) => id !== "raffles" || rafflesOn);
   const session = useCloud((s) => s.session);
   const c = useGame((s) => s.career)!;
   const points = useRewards((s) => s.points);
@@ -41,8 +45,8 @@ export default function Store() {
         {!!points?.pending && <div className="text-[11px] mt-1" style={{ color: "var(--gold)" }}>+{points.pending.toLocaleString()} pending review · <a className="underline" href="https://tourstarapp.com/support">why?</a></div>}
       </div>
 
-      <div className="grid grid-cols-5 gap-1.5 mb-4" role="tablist">
-        {([["rewards", "🎁 Rewards"], ["raffles", "🎟️ Raffles"], ["drops", "💿 Drops"], ["merch", "👕 Merch"], ["shop", "🛒 Shop"]] as const).map(([id, label]) => (
+      <div className={`grid ${tabs.length === 5 ? "grid-cols-5" : "grid-cols-4"} gap-1.5 mb-4`} role="tablist">
+        {tabs.map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
             className={`font-pixel text-[8px] py-2.5 rounded border ${tab === id ? "border-pink text-pink bg-black/30" : "border-line text-muted-fg"}`}>{label.toUpperCase()}</button>
         ))}

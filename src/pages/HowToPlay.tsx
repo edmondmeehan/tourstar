@@ -6,6 +6,7 @@ import { CREW, LABELS, RELEASES, TOURS } from "../game/data";
 import { fmtMoney, fmtNum, levels } from "../game/engine";
 import { useConfig } from "../game/config";
 import { useAiFlags } from "../lib/ai";
+import { useSite } from "../lib/site";
 import { CHOPS_CAP, CHOPS_PER_LESSON, LESSON_ENERGY, LESSONS_PER_DAY } from "../game/drums";
 import { CRATE_MAX, DIG_ENERGY, GENRE_FIT, RARITY } from "../game/crate";
 
@@ -29,6 +30,7 @@ export default function HowToPlay() {
   const bonusEnergy = useConfig((s) => s.config.bonusEnergyPerDay);
   const pointActs = useConfig((s) => s.config.pointActsPerDay);
   const aiMin = useAiFlags((s) => s.minLevel);
+  const raffles = useSite((s) => s.raffles);
   const lv = levels();
   const fullBar = Math.round((regen * 100) / 60);
 
@@ -112,9 +114,9 @@ export default function HowToPlay() {
         <p><b>Real-life tip:</b> real promoters never charge you to play, real companies never ask for your password, and "guaranteed 10x" is never real.</p>
       </Section>
 
-      <Section id="rewards" emoji="🎁" title="Reward points, raffles and real prizes" open={open === "rewards"} toggle={toggle}>
-        <p>You earn <b>reward points</b> by playing: shows and releases (the first {pointActs} each day), quests, daily claims and level-ups. Spend them on real rewards and raffle tickets in the Store.</p>
-        <p>Points and raffle tickets <b>can't be bought</b>. Everyone earns them the same way.</p>
+      <Section id="rewards" emoji="🎁" title={raffles ? "Reward points, raffles and real prizes" : "Reward points and real prizes"} open={open === "rewards"} toggle={toggle}>
+        <p>You earn <b>reward points</b> by playing: shows and releases (the first {pointActs} each day), quests, daily claims and level-ups. Spend them on real rewards{raffles ? " and raffle tickets" : ""} in the Store.</p>
+        <p>Points{raffles ? " and raffle tickets" : ""} <b>can't be bought</b>. Everyone earns them the same way.</p>
       </Section>
 
       <Section id="premium" emoji="💎" title="Gold, packs and VIP" open={open === "premium"} toggle={toggle}>
