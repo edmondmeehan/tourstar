@@ -1,4 +1,5 @@
 import { COPYRIGHT } from "../lib/site";
+import { Capacitor } from "@capacitor/core";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Logo } from "../components/HeroBackdrop";
@@ -29,6 +30,8 @@ function Field(props: React.InputHTMLAttributes<HTMLInputElement> & { label: str
 
 /** Google sign-in is hidden until it's set up in Supabase (flip to true to show it again). */
 const SHOW_GOOGLE = false;
+/** Apple sign-in works in the iPhone app (Apple's own sheet). On the website it needs extra Apple setup, so it's hidden there. */
+const SHOW_APPLE = Capacitor.getPlatform() === "ios";
 
 function ProviderButtons({ onResult }: { onResult: (r: AuthResult) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -40,9 +43,11 @@ function ProviderButtons({ onResult }: { onResult: (r: AuthResult) => void }) {
   };
   return (
     <div className="grid gap-2">
-      <button type="button" className="btn w-full !text-[10px] bg-white text-black border-white" disabled={!!busy} onClick={() => go("apple")}>
-        {busy === "apple" ? "Opening…" : "Continue with Apple"}
-      </button>
+      {SHOW_APPLE && (
+        <button type="button" className="btn w-full !text-[10px] bg-white text-black border-white" disabled={!!busy} onClick={() => go("apple")}>
+          {busy === "apple" ? "Opening…" : "Continue with Apple"}
+        </button>
+      )}
       {SHOW_GOOGLE && (
         <button type="button" className="btn w-full !text-[10px] bg-[#1a1f33] border-line" disabled={!!busy} onClick={() => go("google")}>
           {busy === "google" ? "Opening…" : "Continue with Google"}
@@ -91,7 +96,7 @@ export default function Login() {
           <button className="underline text-gold" onClick={async () => toast(await resendConfirmation())}>Resend link</button>
         </Card>
       )}
-      {mode !== "forgot" && (
+      {mode !== "forgot" && (SHOW_APPLE || SHOW_GOOGLE) && (
         <>
           <ProviderButtons onResult={(r) => toast(r)} />
           <div className="flex items-center gap-3 my-5 text-muted-fg text-xs"><div className="h-px bg-line flex-1" />or use email<div className="h-px bg-line flex-1" /></div>
