@@ -41,8 +41,8 @@
       "destination": "/investors/index.html"
     },
     {
-      "source": "/investors/flow",
-      "destination": "/investors/flow.html"
+      "source": "/investors/:page([a-z-]+)",
+      "destination": "/investors/:page.html"
     },
     {
       "source": "/((?!assets/|landing/|brand/|investors).*)",

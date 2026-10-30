@@ -1,0 +1,30 @@
+/* Shared look for the investor pages: TourStar's arcade palette, quieter for reading. */
+:root { color-scheme: dark; --bg: #08061a; --panel: #110d2c; --line: #2e2860; --ink: #ece9ff; --muted: #a39dd0; --pink: #ff4fd8; --gold: #f2c230; --green: #3ddc97; --blue: #4fb4ff; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 "IBM Plex Sans", system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: var(--blue); }
+.back { font-size: 13px; color: var(--muted); }
+.eyebrow { font: 10px/1.6 "Press Start 2P", monospace; color: var(--pink); letter-spacing: .04em; margin: 28px 0 8px; }
+h1 { font: 22px/1.45 "Press Start 2P", monospace; margin: 0 0 14px; text-wrap: balance; }
+h2 { font: 12px/1.6 "Press Start 2P", monospace; color: var(--gold); margin: 44px 0 14px; text-wrap: balance; }
+h3 { font-size: 17px; margin: 22px 0 6px; }
+p, li { max-width: 68ch; }
+.lede { font-size: 18px; color: var(--ink); }
+.muted { color: var(--muted); }
+ul.ticks { padding-left: 1.1em; }
+ul.ticks li { margin: 6px 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1.5px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; }
+.card b { display: block; }
+.card small { color: var(--muted); display: block; margin-top: 4px; font-size: 14px; }
+.tablewrap { overflow-x: auto; margin: 10px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 520px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; border: 1px solid currentColor; white-space: nowrap; }
+.tag.live { color: var(--green); } .tag.next { color: var(--gold); } .tag.later { color: var(--muted); }
+.callout { border-left: 3px solid var(--gold); padding: 10px 14px; background: var(--panel); margin: 16px 0; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+@media (max-width: 520px) { h1 { font-size: 16px; } h2 { font-size: 11px; } }
