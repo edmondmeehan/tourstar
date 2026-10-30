@@ -4,6 +4,7 @@
 // On the web (and in builds without a RevenueCat key) purchases are unavailable.
 import { create } from "zustand";
 import { Purchases, PRODUCT_CATEGORY, type CustomerInfo, type PurchasesStoreProduct } from "@revenuecat/purchases-capacitor";
+import { PAYWALL_RESULT, RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
 import { Capacitor } from "@capacitor/core";
 import { gameStorage, isNative } from "./native";
 import { PREMIUM_SKUS, useMembership, type Sku } from "../game/settings";
@@ -128,6 +129,50 @@ export async function restore(): Promise<{ ok: boolean; message: string }> {
   } catch (e) {
     return { ok: false, message: (e as Error).message || "Couldn't restore purchases." };
   }
+}
+
+/**
+ * RevenueCat Paywall: the VIP plans screen designed in the RevenueCat dashboard (Paywalls), built from
+ * the current Offering. Returns "unavailable" when no paywall is set up, so the game can fall back
+ * to its own VIP buttons.
+ */
+export async function showVipPaywall(): Promise<{ ok: boolean; message: string; result: "purchased" | "restored" | "cancelled" | "unavailable" | "error" }> {
+  if (!purchasesAvailable() || usePurchases.getState().status !== "ready") return { ok: false, result: "unavailable", message: "" };
+  try {
+    const offerings = await Purchases.getOfferings();
+    if (!offerings.current || !offerings.current.availablePackages.length) return { ok: false, result: "unavailable", message: "" };
+    const { result } = await RevenueCatUI.presentPaywall({ offering: offerings.current, displayCloseButton: true });
+    if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      applyEntitlements(customerInfo);
+      // VIP's Gold and AI allowance are added on the server by the RevenueCat webhook.
+      for (const ms of [3000, 10000, 30000]) window.setTimeout(() => { void refreshPerks(); void refreshGold(); }, ms);
+      const vip = !!customerInfo.entitlements.active.vip;
+      return result === PAYWALL_RESULT.PURCHASED
+        ? { ok: true, result: "purchased", message: "👑 Welcome to TourStar VIP. Your perks are on." }
+        : { ok: vip, result: "restored", message: vip ? "👑 VIP restored. Your perks are on." : "No VIP subscription found for this Apple ID." };
+    }
+    if (result === PAYWALL_RESULT.ERROR) return { ok: false, result: "error", message: "The purchase didn't go through. Try again in a moment." };
+    return { ok: false, result: "cancelled", message: "" };
+  } catch (e) {
+    return { ok: false, result: "unavailable", message: (e as Error).message || "" };
+  }
+}
+
+/**
+ * RevenueCat Customer Center: manage, cancel or get help with a VIP subscription without leaving the app.
+ * Falls back to Apple's subscriptions page if it can't open.
+ */
+export async function manageSubscription() {
+  try {
+    if (purchasesAvailable()) {
+      await RevenueCatUI.presentCustomerCenter();
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      applyEntitlements(customerInfo);
+      return;
+    }
+  } catch { /* fall through */ }
+  window.open(IS_ANDROID ? "https://play.google.com/store/account/subscriptions" : "https://apps.apple.com/account/subscriptions", "_blank");
 }
 
 export const isEntitlementSku = (sku: Sku) => !!ENTITLEMENT[sku];

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { PREMIUM_SKUS, VIP_PERKS, useMembership, type Sku } from "../game/settings";
 import { useGame } from "../game/store";
 import { Card, PageTitle, Tag, toast } from "../components/ui";
-import { buy, needsAccount, purchasesAvailable, restore, usePurchases } from "../lib/purchases";
+import { buy, manageSubscription, needsAccount, purchasesAvailable, restore, showVipPaywall, usePurchases } from "../lib/purchases";
 import { useAiFlags } from "../lib/ai";
 import { useGold } from "../lib/gold";
 import { useCloud } from "../lib/cloud";
@@ -19,7 +19,7 @@ export default function Premium() {
   const gold = useGold((s) => s.gold);
   const aiOn = useAiFlags((s) => s.music);
   const signedIn = useCloud((s) => !!s.session);
-  const [busy, setBusy] = useState<Sku | null>(null);
+  const [busy, setBusy] = useState<Sku | "paywall" | null>(null);
   const real = purchasesAvailable();
   const dev = import.meta.env.DEV;
   const vip = m.premiumPass;
@@ -44,6 +44,16 @@ export default function Premium() {
     setBusy(null);
     if (r.cancelled) return;
     toast(r);
+    if (r.ok) sfx("levelup");
+  };
+
+  /** RevenueCat's designed paywall; if none is set up in RevenueCat yet, the buttons below still work. */
+  const openPaywall = async () => {
+    setBusy("paywall");
+    const r = await showVipPaywall();
+    setBusy(null);
+    if (r.result === "unavailable") return toast({ ok: true, message: "Pick monthly or yearly below." });
+    if (r.message) toast(r);
     if (r.ok) sfx("levelup");
   };
 
@@ -85,8 +95,15 @@ export default function Premium() {
           {VIP_PERKS.map((p) => <li key={p}>{p}</li>)}
         </ul>
         {vip ? (
-          <p className="text-xs text-muted-fg mt-4">Thanks for being a VIP. Manage or cancel any time in your {navigator.userAgent.includes("Android") ? "Google Play" : "App Store"} subscriptions.</p>
+          <>
+            <p className="text-xs text-muted-fg mt-4">Thanks for being a VIP. Change plans, cancel or get help any time.</p>
+            <button className="btn btn-ghost w-full mt-3 text-xs" onClick={() => void manageSubscription()}>Manage subscription</button>
+          </>
         ) : (
+          <>
+          {real && status === "ready" && (
+            <button className="btn btn-gold w-full mt-4" disabled={busy !== null} onClick={() => void openPaywall()}>{busy === "paywall" ? "…" : "👑 See VIP plans"}</button>
+          )}
           <div className="grid grid-cols-2 gap-2 mt-4">
             {(["vip_monthly", "vip_yearly"] as const).map((sku) => {
               const p = price(sku) ?? (webOnly ? listPrice(sku) : null);
@@ -98,6 +115,7 @@ export default function Premium() {
               );
             })}
           </div>
+          </>
         )}
       </Card>
 
