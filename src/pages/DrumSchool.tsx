@@ -1,5 +1,6 @@
 // Drum School: play real grooves on kick, snare and hi-hat. Graded lessons cost a little energy and
 // pay cash and fame; passing with an A or S earns chops (a bonus to the playing score at shows).
+import { stopRadio } from "../lib/radio";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -138,6 +139,7 @@ function LessonPlayer({ lesson, practice, corner, onClose }: { lesson: Lesson; p
   const [hits, setHits] = useState<number[]>([0, 0, 0]);
 
   useEffect(() => {
+    stopRadio(); // the radio and the drum kit would fight over the speaker
     kit.current = playLesson(lesson);
     setClock(() => kit.current!.now);
     return () => kit.current?.stop();

@@ -3,6 +3,7 @@
 import type { Lesson } from "../game/drums";
 import { lessonTiming } from "../game/drums";
 import { audio, masterVolume } from "./fx";
+import { audioClock } from "./synth";
 
 export interface DrumHandle {
   /** Seconds since the top of the lesson, on the audio clock (falls back to wall clock). */
@@ -100,9 +101,7 @@ export function playLesson(l: Lesson): DrumHandle {
     }
   }
   let stopped = false;
-  const wall0 = performance.now() / 1000 + 0.1;
-  let mode: "audio" | "wall" | null = null;
-  let lastCtx = -1, lastPerf = 0;
+  const now = audioClock(ctx, t0);
   return {
     hit: (lane) => { if (!stopped) drum(ctx, out, lane, ctx.currentTime, 1); },
     stop: () => {
@@ -112,14 +111,6 @@ export function playLesson(l: Lesson): DrumHandle {
       oscs.forEach((o) => { try { o.stop(); } catch { /* done */ } });
       window.setTimeout(() => out.disconnect(), 400);
     },
-    now: () => {
-      const perf = performance.now() / 1000;
-      const wall = perf - wall0;
-      if (!mode && wall > 0.4) mode = ctx.state === "running" ? "audio" : "wall";
-      if (mode === "wall" || (!mode && ctx.state !== "running")) return wall;
-      const c = ctx.currentTime;
-      if (c !== lastCtx) { lastCtx = c; lastPerf = perf; }
-      return c - t0 + Math.min(perf - lastPerf, 0.1);
-    },
+    now,
   };
 }

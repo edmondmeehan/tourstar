@@ -6,7 +6,7 @@ import { GRADE_LABEL, debutChance, songPool, type EncoreChoice } from "../game/s
 import { makeMedley, playMedley, type MedleyHandle } from "../lib/chiptune";
 import { cheer, masterVolume, sfx } from "../lib/fx";
 import { haptic } from "../lib/haptics";
-import { playClip, useAiFlags, type ClipHandle } from "../lib/ai";
+import { playClipInGame, useAiFlags, type ClipHandle } from "../lib/ai";
 import { DeltaChips, toast } from "../components/ui";
 import { startConcert } from "./ConcertScene";
 import { DIFFICULTIES, showTuning } from "../game/difficulty";
@@ -66,10 +66,10 @@ export default function ConcertOverlay() {
     const intro = career.announcerUrl && career.announcerFor === career.name && useAiFlags.getState().voice && masterVolume() > 0;
     if (intro) {
       setAnnouncing(true);
-      introRef.current = playClip(career.announcerUrl!, { gain: 1.2 });
+      introRef.current = playClipInGame(career.announcerUrl!, { gain: 1.2 });
       cheer();
       void introRef.current.done.then(startMusic);
-      window.setTimeout(startMusic, 9000); // never hold the show hostage to a slow clip
+      window.setTimeout(startMusic, 7000); // never hold the show hostage to a slow clip
     } else startMusic();
     const scene = startConcert(stageRef.current!, {
       attendance: show.attendance,

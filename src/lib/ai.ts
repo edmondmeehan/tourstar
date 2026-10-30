@@ -4,7 +4,7 @@
 // Admins switch each on/off in /admin → AI music.
 import { create } from "zustand";
 import { supabase, useCloud } from "./cloud";
-import { masterVolume } from "./fx";
+import { audio, masterVolume } from "./fx";
 import { useGame } from "../game/store";
 import type { ReleaseKind, Song } from "../game/types";
 
@@ -108,6 +108,33 @@ export function playClip(url: string, opts: { onEnd?: () => void; gain?: number 
   el.addEventListener("error", end, { once: true });
   if (el.volume > 0) void el.play().catch(end); else end();
   return { stop: () => { el.pause(); el.src = ""; resolve(); }, done };
+}
+
+/**
+ * Play a voice clip through the game's audio engine (not a separate <audio> element). On iPhone a
+ * separate media element can grab the speaker and stall the music clock that a show runs on.
+ */
+export function playClipInGame(url: string, opts: { gain?: number } = {}): ClipHandle {
+  let resolve!: () => void;
+  const done = new Promise<void>((r) => { resolve = r; });
+  let src: AudioBufferSourceNode | null = null;
+  let stopped = false;
+  void (async () => {
+    try {
+      const a = audio();
+      const buf = await (await fetch(url)).arrayBuffer();
+      const decoded = await a.decodeAudioData(buf);
+      if (stopped) return;
+      const g = a.createGain();
+      g.gain.value = Math.max(0, Math.min(1, masterVolume() * (opts.gain ?? 1)));
+      src = a.createBufferSource();
+      src.buffer = decoded;
+      src.connect(g).connect(a.destination);
+      src.onended = () => resolve();
+      src.start();
+    } catch { resolve(); }
+  })();
+  return { stop: () => { stopped = true; try { src?.stop(); } catch { /* done */ } resolve(); }, done };
 }
 
 let started = false;

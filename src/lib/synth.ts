@@ -205,24 +205,37 @@ export function playMedleyWith(a: AudioContext | null, vol: number, seeds: numbe
     scheduleSteps(v, p, (seed % 4) * 8, m.stepsPerSong, t0 + intro + si * m.stepsPerSong * m.stepSec);
   });
   const stop = player(m.durationSec + 0.2, out, nodes, ctx);
-  // Follow the audio clock so taps line up with the music. If audio never starts
-  // (blocked or unavailable), settle on the wall clock instead.
+  return { stop, now: audioClock(ctx, t0) };
+}
+
+/**
+ * A game clock that follows the audio clock (so taps line up with the music) but never freezes.
+ * iPhones sometimes report the audio engine as "running" while its time stands still (for example
+ * right after another sound, like the announcer, used the speaker). If the audio time stops moving
+ * we nudge the engine, and if it stays stuck we carry on from the same moment on the wall clock.
+ */
+export function audioClock(ctx: AudioContext, t0: number): () => number {
   const wall0 = performance.now() / 1000 + 0.1;
   let mode: "audio" | "wall" | null = null;
-  // ctx.currentTime moves in audio-buffer steps (often 10-40ms); smooth between steps
-  // with the wall clock so judging stays precise.
-  let lastCtx = -1, lastPerf = 0;
-  return {
-    stop,
-    now: () => {
-      const perf = performance.now() / 1000;
-      const wall = perf - wall0;
-      if (!mode && wall > 0.4) mode = ctx.state === "running" ? "audio" : "wall";
-      if (mode === "wall" || (!mode && ctx.state !== "running")) return wall;
-      const c = ctx.currentTime;
-      if (c !== lastCtx) { lastCtx = c; lastPerf = perf; }
-      return c - t0 + Math.min(perf - lastPerf, 0.1);
-    },
+  let base = 0; // wall-clock origin once we fall back
+  // ctx.currentTime moves in audio-buffer steps (often 10-40ms); smooth between steps.
+  let lastCtx = -1, lastPerf = 0, nudged = false;
+  const toWall = (at: number, perf: number) => { mode = "wall"; base = perf - at; };
+  return () => {
+    const perf = performance.now() / 1000;
+    if (mode === "wall") return perf - base;
+    const wall = perf - wall0;
+    if (!mode && wall > 0.4) {
+      if (ctx.state === "running") mode = "audio"; else { toWall(wall, perf); return wall; }
+    }
+    if (!mode) return ctx.state === "running" ? ctx.currentTime - t0 : wall;
+    const c = ctx.currentTime;
+    if (c !== lastCtx) { lastCtx = c; lastPerf = perf; nudged = false; }
+    const stalled = perf - lastPerf;
+    const at = c - t0 + Math.min(stalled, 0.1);
+    if (stalled > 0.35 && !nudged) { nudged = true; void ctx.resume().catch(() => {}); }
+    if (stalled > 0.8) { toWall(at, perf); return at; }
+    return at;
   };
 }
 
