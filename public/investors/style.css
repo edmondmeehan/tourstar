@@ -28,3 +28,13 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .callout { border-left: 3px solid var(--gold); padding: 10px 14px; background: var(--panel); margin: 16px 0; }
 footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 @media (max-width: 520px) { h1 { font-size: 16px; } h2 { font-size: 11px; } }
+.toc { background: var(--panel); border: 1.5px solid var(--line); border-radius: 6px; padding: 14px 18px; margin: 20px 0; columns: 2 220px; column-gap: 28px; }
+.toc a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; font-size: 14px; }
+.toc a:hover, .toc a:focus-visible { color: var(--pink); }
+.todo { border: 1.5px dashed var(--gold); border-radius: 6px; padding: 10px 14px; margin: 12px 0; font-size: 14px; }
+.todo::before { content: "TO UPDATE BEFORE SHARING"; display: block; font: 9px/1.6 "Press Start 2P", monospace; color: var(--gold); margin-bottom: 4px; }
+dl.terms { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); gap: 0; margin: 10px 0; }
+dl.terms dt, dl.terms dd { margin: 0; padding: 10px; border-bottom: 1px solid var(--line); }
+dl.terms dt { color: var(--muted); font-weight: 600; font-size: 14px; }
+@media (max-width: 520px) { dl.terms { grid-template-columns: minmax(0, 1fr); } dl.terms dt { border-bottom: 0; padding-bottom: 0; } }
+section { scroll-margin-top: 16px; }
