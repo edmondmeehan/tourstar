@@ -9,6 +9,7 @@ import { levelFor } from "../game/engine";
 import { normalizeLook } from "../game/looks";
 import { sfx } from "../lib/fx";
 import { useSite } from "../lib/site";
+import { useVersion, versionLabel } from "../lib/version";
 import { seasonFor, type Season } from "../lib/season";
 
 // Scene coordinates (viewBox 400×860, about a phone's shape). The horizon sits at 61%.
@@ -229,6 +230,7 @@ export default function Title() {
   }, [start]);
 
   const setting = useSite((s) => s.season);
+  const ver = useVersion();
   const season = useMemo(() => seasonFor(new Date(), setting), [setting]);
   const fans = String(career?.stats.fans ?? 0).padStart(6, "0").slice(-6);
   const lvl = career ? levelFor(career.stats.fame) : null;
@@ -286,6 +288,7 @@ export default function Title() {
 
         <div className="absolute inset-x-0 z-10 text-center font-pixel text-[7px] text-white/35" style={{ bottom: "calc(18px + env(safe-area-inset-bottom))" }}>
           © 2026 TOURSTAR, LLC · TAP ANYWHERE
+          <div className="mt-1.5 text-white/25">{versionLabel(ver).toUpperCase()}</div>
         </div>
         {flash && <div className="absolute inset-0 bg-white animate-flash z-20" />}
       </div>

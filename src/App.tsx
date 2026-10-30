@@ -12,6 +12,7 @@ import { startGold } from "./lib/gold";
 import { startPush } from "./lib/push";
 import { startLeaderboard } from "./lib/leaderboard";
 import { startAnalytics } from "./lib/analytics";
+import { loadVersion } from "./lib/version";
 import { startSocial } from "./lib/social";
 import { loadTourEvent } from "./lib/tourEvent";
 import { startPress } from "./lib/press";
@@ -73,6 +74,7 @@ export default function App() {
   useEffect(() => {
     if (!ready) return;
     hideSplash();
+    loadVersion();
     startAnalytics();
     startCloud((path) => nav(path));
     startLive();

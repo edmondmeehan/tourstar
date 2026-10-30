@@ -5,6 +5,7 @@
 import { supabase, useCloud } from "./cloud";
 import { useGame } from "../game/store";
 import { isNative } from "./native";
+import { useVersion } from "./version";
 
 type Ev = { name: string; props?: Record<string, unknown>; t: number };
 const KEY = "ts_device";
@@ -44,7 +45,8 @@ function reportError(msg: string, where: string) {
   if (/ResizeObserver loop|Script error\.?$/i.test(msg)) return; // browser noise
   seenErrors.add(key);
   errorsSent++;
-  track("error", { msg: msg.slice(0, 300), where: where.slice(0, 200), v: __BUILD__, path: location.pathname, native: isNative });
+  const nv = useVersion.getState();
+  track("error", { msg: msg.slice(0, 300), where: where.slice(0, 200), v: nv.build ? `${nv.version} (${nv.build})` : __BUILD__, path: location.pathname, native: isNative });
   void flush();
 }
 
@@ -58,7 +60,8 @@ export function startAnalytics() {
     if (/Failed to fetch|NetworkError|Load failed|network connection/i.test(msg)) return; // offline, not a bug
     reportError(msg, typeof r === "object" ? String(r?.stack ?? "").split("\n")[1]?.trim() ?? "promise" : "promise");
   });
-  track("app_open", { v: __BUILD__, native: isNative, signed_in: !!useCloud.getState().session });
+  // Wait a moment for the iPhone build number, so crashes can be matched to a TestFlight build.
+  window.setTimeout(() => track("app_open", { v: __BUILD__, app: useVersion.getState().build ? `${useVersion.getState().version} (${useVersion.getState().build})` : null, native: isNative, signed_in: !!useCloud.getState().session }), 1500);
 
   // Milestones, read from the save so every path (tutorial, skip, replays) is counted the same way.
   useGame.subscribe((s, p) => {
