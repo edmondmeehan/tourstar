@@ -27,6 +27,9 @@ function Field(props: React.InputHTMLAttributes<HTMLInputElement> & { label: str
   );
 }
 
+/** Google sign-in is hidden until it's set up in Supabase (flip to true to show it again). */
+const SHOW_GOOGLE = false;
+
 function ProviderButtons({ onResult }: { onResult: (r: AuthResult) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const go = async (p: "apple" | "google") => {
@@ -40,9 +43,11 @@ function ProviderButtons({ onResult }: { onResult: (r: AuthResult) => void }) {
       <button type="button" className="btn w-full !text-[10px] bg-white text-black border-white" disabled={!!busy} onClick={() => go("apple")}>
         {busy === "apple" ? "Opening…" : "Continue with Apple"}
       </button>
-      <button type="button" className="btn w-full !text-[10px] bg-[#1a1f33] border-line" disabled={!!busy} onClick={() => go("google")}>
-        {busy === "google" ? "Opening…" : "Continue with Google"}
-      </button>
+      {SHOW_GOOGLE && (
+        <button type="button" className="btn w-full !text-[10px] bg-[#1a1f33] border-line" disabled={!!busy} onClick={() => go("google")}>
+          {busy === "google" ? "Opening…" : "Continue with Google"}
+        </button>
+      )}
     </div>
   );
 }
