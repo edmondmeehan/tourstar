@@ -6,7 +6,7 @@ const ConcertOverlay = lazy(() => import("../concert/ConcertOverlay"));
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useGame } from "../game/store";
 import { useMembership } from "../game/settings";
-import { fmtMoney, levelFor } from "../game/engine";
+import { fmtMoney, levelFor, levelProgress } from "../game/engine";
 import { AnnouncementBanner, AnnouncementPopup, SavePrompt, SyncPill } from "./CloudUI";
 import { CelebrationOverlay, EventModal, LockoutOverlay, OutcomeModal } from "./Overlays";
 import { sfx } from "../lib/fx";
@@ -64,6 +64,7 @@ export default function Layout() {
   useEffect(() => { applySkin(JSON.parse(skinKey)); }, [skinKey]);
   if (!career) return <Navigate to="/create" replace />;
   const lvl = levelFor(career.stats.fame);
+  const prog = levelProgress(career.stats.fame);
   const here = groupOf(loc.pathname);
   // The tutorial points at a page; light up the tab (and sub-tab) that holds it.
   const coachGroup = coach ? groupOf(coach)?.id : null;
@@ -76,7 +77,7 @@ export default function Layout() {
             <div className="font-pixel text-[10px] truncate" style={{ color: "var(--gold)" }}>
               {career.name} {career.style?.badge && <span>{career.style.badge}</span>} {vip && <span title="VIP">💎</span>}
             </div>
-            <div className="font-pixel text-[8px] text-muted-fg mt-1 truncate">{career.style?.title ? <span style={{ color: "var(--neon-pink)" }}>{career.style.title.toUpperCase()} · </span> : null}LV{lvl.level} · {lvl.name.toUpperCase()} · WK {career.week}</div>
+            <div className="font-pixel text-[8px] text-muted-fg mt-1 truncate">{career.style?.title ? <span style={{ color: "var(--neon-pink)" }}>{career.style.title.toUpperCase()} · </span> : null}WEEK {career.week}</div>
           </Link>
           <div className="flex items-center gap-1.5 shrink-0">
             {online ? <SyncPill /> : <span className="font-pixel text-[7px] px-2 py-1.5 rounded bg-black/40 border border-line whitespace-nowrap" style={{ color: "var(--gold)" }} title="No connection: playing offline">✈️ OFFLINE</span>}
@@ -87,6 +88,12 @@ export default function Layout() {
             </button>
           </div>
         </div>
+        <Link to="/summary" className="flex items-center gap-2 mt-2.5" aria-label={`Level ${lvl.level}, ${lvl.name}. ${prog.next ? `${Math.round(prog.pct)}% of the way to ${prog.next.name}` : "Max level"}`}>
+          <span className="font-pixel text-[9px] px-1.5 py-1 rounded shrink-0" style={{ background: "var(--gold)", color: "#1a1206" }}>LV{lvl.level}</span>
+          <span className="font-pixel text-[8px] shrink-0" style={{ color: "var(--gold)" }}>{lvl.name.toUpperCase()}</span>
+          <div className="h-2 flex-1 rounded-full bg-black/50 border border-line overflow-hidden"><div className="h-full rounded-full" style={{ width: `${prog.next ? Math.max(2, prog.pct) : 100}%`, background: "linear-gradient(90deg, var(--gold), oklch(85% .17 70))" }} /></div>
+          <span className="text-[10px] text-muted-fg shrink-0 tabular-nums">{prog.next ? `${Math.round(prog.pct)}% → LV${prog.next.level}` : "MAX"}</span>
+        </Link>
         {menu && <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} aria-hidden="true" />}
         {menu && (
           <nav className="absolute right-3 top-full mt-2 panel p-2 w-60 animate-pop z-50 overflow-y-auto" style={{ maxHeight: "calc(100dvh - 140px)", background: "#0b0b1e", boxShadow: "0 16px 40px #000c" }}>
