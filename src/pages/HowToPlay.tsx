@@ -1,5 +1,6 @@
 // How to Play: a plain-language guide. Numbers come from the live game data so it never goes stale.
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useHelpSeen } from "../lib/help";
 import { Link } from "react-router-dom";
 import { Card, PageTitle } from "../components/ui";
 import { CREW, LABELS, RELEASES, TOURS } from "../game/data";
@@ -26,6 +27,8 @@ function Section({ id, emoji, title, open, toggle, children }: { id: string; emo
 export default function HowToPlay() {
   const [open, setOpen] = useState<string | null>("basics");
   const toggle = (id: string) => setOpen(open === id ? null : id);
+  const markSeen = useHelpSeen((s) => s.markSeen);
+  useEffect(() => markSeen(), [markSeen]);
   const regen = useConfig((s) => s.config.energyRegenSeconds);
   const bonusEnergy = useConfig((s) => s.config.bonusEnergyPerDay);
   const pointActs = useConfig((s) => s.config.pointActsPerDay);

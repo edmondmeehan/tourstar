@@ -15,6 +15,7 @@ import { COPYRIGHT } from "../lib/site";
 import RadioBar from "./RadioBar";
 import { useRadio } from "../lib/radio";
 import Coach, { coachTarget } from "./Coach";
+import { useHelpSeen } from "../lib/help";
 
 const NAV = [
   { to: "/dashboard", label: "Home", icon: "🏠" },
@@ -26,19 +27,28 @@ const NAV = [
   { to: "/summary", label: "Stats", icon: "📊" },
 ];
 
-const MORE = [
-  { to: "/locker", label: "Locker", icon: "🎧" },
-  { to: "/rivals", label: "Rivals", icon: "⚔️" },
-  { to: "/releases", label: "Releases", icon: "📀" },
-  { to: "/log", label: "Career Log", icon: "📜" },
-  { to: "/look", label: "My Look", icon: "🧑‍🎤" },
-  { to: "/press", label: "The Press", icon: "📰" },
-  { to: "/drums", label: "Drum School", icon: "🥁" },
-  { to: "/how-to-play", label: "How to Play", icon: "❓" },
-  { to: "/radio", label: "TourStar Radio", icon: "📻" },
-  { to: "/distribute", label: "TourStar Monthly", icon: "💿" },
-  { to: "/premium", label: "Premium", icon: "💎" },
-  { to: "/account", label: "Account & Settings", icon: "⚙️" },
+// The ☰ menu, grouped by what players come for.
+const MORE: { group: string; items: { to: string; label: string; icon: string }[] }[] = [
+  { group: "Play", items: [
+    { to: "/drums", label: "Drum School", icon: "🥁" },
+    { to: "/rivals", label: "Rivals & Charts", icon: "⚔️" },
+    { to: "/radio", label: "TourStar Radio", icon: "📻" },
+  ] },
+  { group: "My artist", items: [
+    { to: "/look", label: "My Look", icon: "🧑‍🎤" },
+    { to: "/locker", label: "Locker", icon: "🎧" },
+    { to: "/releases", label: "Releases", icon: "📀" },
+    { to: "/log", label: "Career Log", icon: "📜" },
+  ] },
+  { group: "News", items: [
+    { to: "/press", label: "The Press", icon: "📰" },
+    { to: "/distribute", label: "TourStar Monthly", icon: "💿" },
+  ] },
+  { group: "Help & account", items: [
+    { to: "/how-to-play", label: "How to Play", icon: "❓" },
+    { to: "/premium", label: "VIP & Gold", icon: "💎" },
+    { to: "/account", label: "Account & Settings", icon: "⚙️" },
+  ] },
 ];
 
 export function useGameTick() {
@@ -62,6 +72,9 @@ export default function Layout() {
   const radioOn = useRadio((s) => !!s.station && !!s.queue?.length);
   useGameTick();
   const corner = useLiveCorner();
+  const helpSeen = useHelpSeen((s) => s.seen);
+  // Once Mo's walkthrough is done, nudge new players to How to Play until they've opened it.
+  const helpDot = !helpSeen && !career?.tutorial;
   useEffect(() => setMenu(false), [loc.pathname]);
   const skinKey = JSON.stringify(career?.style?.skin ?? null);
   useEffect(() => { applySkin(JSON.parse(skinKey)); }, [skinKey]);
@@ -82,15 +95,25 @@ export default function Layout() {
             <SyncPill />
             <span className="font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border border-line" style={{ color: "var(--success)" }}>{fmtMoney(career.stats.cash)}</span>
             <span className="font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border border-line" style={{ color: "oklch(85% .17 110)" }}>⚡{career.stats.energy}</span>
-            <button aria-label="More" className="w-8 h-8 rounded border border-line bg-black/40" onClick={() => { sfx("click"); setMenu((m) => !m); }}>☰</button>
+            <button aria-label="Menu" aria-expanded={menu} className="relative w-8 h-8 rounded border border-line bg-black/40" onClick={() => { sfx("click"); setMenu((m) => !m); }}>
+              ☰{helpDot && !menu && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--neon-pink)] animate-pulse" aria-hidden="true" />}
+            </button>
           </div>
         </div>
+        {menu && <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} aria-hidden="true" />}
         {menu && (
-          <nav className="absolute right-3 top-full mt-2 panel p-2 w-56 animate-pop z-50">
-            {MORE.map((m) => (
-              <NavLink key={m.to} to={m.to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded text-sm ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}>
-                <span>{m.icon}</span>{m.to === "/drums" && corner ? corner.title : m.label}
-              </NavLink>
+          <nav className="absolute right-3 top-full mt-2 panel p-2 w-60 animate-pop z-50 overflow-y-auto" style={{ maxHeight: "calc(100dvh - 140px)" }}>
+            {MORE.map((g, gi) => (
+              <div key={g.group} className={gi ? "mt-1 pt-1 border-t border-line" : ""}>
+                <div className="font-pixel text-[7px] text-muted-fg px-3 pt-2 pb-1 tracking-wider">{g.group.toUpperCase()}</div>
+                {g.items.map((m) => (
+                  <NavLink key={m.to} to={m.to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded text-sm ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}>
+                    <span className="w-5 text-center">{m.icon}</span>
+                    <span className="flex-1">{m.to === "/drums" && corner ? corner.title : m.label}</span>
+                    {m.to === "/how-to-play" && helpDot && <span className="font-pixel text-[7px] px-1.5 py-0.5 rounded bg-[var(--neon-pink)] text-white">NEW</span>}
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </nav>
         )}

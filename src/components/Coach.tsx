@@ -1,7 +1,7 @@
 // First-time tutorial: "Mo", the player's manager, walks them through their first show and release.
 import { useEffect } from "react";
 import { moLineUrl, playClip, type ClipHandle } from "../lib/ai";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useGame } from "../game/store";
 import { useConcert } from "../concert/useConcert";
 import { sfx } from "../lib/fx";
@@ -18,6 +18,7 @@ export default function Coach() {
   const celebrating = useGame((s) => s.celebrations.length > 0);
   const concert = useConcert((s) => s.open);
   const { pathname } = useLocation();
+  const nav = useNavigate();
   const step = c?.tutorial?.step;
 
   // Route-driven steps.
@@ -65,8 +66,13 @@ export default function Coach() {
       body = <>Drop a free <b>Mixtape</b> (or a Single for $200). Every release joins your setlist <i>and</i> earns royalties while you're away.</>;
       break;
     default:
-      body = <>You're officially an artist. Every day: claim your <b>daily reward</b>, finish <b>3 quests</b> and collect <b>royalties</b>. See you at the top!</>;
-      action = <button className="btn btn-gold text-[10px] px-4 py-2" onClick={() => next(null)}>Let's go +25 ⭐</button>;
+      body = <>You're officially an artist. Every day: claim your <b>daily reward</b>, finish <b>3 quests</b> and collect <b>royalties</b>. Want the full playbook? It's in <b>☰ → How to Play</b> any time.</>;
+      action = (
+        <div className="flex gap-2">
+          <button className="btn btn-ghost text-[10px] px-3 py-2" onClick={() => { next(null); nav("/how-to-play"); }}>How to Play</button>
+          <button className="btn btn-gold text-[10px] px-4 py-2" onClick={() => next(null)}>Let's go +25 ⭐</button>
+        </div>
+      );
   }
 
   return (
