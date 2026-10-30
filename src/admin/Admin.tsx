@@ -337,8 +337,9 @@ function Finance() {
           <div className="font-semibold mb-2">To turn on real revenue</div>
           <ol className="list-decimal pl-5 space-y-1 text-muted-fg">
             <li>The app's Premium screen already uses real App Store / Google Play purchases through RevenueCat.</li>
-            <li>Create the products in App Store Connect with IDs <code>co.please.tourstar.remove_timers</code>, <code>.premium_pass</code>, <code>.vip_badge</code> (non-consumable) and <code>.cash_small</code>, <code>.cash_large</code> (consumable). See LAUNCH.md.</li>
-            <li>Add the RevenueCat public SDK keys to the app build (<code>VITE_REVENUECAT_IOS_KEY</code>, <code>VITE_REVENUECAT_ANDROID_KEY</code>). A RevenueCat webhook can then feed live revenue into this tab.</li>
+            <li>Create the products in App Store Connect. Consumables: <code>co.please.tourstar.gold_100</code>, <code>.gold_550</code>, <code>.gold_1200</code>, <code>.gold_2500</code>, <code>.ai_songs_5</code>, <code>.ai_songs_15</code>, <code>.cash_small</code>, <code>.cash_large</code>. Auto-renewable subscriptions (group "TourStar VIP"): <code>co.please.tourstar.vip_monthly</code>, <code>.vip_yearly</code>.</li>
+            <li>In RevenueCat, import them, attach the two VIP subscriptions to the <code>vip</code> entitlement, and add them to the current offering for the paywall.</li>
+            <li>Paste the RevenueCat keys and webhook password in Setup → Integrations. The webhook then feeds live revenue into this tab.</li>
           </ol>
         </div>
       </Section>
