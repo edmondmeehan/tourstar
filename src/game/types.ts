@@ -142,6 +142,21 @@ export interface Career {
   crateDay?: string;
   /** A show that has started (energy spent) but not finished yet. */
   pendingShow?: import("./setlist").PendingShow | null;
+  /** Promoter gig offer on the table, and when the next one may arrive. */
+  offer?: import("./offers").GigOffer | null;
+  offerNext?: number;
+  offersTaken?: number;
+  /** Progress in the current tour event. */
+  event?: { id: string; shows: number; claimed: boolean };
+  eventsDone?: number;
+  /** Festival bill (you + friends): goals already claimed this week. */
+  festival?: { week: string; claimed: number };
+  /** Achievements claimed (id → when). Carries over when a Legend retires. */
+  achievements?: Record<string, number>;
+  /** League history seen on this career. */
+  leagues?: { promotions: number; best: number; lastWeek?: string };
+  /** Retired careers that came before this one (Hall of Fame). Each adds a lasting fame bonus. */
+  legacy?: { count: number; names: string[]; fameBonus: number };
 }
 
 export interface Celebration {
@@ -155,6 +170,8 @@ export interface Settings {
   volume: number; // 0..1
   muted: boolean;
   vibration: "off" | "low" | "med" | "high";
+  /** Rhythm timing: how late (ms) this player's taps land after the beat they hear (headphones, slow screens). */
+  tapOffsetMs?: number;
 }
 
 export interface Purchase {

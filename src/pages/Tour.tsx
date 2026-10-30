@@ -13,13 +13,15 @@ import { useConfig } from "../game/config";
 import { openVenueTickets, refreshVenues, trackVenue, useVenues, venueUnlocked, type Venue } from "../lib/venues";
 import { useGold } from "../lib/gold";
 import { stageTheme } from "../game/cosmetics";
+import { EventCard, OfferCard } from "../components/Engage";
+import type { ShowVenue } from "../game/setlist";
 
 export default function Tour() {
   const corner = useLiveCorner();
   const c = useGame((s) => s.career)!;
   const payMultiplier = useConfig((s) => s.config.tourPayMultiplier);
   const resume = useConcert((s) => s.start);
-  const [booking, setBooking] = useState<{ tour: TourDef; venue?: Venue } | null>(null);
+  const [booking, setBooking] = useState<{ tour: TourDef; venue?: Venue; special?: ShowVenue } | null>(null);
   const venues = useVenues((s) => s.venues);
   useGold((s) => s.owned); // re-check pack-only venues after a purchase
   useEffect(() => { void refreshVenues(); }, []);
@@ -37,6 +39,8 @@ export default function Tour() {
           <button className="btn btn-pink w-full mt-3" onClick={() => resume(pending)}>Back on stage</button>
         </Card>
       )}
+      {!pending && <EventCard onBook={(tour, special) => setBooking({ tour, special })} />}
+      {!pending && <OfferCard onBook={(tour, special) => setBooking({ tour, special })} />}
       <Link to="/drums" className="panel flex items-center gap-3 px-4 py-3 mb-4 hover:border-pink">
         <span className="text-2xl">🥁</span>
         <span className="flex-1 text-sm"><b>{corner ? corner.title : "Drum School"}</b><span className="block text-xs text-muted-fg">{corner ? `Learn grooves with ${corner.host}.` : "Learn real grooves."} Chops boost every show: +{drumChops(c.drums?.best)}% now.</span></span>
@@ -88,7 +92,7 @@ export default function Tour() {
         })}
       </div>
       <p className="text-[11px] text-muted-fg text-center mt-4">Sellout odds rise with Hype, Fans and Pyro. Pay and fame depend on how you play and your setlist.</p>
-      {booking && <SetlistSheet tour={booking.tour} venue={booking.venue} onClose={() => setBooking(null)} />}
+      {booking && <SetlistSheet tour={booking.tour} venue={booking.venue} special={booking.special} onClose={() => setBooking(null)} />}
     </div>
   );
 }

@@ -127,6 +127,18 @@ export default function HowToPlay() {
         <p><b>TourStar VIP</b> adds faster energy, monthly Gold, extra AI songs and presale codes. All optional, and none of it buys points or raffle entries.</p>
       </Section>
 
+      <Section id="social" emoji="🏅" title="Leagues, friends and events" open={open === "social"} toggle={toggle}>
+        <p><b>Weekly leagues:</b> sign in and you're placed in a league of about 30 real players. Fame you earn this week is your score. On Monday the top spots move up a division (Garage up to Legends), the bottom spots move down, and the top 3 win Gold. See it on <Link to="/rivals" className="underline">Rivals</Link>.</p>
+        <p><b>Friends:</b> share your 6-letter code on <Link to="/friends" className="underline">Friends</Link>. Shows you and your friends play this week fill the <b>festival bill</b>, and everyone claims a reward at each goal.</p>
+        <p><b>Gig offers:</b> every few hours a promoter offers a one-off show with bonus pay and fame. It expires, so take it while it's there (or pass).</p>
+        <p><b>Tour events:</b> limited-time stages with extra pay. Play them enough times before the event ends to earn a badge you can't get any other way.</p>
+        <p><b>Achievements:</b> long-term goals with cash, energy and hype rewards. When an artist reaches <b>Legend</b>, you can retire them to the <Link to="/achievements" className="underline">Hall of Fame</Link>. Your next artist keeps your looks and starts with a lasting fame bonus.</p>
+      </Section>
+
+      <Section id="timing" emoji="🎧" title="Notes feel early or late?" open={open === "timing"} toggle={toggle}>
+        <p>Bluetooth headphones and some phones play sound a little late, so taps can feel off. Run the <b>timing check</b> under <Link to="/account" className="underline">Account & Settings</Link>: tap along to 12 clicks and the game adjusts to you.</p>
+      </Section>
+
       <Section id="daily" emoji="📅" title="Daily habits" open={open === "daily"} toggle={toggle}>
         <p>Claim your daily reward (streaks grow it), finish your daily quests, spend your energy bar, collect royalties, and check the weekly chart in <Link to="/rivals" className="underline">Rivals</Link>.</p>
       </Section>

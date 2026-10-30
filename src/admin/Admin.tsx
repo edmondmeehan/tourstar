@@ -18,6 +18,7 @@ import { BetaSignupsTab } from "./WaitlistAdmin";
 import { IntegrationsTab } from "./IntegrationsAdmin";
 import { AiTab } from "./AiAdmin";
 import { EmailJobsAdmin } from "./EmailJobsAdmin";
+import { EngagementTab, LeaguesAdmin, TourEventsAdmin } from "./EngageAdmin";
 import { EconomyTab } from "./EconomyAdmin";
 import { DropsTab } from "./DropsAdmin";
 import { PartnersTab } from "./PartnersAdmin";
@@ -27,22 +28,24 @@ import { MerchAdminTab } from "./MerchAdmin";
 import { NotificationsTab, PresalesTab } from "./PresalesAdmin";
 import { refreshSite, useSite } from "../lib/site";
 
-type Tab = "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "leaderboard" | "merch" | "presales" | "push" | "raffles" | "traffic" | "music" | "integrations" | "admins";
+type Tab = "engagement" | "tourevent" | "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "leaderboard" | "merch" | "presales" | "push" | "raffles" | "traffic" | "music" | "integrations" | "admins";
 /** Admin sections, grouped by what you're there to do. Order inside a group = most used first. */
 const GROUPS: { title: string; icon: string; color: string; tabs: { id: Tab; label: string; about: string }[] }[] = [
   { title: "Overview", icon: "📊", color: "#1aa3ff", tabs: [
     { id: "insights", label: "Dashboard", about: "Players, activity and the health of the game at a glance." },
     { id: "finance", label: "Revenue", about: "App Store sales, subscriptions and refunds from RevenueCat." },
     { id: "traffic", label: "Traffic sources", about: "Where new players come from, and tagged links for campaigns." },
+    { id: "engagement", label: "Engagement & crashes", about: "How far new players get, who comes back, and errors from players' phones." },
   ] },
   { title: "Players", icon: "🎤", color: "#ff42d8", tabs: [
     { id: "players", label: "Players", about: "Look up a player, see their save, and handle support." },
     { id: "beta", label: "Waitlist", about: "Early-access signups, referrals and waitlist emails." },
-    { id: "leaderboard", label: "Leaderboard", about: "Weekly charts, rewards for the top 10, and removing cheaters." },
+    { id: "leaderboard", label: "Leaderboard & leagues", about: "Weekly charts, leagues, rewards, the festival bill and removing cheaters." },
   ] },
   { title: "Engage players", icon: "📣", color: "#ff9f1c", tabs: [
     { id: "push", label: "Notifications & emails", about: "Push messages, the daily admin report and win-back emails." },
     { id: "marketing", label: "In-game announcements", about: "Banners and pop-ups players see when they open the game." },
+    { id: "tourevent", label: "Tour events", about: "Limited-time event stages with an exclusive collectible." },
     { id: "events", label: "Events & gifts", about: "Trigger an event or send a gift to every player." },
   ] },
   { title: "Store & money", icon: "💰", color: "#f2c230", tabs: [
@@ -152,7 +155,9 @@ export default function Admin() {
           {tab === "drops" && <DropsTab />}
           {tab === "partners" && <PartnersTab />}
           {tab === "monthly" && <MonthlyTab />}
-          {tab === "leaderboard" && <LeaderboardTab />}
+          {tab === "leaderboard" && <><LeaguesAdmin /><LeaderboardTab /></>}
+          {tab === "engagement" && <EngagementTab />}
+          {tab === "tourevent" && <TourEventsAdmin />}
           {tab === "merch" && <MerchAdminTab />}
           {tab === "presales" && <PresalesTab />}
           {tab === "push" && <><NotificationsTab /><EmailJobsAdmin /></>}

@@ -4,6 +4,8 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 
 // `npm run build:preview` makes one self-contained HTML file for the hosted preview.
 export default defineConfig(({ mode }) => ({
+  // Build stamp sent with usage and crash reports, so errors can be matched to a TestFlight build.
+  define: { __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")) },
   plugins: mode === "preview-single" ? [react(), viteSingleFile()] : [react()],
   // Phaser (~1MB) is lazy-loaded only when a concert starts.
   // The normal build has two pages: the game (index.html) and the tourstarapp.com splash page (landing.html).

@@ -16,6 +16,7 @@ import RadioBar from "./RadioBar";
 import { useRadio } from "../lib/radio";
 import Coach, { coachTarget } from "./Coach";
 import { useHelpSeen } from "../lib/help";
+import { unclaimedCount } from "../game/achievements";
 
 const NAV = [
   { to: "/dashboard", label: "Home", icon: "🏠" },
@@ -31,8 +32,12 @@ const NAV = [
 const MORE: { group: string; items: { to: string; label: string; icon: string }[] }[] = [
   { group: "Play", items: [
     { to: "/drums", label: "Drum School", icon: "🥁" },
-    { to: "/rivals", label: "Rivals & Charts", icon: "⚔️" },
     { to: "/radio", label: "TourStar Radio", icon: "📻" },
+  ] },
+  { group: "Compete & friends", items: [
+    { to: "/rivals", label: "Leagues & Rivals", icon: "⚔️" },
+    { to: "/friends", label: "Friends", icon: "🤝" },
+    { to: "/achievements", label: "Achievements & Hall of Fame", icon: "🏅" },
   ] },
   { group: "My artist", items: [
     { to: "/look", label: "My Look", icon: "🧑‍🎤" },
@@ -75,6 +80,7 @@ export default function Layout() {
   const helpSeen = useHelpSeen((s) => s.seen);
   // Once Mo's walkthrough is done, nudge new players to How to Play until they've opened it.
   const helpDot = !helpSeen && !career?.tutorial;
+  const ready = career ? unclaimedCount(career) : 0;
   useEffect(() => setMenu(false), [loc.pathname]);
   const skinKey = JSON.stringify(career?.style?.skin ?? null);
   useEffect(() => { applySkin(JSON.parse(skinKey)); }, [skinKey]);
@@ -96,13 +102,13 @@ export default function Layout() {
             <span className="font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border border-line" style={{ color: "var(--success)" }}>{fmtMoney(career.stats.cash)}</span>
             <span className="font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border border-line" style={{ color: "oklch(85% .17 110)" }}>⚡{career.stats.energy}</span>
             <button aria-label="Menu" aria-expanded={menu} className="relative w-8 h-8 rounded border border-line bg-black/40" onClick={() => { sfx("click"); setMenu((m) => !m); }}>
-              ☰{helpDot && !menu && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--neon-pink)] animate-pulse" aria-hidden="true" />}
+              ☰{(helpDot || ready > 0) && !menu && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--neon-pink)] animate-pulse" aria-hidden="true" />}
             </button>
           </div>
         </div>
         {menu && <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} aria-hidden="true" />}
         {menu && (
-          <nav className="absolute right-3 top-full mt-2 panel p-2 w-60 animate-pop z-50 overflow-y-auto" style={{ maxHeight: "calc(100dvh - 140px)" }}>
+          <nav className="absolute right-3 top-full mt-2 panel p-2 w-60 animate-pop z-50 overflow-y-auto" style={{ maxHeight: "calc(100dvh - 140px)", background: "#0b0b1e", boxShadow: "0 16px 40px #000c" }}>
             {MORE.map((g, gi) => (
               <div key={g.group} className={gi ? "mt-1 pt-1 border-t border-line" : ""}>
                 <div className="font-pixel text-[7px] text-muted-fg px-3 pt-2 pb-1 tracking-wider">{g.group.toUpperCase()}</div>
@@ -111,6 +117,7 @@ export default function Layout() {
                     <span className="w-5 text-center">{m.icon}</span>
                     <span className="flex-1">{m.to === "/drums" && corner ? corner.title : m.label}</span>
                     {m.to === "/how-to-play" && helpDot && <span className="font-pixel text-[7px] px-1.5 py-0.5 rounded bg-[var(--neon-pink)] text-white">NEW</span>}
+                    {m.to === "/achievements" && ready > 0 && <span className="font-pixel text-[7px] px-1.5 py-0.5 rounded bg-[var(--gold)] text-black">{ready}</span>}
                   </NavLink>
                 ))}
               </div>

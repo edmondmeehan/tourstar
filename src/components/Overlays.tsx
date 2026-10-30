@@ -5,6 +5,7 @@ import { sfx } from "../lib/fx";
 import { DeltaChips, Modal, toast } from "./ui";
 import { fmtMoney } from "../game/engine";
 import { useConcert } from "../concert/useConcert";
+import { shareCard } from "../lib/share";
 
 export function EventModal() {
   const id = useGame((s) => s.career?.pendingEvent);
@@ -105,6 +106,7 @@ export function CelebrationOverlay() {
   const first = useGame((s) => s.celebrations[0]);
   const c = concert ? undefined : first;
   const dismiss = useGame((s) => s.dismissCelebration);
+  const career = useGame((s) => s.career);
   useEffect(() => {
     if (c) { sfx("levelup"); }
   }, [c]);
@@ -116,6 +118,9 @@ export function CelebrationOverlay() {
       <div className="text-center px-6 animate-pop relative z-10">
         <div className="font-pixel text-xl mb-4 crt-flicker" style={{ color, textShadow: `0 0 18px ${color}` }}>{c.title}</div>
         <div className="text-lg mb-8">{c.subtitle}</div>
+        {c.kind === "level" && career && (
+          <button className="btn btn-gold mb-6" onClick={(e) => { e.stopPropagation(); void shareCard({ kind: "level", title: "LEVEL UP!", big: "⭐", bigColor: "#f2c230", sub: c.subtitle.split(" · ")[0], career }); }}>Share it</button>
+        )}
         <div className="font-pixel text-[9px] text-muted-fg animate-press-start">TAP TO CONTINUE</div>
       </div>
     </div>

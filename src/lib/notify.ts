@@ -13,6 +13,8 @@ import { cfg } from "../game/config";
 import { MAX_ENERGY } from "../game/data";
 import { todayKey } from "../game/engine";
 import { ROYALTY_CAP_HOURS } from "../game/quests";
+import { eventLive, useTourEvent } from "./tourEvent";
+import { useLeague } from "./social";
 
 type Status = "unknown" | "granted" | "denied";
 export const useNotify = create<{ enabled: boolean; status: Status; asked: boolean; set: (p: Partial<{ enabled: boolean; status: Status; asked: boolean }>) => void }>()(
@@ -22,7 +24,7 @@ export const useNotify = create<{ enabled: boolean; status: Status; asked: boole
   ),
 );
 
-const IDS = { energy: 101, royalties: 102, streak: 103, quests: 104, miss3: 105, miss7: 106, drums: 107 };
+const IDS = { energy: 101, royalties: 102, streak: 103, quests: 104, miss3: 105, miss7: 106, drums: 107, offer: 108, event: 109, league: 110 };
 
 /** Ask for permission once, at a good moment (after the first show), never on launch. */
 export async function askNotificationPermission() {
@@ -80,6 +82,29 @@ export async function scheduleReminders() {
     // Drum School: a nudge in the early evening the day after, if they've started lessons but haven't maxed chops.
     if (c.drums && Object.keys(c.drums.best ?? {}).length > 0) {
       list.push({ id: IDS.drums, title: "🥁 Your sticks are getting cold", body: "One Drum School lesson today keeps your chops sharp for every show.", schedule: { at: at(17, 30, 2), allowWhileIdle: true } });
+    }
+    // Promoter offer about to expire (45 minutes before).
+    if (c.offer) {
+      const when = c.offer.expires - 45 * 60_000;
+      if (soon(when)) list.push({ id: IDS.offer, title: `📞 ${c.offer.venue} needs an answer`, body: `The +${c.offer.payBonus}% pay gig offer expires in 45 minutes.`, schedule: { at: new Date(when), allowWhileIdle: true } });
+    }
+    // Tour event ending tomorrow and the collectible isn't earned yet.
+    const ev = useTourEvent.getState().event;
+    if (ev && eventLive(ev) && !(c.event?.id === ev.id && c.event.claimed)) {
+      const left = ev.goal - (c.event?.id === ev.id ? c.event.shows : 0);
+      const when = Date.parse(ev.ends) - 20 * 36e5;
+      if (left > 0 && soon(when)) list.push({ id: IDS.event, title: `${ev.emoji} ${ev.name} ends tomorrow`, body: `${left} more show${left === 1 ? "" : "s"} at ${ev.venue.name} to earn the collectible. It won't come back.`, schedule: { at: new Date(when), allowWhileIdle: true } });
+    }
+    // League: Sunday 6pm, if a promotion spot is close or the relegation zone is near.
+    const lg = useLeague.getState().league;
+    const me = lg?.rows.find((r) => r.me);
+    if (lg?.joined && me) {
+      const close = Date.parse(lg.resets_at);
+      const sun = new Date(close - 36e5); sun.setHours(18, 0, 0, 0);
+      const when = sun.getTime() < close ? sun.getTime() : close - 3 * 36e5;
+      const promo = lg.up > 0 && me.rank > lg.up && me.rank <= lg.up + 3;
+      const danger = lg.down > 0 && me.rank > lg.size - lg.down - 2;
+      if ((promo || danger) && soon(when)) list.push({ id: IDS.league, title: promo ? "⬆️ Promotion is within reach" : "⚠️ Your league spot is at risk", body: promo ? `You're #${me.rank}. Top ${lg.up} move up when the week ends in a few hours.` : `You're #${me.rank}. The week ends in a few hours. One good show keeps you out of the drop zone.`, schedule: { at: new Date(when), allowWhileIdle: true } });
     }
     // Come back: 3 and 7 days after they last left the app (replaced every time they leave again).
     list.push({ id: IDS.miss3, title: `🎤 The crowd keeps chanting "${c.name}"`, body: "Your energy is full and the next stage is open. One show keeps the hype alive.", schedule: { at: at(18, 0, 3), allowWhileIdle: true } });

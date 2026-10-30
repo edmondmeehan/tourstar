@@ -8,6 +8,9 @@ import { useGame } from "../game/store";
 import { useMembership } from "../game/settings";
 import { Bar, Card, Modal, StatBar, toast } from "../components/ui";
 import type { Career, Stats } from "../game/types";
+import { EventCard, OfferCard } from "../components/Engage";
+import { tierOf, useLeague } from "../lib/social";
+import { unclaimedCount } from "../game/achievements";
 import { ALL_QUESTS_BONUS, ROYALTY_CAP_HOURS, currentQuests, questEmoji, questLabel, royaltiesPending, royaltyRate } from "../game/quests";
 import { sfx } from "../lib/fx";
 import { useMyRank } from "../lib/leaderboard";
@@ -155,7 +158,10 @@ export default function Dashboard() {
         <p className="text-xs text-muted-fg mt-3 italic">{mood.tip}</p>
       </Card>
 
-      <RankCard />
+      <EventCard compact />
+      <OfferCard compact />
+      <LeagueCard />
+      <AchievementsNudge c={c} />
       <PresalesTeaser />
       <QuestsCard c={c} now={now} />
       <RoyaltiesCard c={c} now={now} />
@@ -216,6 +222,43 @@ export default function Dashboard() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+/** Your weekly league (or, before leagues load, your leaderboard rank). */
+function LeagueCard() {
+  const league = useLeague((s) => s.league);
+  if (!league?.joined) return <RankCard />;
+  const t = tierOf(league.tier);
+  const me = league.rows.find((r) => r.me);
+  if (!me) return <RankCard />;
+  const cut = league.up ? league.rows[league.up - 1] : null;
+  const zone = league.up && me.rank <= league.up ? "▲ in a promotion spot" : league.down && me.rank > league.size - league.down ? "▼ in the relegation zone" : cut ? `${(cut.score - me.score + 1).toLocaleString()} fame to move up` : "";
+  return (
+    <Link to="/rivals" className="block mb-4">
+      <Card className="flex items-center gap-3" style={{ borderColor: t.color }}>
+        <div className="text-2xl">{t.emoji}</div>
+        <div className="flex-1 min-w-0">
+          <div className="font-pixel text-[8px]" style={{ color: t.color }}>{t.name.toUpperCase()}{league.result ? " · RESULTS ARE IN" : ""}</div>
+          <div className="text-sm mt-1"><b>#{me.rank}</b> of {league.size} · {zone}</div>
+        </div>
+        <span className="text-xs text-muted-fg">›</span>
+      </Card>
+    </Link>
+  );
+}
+
+function AchievementsNudge({ c }: { c: Career }) {
+  const n = unclaimedCount(c);
+  if (!n) return null;
+  return (
+    <Link to="/achievements" className="block mb-4">
+      <Card glow="gold" className="flex items-center gap-3">
+        <div className="text-2xl">🏅</div>
+        <div className="flex-1 text-sm"><b>{n} achievement{n === 1 ? "" : "s"}</b> ready to claim</div>
+        <span className="text-xs text-muted-fg">›</span>
+      </Card>
+    </Link>
   );
 }
 

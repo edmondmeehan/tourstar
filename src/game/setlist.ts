@@ -36,6 +36,12 @@ export interface ShowVenue {
   fameBonus: number;
   /** Real capacity (otherwise the base tour's). */
   capacity?: number | null;
+  /** Extra pay, percent (gig offers and tour events). */
+  payBonus?: number;
+  /** Set when this show counts toward a tour event. */
+  eventId?: string;
+  /** Set when this show is a promoter's gig offer. */
+  offerId?: string;
 }
 
 /** Songs per show by tour size. */

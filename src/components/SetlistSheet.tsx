@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { TourDef } from "../game/data";
 import { useGame } from "../game/store";
 import { DIFFICULTIES, showTuning, type Difficulty } from "../game/difficulty";
-import { SET_SLOTS, autoSetlist, fanRequest, setlistScore, songPool, type SetSong } from "../game/setlist";
+import { SET_SLOTS, autoSetlist, fanRequest, setlistScore, songPool, type SetSong, type ShowVenue } from "../game/setlist";
 import { Modal, toast } from "./ui";
 import { useConcert } from "../concert/useConcert";
 import { sfx } from "../lib/fx";
@@ -15,7 +15,7 @@ function Appeal({ v }: { v: number }) {
   return <span className="text-[10px] tracking-tight" style={{ color: "var(--gold)" }} aria-label={`Appeal ${v} of 100`}>{"★".repeat(stars)}<span className="opacity-25">{"★".repeat(5 - stars)}</span></span>;
 }
 
-export default function SetlistSheet({ tour, venue, onClose }: { tour: TourDef; venue?: Venue; onClose: () => void }) {
+export default function SetlistSheet({ tour, venue, special, onClose }: { tour: TourDef; venue?: Venue; special?: ShowVenue; onClose: () => void }) {
   const c = useGame((s) => s.career)!;
   const startShow = useGame((s) => s.startShow);
   const startConcert = useConcert((s) => s.start);
@@ -43,7 +43,7 @@ export default function SetlistSheet({ tour, venue, onClose }: { tour: TourDef; 
   };
 
   const go = () => {
-    const r = startShow(tour.id, keys, diff, venue ? showVenue(venue) : undefined);
+    const r = startShow(tour.id, keys, diff, special ?? (venue ? showVenue(venue) : undefined));
     if (!r.ok || !r.show) { toast(r); return; }
     if (venue) trackVenue(venue.id, "play");
     onClose();
@@ -57,7 +57,7 @@ export default function SetlistSheet({ tour, venue, onClose }: { tour: TourDef; 
     <Modal open onClose={onClose}>
       <div className="flex items-baseline justify-between mb-1">
         <h3 className="font-pixel text-xs" style={{ color: "var(--gold)" }}>SETLIST</h3>
-        <span className="text-xs text-muted-fg">{venue ? `${venue.emoji} ${venue.name}` : `${tour.emoji} ${tour.name}`} · {slots} songs</span>
+        <span className="text-xs text-muted-fg">{special ? `${special.emoji} ${special.name}` : venue ? `${venue.emoji} ${venue.name}` : `${tour.emoji} ${tour.name}`} · {slots} songs</span>
       </div>
       <p className="text-[11px] text-muted-fg mb-3">Your opener and closer matter most. Songs you play often become fan faves.</p>
 

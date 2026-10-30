@@ -1,9 +1,12 @@
 // Daily jobs: the admin report email and win-back emails for players who stopped playing.
 //   Cron (pg_cron → pg_net, header x-cron-secret): runs both, if switched on in the admin.
+//   Hourly cron ({ job: "hourly" }): closes finished league weeks and pushes "you were knocked out of the
+//   promotion spots" alerts (switch: admin_settings.league_push.enabled, on unless turned off).
 //   Admin (signed in): { action: "test_report" } emails the report to the caller now;
 //                      { action: "test_winback", stage } emails the caller a sample win-back email.
 // Deployed with verify_jwt = false: the cron call has no user JWT; both paths check their own credentials.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { pushToUser } from "./apns.ts";
 
 const SITE = "https://tourstarapp.com";
 const ADDRESS = "TourStar, LLC · 1133 Broadway, #1301, New York, NY 10010";
@@ -163,7 +166,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   const url = Deno.env.get("SUPABASE_URL")!;
   const svc = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
-  const body = await req.json().catch(() => ({})) as { action?: string; stage?: number };
+  const body = await req.json().catch(() => ({})) as { action?: string; stage?: number; job?: string };
 
   // Who is calling: the cron job (secret header) or a signed-in admin.
   const cronHeader = req.headers.get("x-cron-secret") ?? "";
@@ -180,6 +183,27 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await asUser.rpc("is_admin");
     if (!who?.user?.email || isAdmin !== true) return json({ error: "Admins only." }, 403);
     caller = { id: who.user.id, email: who.user.email };
+  }
+
+  // ---- Hourly: leagues
+  if (fromCron && body.job === "hourly") {
+    await svc.rpc("league_settle");
+    const { data: sw } = await svc.from("admin_settings").select("value").eq("key", "league_push").maybeSingle();
+    if ((sw?.value as { enabled?: boolean } | null)?.enabled === false) return json({ ok: true, pushed: 0, off: true });
+    const { data: rows, error } = await svc.rpc("league_overtakes");
+    if (error) return json({ error: error.message }, 500);
+    const cache: { jwt?: string | null } = {};
+    let pushed = 0;
+    for (const r of ((rows ?? []) as { user_id: string; by_name: string; rank: number; up: number; hours_left: number }[]).slice(0, 500)) {
+      const left = r.hours_left >= 48 ? `${Math.floor(r.hours_left / 24)} days left` : r.hours_left > 1 ? `${r.hours_left} hours left` : "the week ends soon";
+      pushed += await pushToUser(svc, r.user_id, {
+        title: "⚔️ You just got passed",
+        body: `${r.by_name} knocked you out of the promotion spots (you're #${r.rank}, top ${r.up} move up). ${left[0].toUpperCase()}${left.slice(1)}.`,
+        link: "/rivals",
+      }, cache);
+      if (cache.jwt === null) break; // push isn't set up
+    }
+    return json({ ok: true, pushed });
   }
 
   const { data: key } = await svc.rpc("get_secret", { p_name: "resend_api_key" });

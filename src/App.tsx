@@ -11,6 +11,9 @@ import { startAi } from "./lib/ai";
 import { startGold } from "./lib/gold";
 import { startPush } from "./lib/push";
 import { startLeaderboard } from "./lib/leaderboard";
+import { startAnalytics } from "./lib/analytics";
+import { startSocial } from "./lib/social";
+import { loadTourEvent } from "./lib/tourEvent";
 import { startPress } from "./lib/press";
 import { loadCorner } from "./lib/corner";
 import Press from "./pages/Press";
@@ -35,6 +38,8 @@ import Log from "./pages/Log";
 import Distribute from "./pages/Distribute";
 import Radio from "./pages/Radio";
 import HowToPlay from "./pages/HowToPlay";
+import Friends from "./pages/Friends";
+import Achievements from "./pages/Achievements";
 import LookPage from "./pages/Look";
 import DrumSchool from "./pages/DrumSchool";
 import Premium from "./pages/Premium";
@@ -68,6 +73,7 @@ export default function App() {
   useEffect(() => {
     if (!ready) return;
     hideSplash();
+    startAnalytics();
     startCloud((path) => nav(path));
     startLive();
     startNotifications();
@@ -75,6 +81,8 @@ export default function App() {
     startAi();
     startGold();
     startLeaderboard();
+    startSocial();
+    void loadTourEvent();
     startPress();
     void loadCorner();
     startPush((path) => nav(path));
@@ -119,6 +127,8 @@ export default function App() {
           <Route path="/distribute" element={<Distribute />} />
           <Route path="/radio" element={<Radio />} />
           <Route path="/how-to-play" element={<HowToPlay />} />
+          <Route path="/friends" element={<Friends />} />
+          <Route path="/achievements" element={<Achievements />} />
           <Route path="/look" element={<LookPage />} />
           <Route path="/drums" element={<DrumSchool />} />
           <Route path="/press" element={<Press />} />

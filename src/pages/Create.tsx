@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { cloudConfigured, useCloud } from "../lib/cloud";
 import { BASE_STATS, GENRES, PERSONAS } from "../game/data";
 import { applyDelta } from "../game/engine";
@@ -20,17 +20,23 @@ export default function Create() {
   const [persona, setPersona] = useState<PersonaId>("underdog");
   const [theme, setTheme] = useState<{ seed: number; title: string } | null>(null);
   const [gens, setGens] = useState<Generation[]>([]);
+  const [more, setMore] = useState(false);
+  const [params] = useSearchParams();
+  // A Legend retiring from the Hall of Fame starts a new career with a legacy bonus.
+  const legacy = params.get("legacy") === "1" && !!existing && existing.peakLevel >= 7;
 
   const preview: Stats = applyDelta(applyDelta(BASE_STATS, PERSONAS[persona].mods), GENRES[genre].bonus);
 
   const submit = () => {
     if (name.trim().length < 2) return toast({ ok: false, message: "Give your artist a name (2+ characters)." });
     const go = () => {
-      createCareer({ name, genre, persona, themeSeed: theme?.seed });
+      createCareer({ name, genre, persona, themeSeed: theme?.seed, legacy });
       sfx("levelup");
-      nav("/dashboard");
+      // New players go straight to their first stage; Mo takes it from there.
+      nav(legacy ? "/dashboard" : "/tour");
     };
-    if (existing) askConfirm(`This replaces ${existing.name}'s career. Continue?`, go, { yes: "Start over", danger: true });
+    if (legacy) go();
+    else if (existing) askConfirm(`This replaces ${existing.name}'s career. Continue?`, go, { yes: "Start over", danger: true });
     else go();
   };
 
@@ -40,7 +46,7 @@ export default function Create() {
       <div className="relative z-10 px-4 pt-8 pb-16">
         <div className="flex justify-center mb-6"><Logo size="sm" /></div>
         <h1 className="font-pixel text-sm text-center mb-1 text-glow-pink" style={{ color: "var(--neon-pink)" }}>CREATE YOUR ARTIST</h1>
-        <p className="text-center text-xs text-muted-fg mb-6">Every legend starts in Mom's basement.</p>
+        <p className="text-center text-xs text-muted-fg mb-6">{legacy ? `${existing!.name} is in the Hall of Fame. Your next artist starts with a +${Math.min(50, ((existing!.legacy?.count ?? 0) + 1) * 10)}% fame bonus.` : "Every legend starts in Mom's basement."}</p>
 
         <Card className="mb-4">
           <label className="font-pixel text-[9px] text-muted-fg">STAGE NAME</label>
@@ -60,6 +66,9 @@ export default function Create() {
           <p className="text-xs text-muted-fg mt-3">{GENRES[genre].blurb}</p>
         </Card>
 
+        <button className="btn btn-primary w-full py-4 text-[11px] mb-3" onClick={submit}>▶ {legacy ? "Start the new career" : "Start career"}</button>
+        {!more && <button className="w-full text-xs text-muted-fg underline mb-6" onClick={() => setMore(true)}>Customize persona and theme song (optional)</button>}
+        {more && <>
         <Card className="mb-4">
           <div className="font-pixel text-[9px] text-muted-fg mb-3">PERSONA</div>
           <div className="grid grid-cols-3 gap-2">
@@ -84,7 +93,8 @@ export default function Create() {
           <SongGenerator genre={genre} history={gens} setHistory={setGens} onGenerated={(seed, title) => setTheme({ seed, title })} />
         </Card>
 
-        <button className="btn btn-primary w-full py-4 text-[11px]" onClick={submit}>▶ Start Career</button>
+        <button className="btn btn-primary w-full py-4 text-[11px]" onClick={submit}>▶ {legacy ? "Start the new career" : "Start career"}</button>
+        </>}
         {cloudConfigured && !session && (
           <p className="text-center text-sm mt-5 text-muted-fg">
             Played before? <Link to="/login?mode=signin" className="underline text-electric">Sign in to load your career</Link>

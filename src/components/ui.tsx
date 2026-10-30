@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { STAT_META } from "../game/data";
 import { fmtMoney, fmtNum } from "../game/engine";
 import type { Delta, Stats } from "../game/types";
@@ -103,9 +104,9 @@ export function PageTitle({ title, sub, right }: { title: string; sub?: string; 
   );
 }
 
-export function Card({ children, className = "", glow }: { children: ReactNode; className?: string; glow?: "pink" | "blue" | "gold" }) {
+export function Card({ children, className = "", glow, style }: { children: ReactNode; className?: string; glow?: "pink" | "blue" | "gold"; style?: CSSProperties }) {
   const border = glow === "pink" ? "var(--neon-pink)" : glow === "blue" ? "var(--electric)" : glow === "gold" ? "var(--gold)" : undefined;
-  return <div className={`panel p-4 ${className}`} style={border ? { borderColor: border } : undefined}>{children}</div>;
+  return <div className={`panel p-4 ${className}`} style={{ ...(border ? { borderColor: border } : {}), ...style }}>{children}</div>;
 }
 
 export function Tag({ children, color = "var(--muted-foreground)" }: { children: ReactNode; color?: string }) {
@@ -120,12 +121,15 @@ export function Modal({ open, onClose, children, dismissable = true }: { open: b
     return () => window.removeEventListener("keydown", h);
   }, [open, onClose, dismissable]);
   if (!open) return null;
-  return (
+  // Rendered on <body> so it always sits above the page (pages animate in with a transform, which
+  // would otherwise trap the modal under the bottom bar and Mo's tips).
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => dismissable && onClose?.()}>
       <div className="panel w-full max-w-sm p-5 animate-pop max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

@@ -54,7 +54,9 @@ export default function Coach() {
       body = <>First stop: your first gig. Tap <b>Tour</b> down below.</>;
       break;
     case 2:
-      body = <>The <b>Open Mic</b> is free. Tap <b>▶ Hit the road</b>, pick your songs, then go on stage. When the notes hit the line, tap!</>;
+      body = c.totals.gigs === 0
+        ? <>Hey <b>{c.name}</b>, I'm Mo, your manager. Let's get you on stage right now: the <b>Open Mic</b> is free. Tap <b>▶ Hit the road</b>, then <b>Go on stage</b>. When the notes hit the line, tap!</>
+        : <>The <b>Open Mic</b> is free. Tap <b>▶ Hit the road</b>, pick your songs, then go on stage. When the notes hit the line, tap!</>;
       break;
     case 3:
       body = <>The crowd's waiting. Get back on stage and finish your show.</>;

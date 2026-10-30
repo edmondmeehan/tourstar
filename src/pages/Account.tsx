@@ -1,5 +1,6 @@
 import { COPYRIGHT } from "../lib/site";
 import { useEffect, useState } from "react";
+import Calibrate from "../components/Calibrate";
 import { openTickets } from "../lib/presales";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../game/store";
@@ -117,6 +118,7 @@ export default function Account() {
   const retire = useGame((s) => s.retire);
   const m = useMembership();
   const s = useSettings();
+  const [calib, setCalib] = useState(false);
   const nav = useNavigate();
 
   return (
@@ -166,7 +168,12 @@ export default function Account() {
             ))}
           </div>
         </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm">Rhythm timing<span className="block text-[11px] text-muted-fg">{s.tapOffsetMs ? `Adjusted ${Math.abs(s.tapOffsetMs)} ms ${s.tapOffsetMs > 0 ? "later" : "earlier"}` : "Not adjusted. Run this if notes feel off, especially with Bluetooth headphones."}</span></div>
+          <button className="btn btn-ghost text-xs shrink-0" onClick={() => setCalib(true)}>Timing check</button>
+        </div>
       </Card>
+      {calib && <Calibrate onClose={() => setCalib(false)} />}
 
       {isNative && <RemindersCard />}
       <EmailRemindersCard />

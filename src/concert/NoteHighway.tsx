@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useSettings } from "../game/settings";
 import type { ChartNote, Medley } from "../lib/chiptune";
 
 export type Judge = "perfect" | "good" | "miss";
@@ -59,7 +60,8 @@ export default function NoteHighway({ medley, now, onJudge, onDone, tuning = DEF
     };
 
     const tap = (lane: number) => {
-      const t = now();
+      // Timing calibration: Bluetooth headphones and some screens make taps land late.
+      const t = now() - (useSettings.getState().tapOffsetMs ?? 0) / 1000;
       flash[lane] = t;
       cb.current.onTap?.(lane);
       let best: Live | null = null;

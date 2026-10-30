@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GENRES, RIVALS } from "../game/data";
 import { Avatar } from "../components/Avatar";
+import LeagueBoard from "../components/LeagueBoard";
 import { normalizeLook } from "../game/looks";
 import type { GenreId } from "../game/types";
 import { useCloud } from "../lib/cloud";
@@ -79,16 +80,17 @@ function RivalChart() {
 }
 
 export default function Rivals() {
-  const [tab, setTab] = useState<"players" | "chart">("players");
+  const [tab, setTab] = useState<"league" | "players" | "chart">("league");
+  const label = { league: "🏅 League", players: "🏆 Leaderboard", chart: "📈 Rivals" } as const;
   return (
     <div>
-      <PageTitle title="RIVALS" sub="Real players and industry rivals." />
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        {(["players", "chart"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`btn ${tab === t ? "btn-pink" : "btn-ghost"} !py-2 text-xs`}>{t === "players" ? "🏆 Leaderboard" : "📈 Rival chart"}</button>
+      <PageTitle title="RIVALS" sub="Your weekly league, the leaderboards and industry rivals." />
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {(["league", "players", "chart"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)} className={`btn ${tab === t ? "btn-pink" : "btn-ghost"} !py-2 text-[11px]`}>{label[t]}</button>
         ))}
       </div>
-      {tab === "players" ? <PlayerBoard /> : <RivalChart />}
+      {tab === "league" ? <LeagueBoard /> : tab === "players" ? <PlayerBoard /> : <RivalChart />}
     </div>
   );
 }

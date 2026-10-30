@@ -6,6 +6,8 @@ import { GRADE_LABEL, debutChance, songPool, type EncoreChoice } from "../game/s
 import { makeMedley, playMedley, type MedleyHandle } from "../lib/chiptune";
 import { cheer, masterVolume, sfx } from "../lib/fx";
 import { haptic } from "../lib/haptics";
+import Calibrate from "../components/Calibrate";
+import { shareCard } from "../lib/share";
 import { playClipInGame, useAiFlags, type ClipHandle } from "../lib/ai";
 import { DeltaChips, toast } from "../components/ui";
 import { startConcert } from "./ConcertScene";
@@ -53,6 +55,7 @@ export default function ConcertOverlay() {
   const musicStopped = useRef(false);
   const introRef = useRef<ClipHandle | null>(null);
   const [announcing, setAnnouncing] = useState(false);
+  const [calib, setCalib] = useState(false);
 
   useEffect(() => {
     let disposed = false;
@@ -237,11 +240,23 @@ export default function ConcertOverlay() {
                   : <li>😬 The new song fell flat.</li>)}
               </ul>
               {result?.delta && <DeltaChips delta={result.delta} className="justify-center mt-3" />}
-              <button className="btn btn-primary w-full mt-4" onClick={close}>Continue</button>
+              {hw && hw.total > 0 && hw.accuracy < 0.6 && (
+                <p className="text-[11px] text-muted-fg text-center mt-3">Notes feel early or late? <button className="underline text-electric" onClick={() => setCalib(true)}>Run the timing check</button> (great with Bluetooth headphones).</p>
+              )}
+              <div className="flex gap-2 mt-4">
+                {(gig.grade === "S" || gig.grade === "A" || gig.sellout) && (
+                  <button className="btn btn-ghost flex-1" onClick={() => void shareCard({
+                    kind: "show", title: gig.sellout ? `SOLD OUT ${gig.tourName.toUpperCase()}` : `${GRADE_LABEL[gig.grade]} AT ${gig.tourName.toUpperCase()}`,
+                    big: gig.grade, bigColor: GRADE_COLOR[gig.grade], sub: `${gig.crowd.toLocaleString()} fans · ${Math.round(gig.performance * 100)}% playing`, career: useGame.getState().career!,
+                  })}>Share</button>
+                )}
+                <button className="btn btn-primary flex-[2]" onClick={close}>Continue</button>
+              </div>
             </div>
           )}
         </div>
       </div>
+      {calib && <Calibrate onClose={() => setCalib(false)} />}
     </div>
   );
 }

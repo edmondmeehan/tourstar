@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { gameStorage } from "../lib/native";
 import {
   BASE_STATS, CREW, DAILY_MILESTONES, GENRES, LABELS, MAX_ENERGY, PERSONAS,
-  RELEASES, RIVALS, STORE, TOURS,
+  LEVELS, RELEASES, RIVALS, STORE, TOURS,
 } from "./data";
 import { EVENTS, type Outcome } from "./events";
 import {
@@ -23,6 +23,8 @@ import {
 } from "./setlist";
 import { LESSON_ENERGY, LESSONS_PER_DAY, betterGrade, drumChops, drumGrade, lessonById } from "./drums";
 import { CRATE_MAX, DIG_ENERGY, RARITY, rollSample, sampleBoost, type Sample } from "./crate";
+import { makeOffer, OFFER_GAP_HOURS } from "./offers";
+import { ACHIEVEMENTS, achievementReward } from "./achievements";
 import { ALL_QUESTS_BONUS, currentQuests, questLabel, royaltiesPending, type QuestKind } from "./quests";
 
 export interface GigReport {
@@ -59,7 +61,17 @@ interface GameState {
   celebrations: Celebration[];
   lastOutcome: { title: string; text: string; delta: Delta } | null;
 
-  createCareer: (p: { name: string; genre: GenreId; persona: PersonaId; themeSeed?: number }) => void;
+  createCareer: (p: { name: string; genre: GenreId; persona: PersonaId; themeSeed?: number; legacy?: boolean }) => void;
+  /** Achievements: pay out one that's complete. */
+  claimAchievement: (id: string) => ActionResult;
+  /** Festival bill: claim the next goal reached by you and your friends this week. */
+  claimFestival: (goalIndex: number, reached: boolean) => ActionResult;
+  /** Tour event: the server gave the collectible; remember it on this career. */
+  markEventClaimed: (id: string) => void;
+  /** League: record last week's result once (promotions count toward achievements). */
+  noteLeagueResult: (week: string, tier: number, nextTier: number) => void;
+  /** Turn down the current gig offer. */
+  dismissOffer: () => void;
   tick: () => void;
   /** Spend energy and costs, lock in the crowd, and put the show on (the concert overlay plays it). */
   startShow: (tourId: string, setlist: string[], difficulty?: Difficulty, venue?: ShowVenue) => ActionResult & { show?: PendingShow };
@@ -157,6 +169,8 @@ export const useGame = create<GameState>()(
         const b = crewBonuses(c);
         const d: Delta = { ...raw };
         if (d.hype && d.hype > 0) d.hype = Math.round(d.hype * b.hypeMult);
+        // Hall of Fame legacy: every retired Legend adds a lasting fame bonus to the next career.
+        if (d.fame && d.fame > 0 && c.legacy?.fameBonus) d.fame = Math.round(d.fame * (1 + Math.min(50, c.legacy.fameBonus) / 100));
         const beforeLevel = levelFor(c.stats.fame).level;
         c.stats = applyDelta(c.stats, d);
         if (opts.chart !== false && ((d.fame ?? 0) > 0 || (d.hype ?? 0) > 0)) {
@@ -228,7 +242,9 @@ export const useGame = create<GameState>()(
         celebrations: [],
         lastOutcome: null,
 
-        createCareer: ({ name, genre, persona, themeSeed }) => {
+        createCareer: ({ name, genre, persona, themeSeed, legacy }) => {
+          const prev = get().career;
+          const retiring = legacy && prev && prev.peakLevel >= LEVELS.length ? prev : null;
           let stats: Stats = applyDelta(BASE_STATS, PERSONAS[persona].mods);
           stats = applyDelta(stats, GENRES[genre].bonus);
           if (cfg().startingCashBonus) stats = applyDelta(stats, { cash: cfg().startingCashBonus });
@@ -240,11 +256,26 @@ export const useGame = create<GameState>()(
             totals: { gigs: 0, earnings: 0, sellouts: 0, scandals: 0, collabs: 0, beefs: 0 },
             peakLevel: 1, unlockedTours: TOURS.filter((t) => t.level === 1).map((t) => t.id),
             rivals: { weekKey: weekKey(), points: 0, cooldowns: {}, lastPaidWeek: null }, pendingEvent: null,
-            tutorial: { step: 0 },
+            tutorial: { step: 2 },
             look: defaultLook(genre, Math.floor(Math.random() * 64)),
             ownedLooks: [],
           };
+          if (retiring) {
+            // A Legend retires to the Hall of Fame: the new artist keeps the closet, achievements and a fame bonus.
+            const count = (retiring.legacy?.count ?? 0) + 1;
+            c.legacy = { count, names: [...(retiring.legacy?.names ?? []), retiring.name].slice(-20), fameBonus: Math.min(50, count * 10) };
+            c.ownedLooks = retiring.ownedLooks ?? [];
+            c.look = retiring.look ?? c.look;
+            c.style = retiring.style;
+            c.achievements = retiring.achievements;
+            c.leagues = retiring.leagues;
+            c.eventsDone = retiring.eventsDone;
+            c.offersTaken = retiring.offersTaken;
+            c.tutorial = null;
+            c.claimedDrops = retiring.claimedDrops;
+          }
           newLog(c, "system", `${c.name} starts out in Mom's basement — ${GENRES[genre].name}, ${PERSONAS[persona].name}.`);
+          if (retiring) newLog(c, "milestone", `${retiring.name} retired to the Hall of Fame. ${c.name} starts with a +${c.legacy!.fameBonus}% fame legacy bonus.`);
           if (themeSeed !== undefined) {
             const s: Song = { id: uid(), title: `${c.name} Theme`, seed: themeSeed, genre, createdAt: now, source: "theme" };
             c.songs.push(s);
@@ -275,6 +306,13 @@ export const useGame = create<GameState>()(
             c.lockout = null;
             changed = true;
           }
+          // Promoter gig offers: one every few hours once the first show is done.
+          if (c.offer && c.offer.expires <= now) { c.offer = null; c.offerNext = now + 2 * 36e5; changed = true; }
+          if (!c.offer && !c.tutorial && c.totals.gigs >= 1 && now >= (c.offerNext ?? 0) && !isLocked(c)) {
+            c.offer = makeOffer(c, levelFor(c.stats.fame).level, now);
+            c.offerNext = now + OFFER_GAP_HOURS * 36e5;
+            changed = true;
+          }
           const wk = weekKey();
           if (c.rivals.weekKey !== wk) {
             const chart = buildChart(c, new Date(c.rivals.weekKey + "T23:59:59"));
@@ -300,6 +338,7 @@ export const useGame = create<GameState>()(
           const t = TOURS.find((x) => x.id === id)!;
           const lvl = levelFor(c.stats.fame).level;
           if (lvl < t.level) return { ok: false, message: `Unlocks at level ${t.level}.` };
+          if (venue?.offerId && (!c.offer || c.offer.id !== venue.offerId || c.offer.expires <= Date.now())) return { ok: false, message: "That offer has expired." };
           const b = crewBonuses(c);
           const energy = Math.round(t.energy * b.tourEnergyMult * (PERSONAS[c.persona].tourEnergy ?? 1));
           if (c.stats.energy < energy) return { ok: false, message: `Need ${energy} energy.` };
@@ -362,6 +401,7 @@ export const useGame = create<GameState>()(
             } else hypeBonus -= 4;
           }
 
+          payM *= 1 + Math.max(0, Math.min(100, show.venue?.payBonus ?? 0)) / 100;
           let gross = Math.round(t.pay * attendance * b.payMult * (1 + c.stats.hype / 200) * cfg().tourPayMultiplier * payM);
           if (label) gross = Math.round(gross * (1 + label.boost) * (1 - label.share));
           const net = gross - t.cost;
@@ -394,6 +434,15 @@ export const useGame = create<GameState>()(
           show.setlist.forEach((k) => { plays[k] = (plays[k] ?? 0) + 1; });
           c.setPlays = plays;
           c.pendingShow = null;
+          if (show.venue?.offerId && c.offer?.id === show.venue.offerId) {
+            c.offer = null;
+            c.offerNext = Date.now() + OFFER_GAP_HOURS * 36e5;
+            c.offersTaken = (c.offersTaken ?? 0) + 1;
+          }
+          if (show.venue?.eventId) {
+            const ev = c.event?.id === show.venue.eventId ? c.event : { id: show.venue.eventId, shows: 0, claimed: false };
+            c.event = { ...ev, shows: ev.shows + 1 };
+          }
           c.week += t.weeks;
           c.stats.hype = Math.max(0, c.stats.hype - t.weeks * 3); // buzz fades over time
           c.totals.gigs += 1;
@@ -869,6 +918,64 @@ export const useGame = create<GameState>()(
           c.pendingEvent = eventId;
           commit(c);
           return true;
+        },
+
+        claimAchievement: (id) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const a = ACHIEVEMENTS.find((x) => x.id === id);
+          if (!a) return { ok: false, message: "Unknown achievement." };
+          if (c.achievements?.[id]) return { ok: false, message: "Already claimed." };
+          const p = a.progress(c);
+          if (p < a.target) return { ok: false, message: "Not there yet." };
+          c.achievements = { ...(c.achievements ?? {}), [id]: Date.now() };
+          const reward = achievementReward(a, levelFor(c.stats.fame).level);
+          const applied = gain(c, reward, { chart: false });
+          newLog(c, "milestone", `Achievement: ${a.name}.`);
+          commit(c);
+          return { ok: true, title: `${a.emoji} ${a.name}`, message: "Achievement unlocked.", delta: applied };
+        },
+
+        claimFestival: (goalIndex, reached) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const wk = weekKey();
+          const claimed = c.festival?.week === wk ? c.festival.claimed : 0;
+          if (!reached || goalIndex !== claimed || goalIndex > 2) return { ok: false, message: "Not ready yet." };
+          const lvl = levelFor(c.stats.fame).level;
+          const reward: Delta = { cash: Math.round([600, 1500, 4000][goalIndex] * Math.pow(2.2, lvl - 1)), energy: [10, 20, 30][goalIndex], hype: [3, 5, 8][goalIndex] };
+          c.festival = { week: wk, claimed: claimed + 1 };
+          const applied = gain(c, reward, { chart: false });
+          newLog(c, "milestone", `Festival bill goal ${goalIndex + 1} reached with your friends.`);
+          commit(c);
+          return { ok: true, title: "🎪 FESTIVAL BILL", message: "Your band of friends hit the goal.", delta: applied };
+        },
+
+        markEventClaimed: (id) => {
+          const c = draft();
+          if (!c) return;
+          const ev = c.event?.id === id ? c.event : { id, shows: 0, claimed: false };
+          if (ev.claimed) return;
+          c.event = { ...ev, claimed: true };
+          c.eventsDone = (c.eventsDone ?? 0) + 1;
+          newLog(c, "milestone", "Earned a tour event collectible.");
+          commit(c);
+        },
+
+        noteLeagueResult: (week, tier, nextTier) => {
+          const c = draft();
+          if (!c || c.leagues?.lastWeek === week) return;
+          const l = c.leagues ?? { promotions: 0, best: 1 };
+          c.leagues = { promotions: l.promotions + (nextTier > tier ? 1 : 0), best: Math.max(l.best, nextTier, tier), lastWeek: week };
+          commit(c);
+        },
+
+        dismissOffer: () => {
+          const c = draft();
+          if (!c?.offer) return;
+          c.offer = null;
+          c.offerNext = Date.now() + OFFER_GAP_HOURS * 36e5;
+          commit(c);
         },
 
         dismissCelebration: () => set((s) => ({ celebrations: s.celebrations.slice(1) })),
