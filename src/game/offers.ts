@@ -1,6 +1,7 @@
 // Promoter gig offers: every few hours a promoter offers a one-off show at your level with a bonus.
 // The offer expires (usually 4 hours), so there's a reason to check in, but nothing is lost by missing it.
 import { TOURS } from "./data";
+import { challengeMet } from "./economy";
 import type { Career } from "./types";
 import type { ShowVenue } from "./setlist";
 
@@ -27,7 +28,7 @@ export const OFFER_GAP_HOURS = 5;
 const pick = <T,>(a: readonly T[], r: number) => a[Math.floor(r * a.length) % a.length];
 
 export function makeOffer(c: Career, level: number, now = Date.now()): GigOffer | null {
-  const open = TOURS.filter((t) => t.level <= level);
+  const open = TOURS.filter((t) => t.level <= level && challengeMet(c, t.id));
   if (!open.length) return null;
   // One of your two biggest stages.
   const top = open.slice(-2);

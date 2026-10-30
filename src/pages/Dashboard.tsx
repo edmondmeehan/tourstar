@@ -1,4 +1,5 @@
 import { LUXURIES } from "../game/economy";
+import { NextGoalCard } from "../components/KeepPlaying";
 import { PresalesTeaser } from "./Presales";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -140,6 +141,7 @@ export default function Dashboard() {
           <span className="btn btn-pink text-[9px] px-3 py-2 shrink-0">GO ›</span>
         </Card>
       </Link>
+      <NextGoalCard />
 
       <Card glow="pink" className="mb-4">
         <div className="flex items-start justify-between gap-3">

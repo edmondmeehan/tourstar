@@ -48,7 +48,8 @@ export default function HowToPlay() {
 
       <Section id="energy" emoji="⚡" title="Energy and health" open={open === "energy"} toggle={toggle}>
         <p><b>Energy</b> is spent on shows and releases. It refills by itself: 1 point every {regen}s, so a full bar in about {fullBar} minutes. Check in a few times a day to keep it working.</p>
-        <p>Energy drinks and resting add a little more, up to <b>{bonusEnergy}</b> extra a day.</p>
+        <p>Energy drinks and resting add a little more, up to <b>{bonusEnergy}</b> extra a day. Out of energy? You can also refill the bar with Gold Records, up to 3 times a day.</p>
+        <p><b>Tour challenges:</b> from the Club Tour up, promoters want proof before they book you: a number of shows, sellouts and releases. Your progress shows on each tour. A <b>Promoter's Pass</b> (Gold) skips one tour's challenge. It never adds fame or points.</p>
         <p><b>Health</b> drops with every show (more at bigger venues). If it hits zero you're sent to rehab and can't play for a while. Rest, a spa day, or Security on your crew keep you going.</p>
       </Section>
 

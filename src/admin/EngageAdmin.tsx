@@ -56,6 +56,7 @@ export function EngagementTab() {
         </ul>
         <p className="text-[11px] text-muted-fg mt-3">Mo's walkthrough: {f.tutorial_done} finished, {f.tutorial_skip} skipped. Step reached: {Object.entries(d.tutorial_steps).sort().map(([s, n]) => `${s}: ${n}`).join(" · ") || "—"}</p>
       </Section>
+      <LevelFunnel />
       <Section title="Every day" sub="Players who opened the game, new players, shows played and errors.">
         <div className="grid md:grid-cols-2 gap-6">
           <DayBars label="Active players" data={d.daily.map((x) => ({ day: x.day, value: x.active }))} />
@@ -76,6 +77,38 @@ export function EngagementTab() {
         {d.calibrated && d.calibrated.players > 0 && <p className="text-[11px] text-muted-fg mt-3">Timing check used by {d.calibrated.players} players (average {d.calibrated.avg_ms} ms).</p>}
       </Section>
     </>
+  );
+}
+
+/** Where players stop climbing: highest level reached, split by payers and non-payers, with who's still active. */
+function LevelFunnel() {
+  const [rows, setRows] = useState<{ level: number; payer: boolean; players: number; active_7d: number }[] | null>(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => { void supabase!.rpc("admin_level_funnel").then(({ data, error }) => (error ? setErr(true) : setRows((data ?? []) as never))); }, []);
+  if (err) return null;
+  const levels = [1, 2, 3, 4, 5, 6, 7];
+  const get = (l: number, payer: boolean) => rows?.find((r) => r.level === l && r.payer === payer);
+  const max = Math.max(1, ...(rows ?? []).map((r) => Number(r.players)));
+  return (
+    <Section title="Where players stop" sub="Each player's highest level, split by whether they've ever paid. 'Active' means they played in the last 7 days. A big drop between two levels is where the climb feels too slow.">
+      {!rows ? <p className="text-xs text-muted-fg">Loading…</p> : (
+        <table className="w-full text-sm">
+          <thead><tr className="text-[11px] text-muted-fg text-left"><th className="py-1">Level</th><th>Free players</th><th>Paying players</th></tr></thead>
+          <tbody>
+            {levels.map((l) => {
+              const f = get(l, false), p = get(l, true);
+              const cell = (r: typeof f, color: string) => (
+                <td className="py-1.5 pr-3 align-top">
+                  <div className="tabular-nums">{Number(r?.players ?? 0)} <span className="text-[11px] text-muted-fg">· {Number(r?.active_7d ?? 0)} active</span></div>
+                  <div className="h-1.5 rounded bg-black/40 overflow-hidden mt-1"><div className="h-full" style={{ width: `${(Number(r?.players ?? 0) / max) * 100}%`, background: color }} /></div>
+                </td>
+              );
+              return <tr key={l} className="border-t border-line"><td className="py-1.5 font-bold">LV{l}</td>{cell(f, "var(--electric)")}{cell(p, "var(--gold)")}</tr>;
+            })}
+          </tbody>
+        </table>
+      )}
+    </Section>
   );
 }
 

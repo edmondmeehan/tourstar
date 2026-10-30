@@ -10,7 +10,9 @@ import { gameStorage, isNative } from "./native";
 import { useGame } from "../game/store";
 import { useMembership } from "../game/settings";
 import { cfg } from "../game/config";
-import { MAX_ENERGY } from "../game/data";
+import { MAX_ENERGY, TOURS } from "../game/data";
+import { nextChallenge } from "../game/economy";
+import { levelFor } from "../game/engine";
 import { todayKey } from "../game/engine";
 import { ROYALTY_CAP_HOURS } from "../game/quests";
 import { eventLive, useTourEvent } from "./tourEvent";
@@ -24,7 +26,7 @@ export const useNotify = create<{ enabled: boolean; status: Status; asked: boole
   ),
 );
 
-const IDS = { energy: 101, royalties: 102, streak: 103, quests: 104, miss3: 105, miss7: 106, drums: 107, offer: 108, event: 109, league: 110 };
+const IDS = { energy: 101, royalties: 102, streak: 103, quests: 104, miss3: 105, miss7: 106, drums: 107, offer: 108, event: 109, league: 110, goal: 111 };
 
 /** Ask for permission once, at a good moment (after the first show), never on launch. */
 export async function askNotificationPermission() {
@@ -105,6 +107,12 @@ export async function scheduleReminders() {
       const promo = lg.up > 0 && me.rank > lg.up && me.rank <= lg.up + 3;
       const danger = lg.down > 0 && me.rank > lg.size - lg.down - 2;
       if ((promo || danger) && soon(when)) list.push({ id: IDS.league, title: promo ? "⬆️ Promotion is within reach" : "⚠️ Your league spot is at risk", body: promo ? `You're #${me.rank}. Top ${lg.up} move up when the week ends in a few hours.` : `You're #${me.rank}. The week ends in a few hours. One good show keeps you out of the drop zone.`, schedule: { at: new Date(when), allowWhileIdle: true } });
+    }
+    // Close to the next tour: tomorrow evening, when the challenge is a few steps from done.
+    const goal = nextChallenge(c, levelFor(c.stats.fame).level, TOURS);
+    if (goal && goal.left <= 5) {
+      const t = TOURS.find((x) => x.id === goal.tourId)!;
+      list.push({ id: IDS.goal, title: `${t.emoji} The ${t.name} is almost yours`, body: `Just ${goal.left} more to go before the promoters open the ${t.name}.`, schedule: { at: at(17, 0, 1), allowWhileIdle: true } });
     }
     // Come back: 3 and 7 days after they last left the app (replaced every time they leave again).
     list.push({ id: IDS.miss3, title: `🎤 The crowd keeps chanting "${c.name}"`, body: "Your energy is full and the next stage is open. One show keeps the hype alive.", schedule: { at: at(18, 0, 3), allowWhileIdle: true } });

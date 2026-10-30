@@ -1,4 +1,4 @@
-import { crewPayroll, LUXURIES } from "./economy";
+import { challengeMet, crewPayroll, grandfatheredPasses, LUXURIES } from "./economy";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { gameStorage } from "../lib/native";
@@ -103,6 +103,10 @@ interface GameState {
   leaveLabel: () => ActionResult;
   hire: (id: CrewId) => ActionResult;
   buyLuxury: (id: string) => ActionResult;
+  /** Record a Promoter's Pass (already paid for in Gold on the server). */
+  grantPass: (tourId: string) => void;
+  /** Fill the energy bar (already paid for in Gold on the server). */
+  grantRefill: () => void;
   buy: (id: string) => ActionResult;
   rest: () => ActionResult;
   beef: (rivalId: string) => ActionResult;
@@ -257,7 +261,7 @@ export const useGame = create<GameState>()(
             labelId: null, crew: {}, releases: [], songs: [], queue: [], log: [], lockout: null,
             lastEnergyTick: now, daily: { lastClaim: null, streak: 0, best: 0 }, renameCount: 0,
             totals: { gigs: 0, earnings: 0, sellouts: 0, scandals: 0, collabs: 0, beefs: 0 },
-            peakLevel: 1, unlockedTours: TOURS.filter((t) => t.level === 1).map((t) => t.id),
+            peakLevel: 1, unlockedTours: TOURS.filter((t) => t.level === 1).map((t) => t.id), tourPasses: [],
             rivals: { weekKey: weekKey(), points: 0, cooldowns: {}, lastPaidWeek: null }, pendingEvent: null,
             tutorial: { step: 2 },
             look: defaultLook(genre, Math.floor(Math.random() * 64)),
@@ -303,6 +307,7 @@ export const useGame = create<GameState>()(
             c.lastEnergyTick += steps * interval;
             changed = true;
           }
+          if (!c.tourPasses) { c.tourPasses = grandfatheredPasses(c); changed = true; }
           if (c.releases.length && !c.royaltiesAt) { c.royaltiesAt = now; changed = true; }
           if (c.lockout && c.lockout.until <= now) {
             newLog(c, "system", `Back in action after ${c.lockout.kind}.`);
@@ -341,6 +346,7 @@ export const useGame = create<GameState>()(
           const t = TOURS.find((x) => x.id === id)!;
           const lvl = levelFor(c.stats.fame).level;
           if (lvl < t.level) return { ok: false, message: `Unlocks at level ${t.level}.` };
+          if (!venue && !challengeMet(c, t.id)) return { ok: false, message: `Finish the ${t.name} challenge first, or use a Promoter's Pass.` };
           if (venue?.offerId && (!c.offer || c.offer.id !== venue.offerId || c.offer.expires <= Date.now())) return { ok: false, message: "That offer has expired." };
           const b = crewBonuses(c);
           const energy = Math.round(t.energy * b.tourEnergyMult * (PERSONAS[c.persona].tourEnergy ?? 1));
@@ -628,6 +634,26 @@ export const useGame = create<GameState>()(
           newLog(c, "crew", `Added ${d.name} (${d.role}).`);
           commit(c);
           return { ok: true, title: "Hired!", message: `${d.emoji} ${d.name} joined the crew.`, delta: applied };
+        },
+
+        grantPass: (tourId) => {
+          const c = draft();
+          if (!c || (c.tourPasses ?? []).includes(tourId)) return;
+          c.tourPasses = [...(c.tourPasses ?? []), tourId];
+          const t = TOURS.find((x) => x.id === tourId);
+          newLog(c, "milestone", `Promoter's Pass: the ${t?.name ?? "tour"} is open.`);
+          commit(c);
+        },
+
+        grantRefill: () => {
+          const c = draft();
+          if (!c) return;
+          const day = todayKey();
+          c.refills = { day, n: (c.refills?.day === day ? c.refills.n : 0) + 1 };
+          c.stats.energy = MAX_ENERGY;
+          c.lastEnergyTick = Date.now();
+          newLog(c, "system", "Energy refilled.");
+          commit(c);
         },
 
         buyLuxury: (id) => {

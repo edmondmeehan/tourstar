@@ -9,6 +9,7 @@ import { useMembership } from "../game/settings";
 import { fmtMoney, levelFor, levelProgress } from "../game/engine";
 import { AnnouncementBanner, AnnouncementPopup, SavePrompt, SyncPill } from "./CloudUI";
 import { CelebrationOverlay, EventModal, LockoutOverlay, OutcomeModal } from "./Overlays";
+import { EnergySheet, StarterOffer } from "./KeepPlaying";
 import { sfx } from "../lib/fx";
 import { applySkin } from "../game/cosmetics";
 import { COPYRIGHT } from "../lib/site";
@@ -166,6 +167,8 @@ export default function Layout() {
       <CelebrationOverlay />
       <SavePrompt />
       <AnnouncementPopup />
+      <EnergySheet />
+      <StarterOffer />
       {concert && (
         <Suspense fallback={<div className="fixed inset-0 z-[80] bg-black flex flex-col items-center justify-center gap-6"><span className="font-pixel text-[10px] text-gold animate-press-start">LOADING SHOW…</span><span className="absolute bottom-8 text-[10px] text-white/40">{COPYRIGHT}</span></div>}>
           <ConcertOverlay />

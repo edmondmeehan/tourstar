@@ -15,6 +15,8 @@ import { useGold } from "../lib/gold";
 import { stageTheme } from "../game/cosmetics";
 import { EventCard, OfferCard } from "../components/Engage";
 import type { ShowVenue } from "../game/setlist";
+import { challengeMet } from "../game/economy";
+import { ChallengeBox, useEnergySheet } from "../components/KeepPlaying";
 
 export default function Tour() {
   const corner = useLiveCorner();
@@ -61,7 +63,9 @@ export default function Tour() {
           const energy = Math.round(t.energy * b.tourEnergyMult * (PERSONAS[c.persona].tourEnergy ?? 1));
           let est = t.pay * b.payMult * payMultiplier;
           if (label) est *= (1 + label.boost) * (1 - label.share);
-          const can = !locked && c.stats.energy >= energy && c.stats.cash >= t.cost;
+          const gated = !locked && !challengeMet(c, t.id);
+          const lowEnergy = c.stats.energy < energy;
+          const can = !locked && !gated && !lowEnergy && c.stats.cash >= t.cost;
           return (
             <Card key={t.id} className={locked ? "opacity-50" : ""} glow={!locked && can ? "blue" : undefined}>
               <div className="flex items-start justify-between gap-3">
@@ -82,11 +86,14 @@ export default function Tour() {
                 <span className="px-1.5 py-0.5 rounded bg-black/40" style={{ color: "var(--gold)" }}>★ +{fmtNum(Math.round(t.fame * b.tourFameMult))}</span>
                 <span className="px-1.5 py-0.5 rounded bg-black/40" style={{ color: "oklch(75% .2 300)" }}>♪ +{fmtNum(t.fans)}</span>
               </div>
-              {!locked && (
+              {gated && <ChallengeBox tourId={t.id} />}
+              {!locked && !gated && (lowEnergy && c.stats.cash >= t.cost ? (
+                <button className="btn btn-ghost w-full mt-3" disabled={!!pending} onClick={() => useEnergySheet.getState().open(energy)}>⚡ Need {energy} energy · options</button>
+              ) : (
                 <button className={`btn btn-primary w-full mt-3 ${c.tutorial?.step === 2 && t.id === "open-mic" ? "ring-2 ring-[var(--gold)] animate-pulse" : ""}`} disabled={!can || !!pending} onClick={() => setBooking({ tour: t })}>
-                  {c.stats.energy < energy ? "Not enough energy" : c.stats.cash < t.cost ? "Can't cover costs" : "▶ Hit the road"}
+                  {c.stats.cash < t.cost ? "Can't cover costs" : "▶ Hit the road"}
                 </button>
-              )}
+              ))}
             </Card>
           );
         })}
@@ -133,7 +140,8 @@ function VenueCard({ v, lvl, busy, onBook }: { v: Venue; lvl: number; busy: bool
       <div className="grid gap-2 mt-3" style={{ gridTemplateColumns: v.ticket_url ? "1fr 1fr" : "1fr" }}>
         {levelLocked ? <button className="btn btn-ghost" disabled>🔒 Unlocks at LV{t.level}</button>
           : packLocked ? <Link to="/store?tab=drops" className="btn btn-gold text-center">Get the pack</Link>
-          : <button className="btn btn-primary" disabled={!can || busy} onClick={() => onBook(t)}>{c.stats.energy < energy ? "Not enough energy" : c.stats.cash < t.cost ? "Can't cover costs" : "▶ Play here"}</button>}
+          : c.stats.energy < energy && c.stats.cash >= t.cost ? <button className="btn btn-ghost" disabled={busy} onClick={() => useEnergySheet.getState().open(energy)}>⚡ Need {energy} energy</button>
+          : <button className="btn btn-primary" disabled={!can || busy} onClick={() => onBook(t)}>{c.stats.cash < t.cost ? "Can't cover costs" : "▶ Play here"}</button>}
         {v.ticket_url && <button className="btn btn-ghost text-xs" onClick={() => void openVenueTickets(v)}>🎟️ {v.ticket_label || "See real upcoming shows"}</button>}
       </div>
     </Card>

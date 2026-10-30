@@ -1,5 +1,6 @@
 // Cards for the time-limited things: a promoter's gig offer and the current tour event.
 import { useEffect, useState } from "react";
+import { useEnergySheet } from "./KeepPlaying";
 import { Link } from "react-router-dom";
 import { PERSONAS, TOURS, type TourDef } from "../game/data";
 import { crewBonuses, fmtNum, levelFor } from "../game/engine";
@@ -48,7 +49,9 @@ export function OfferCard({ onBook, compact }: { onBook?: (t: TourDef, v: ShowVe
         ? <Link to="/tour" className="btn btn-gold w-full mt-3 text-center block">See the offer</Link>
         : (
           <div className="grid grid-cols-[1fr_auto] gap-2 mt-3">
-            <button className="btn btn-gold" disabled={!can} onClick={() => onBook?.(t, offerVenue(o))}>{c.stats.energy < energy ? "Not enough energy" : "▶ Take the gig"}</button>
+            {c.stats.energy < energy && !c.pendingShow
+              ? <button className="btn btn-ghost" onClick={() => useEnergySheet.getState().open(energy)}>⚡ Need {energy} energy</button>
+              : <button className="btn btn-gold" disabled={!can} onClick={() => onBook?.(t, offerVenue(o))}>▶ Take the gig</button>}
             <button className="btn btn-ghost text-xs" onClick={dismiss}>Pass</button>
           </div>
         )}
@@ -115,7 +118,9 @@ export function EventCard({ onBook, compact }: { onBook?: (t: TourDef, v: ShowVe
       {!prog.claimed && !done && (compact
         ? <Link to="/tour" className="btn btn-pink w-full mt-3 block text-center">Play the event</Link>
         : locked ? <button className="btn btn-ghost w-full mt-3" disabled>🔒 Unlocks at LV{t.level}</button>
-        : <button className="btn btn-pink w-full mt-3" disabled={!can} onClick={() => onBook?.(t, eventVenue(e))}>{c.stats.energy < energy ? "Not enough energy" : "▶ Play the event"}</button>)}
+        : !locked && c.stats.energy < energy && !c.pendingShow
+          ? <button className="btn btn-ghost w-full mt-3" onClick={() => useEnergySheet.getState().open(energy)}>⚡ Need {energy} energy · options</button>
+          : <button className="btn btn-pink w-full mt-3" disabled={!can} onClick={() => onBook?.(t, eventVenue(e))}>▶ Play the event</button>)}
       {prog.claimed && !compact && !locked && <button className="btn btn-ghost w-full mt-2 text-xs" disabled={!can} onClick={() => onBook?.(t, eventVenue(e))}>Play again</button>}
     </Card>
   );

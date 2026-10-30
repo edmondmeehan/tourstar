@@ -117,6 +117,10 @@ export interface Career {
   totals: { gigs: number; earnings: number; sellouts: number; scandals: number; collabs: number; beefs: number };
   peakLevel: number;
   unlockedTours: string[];
+  /** Tours whose challenge was skipped with a Promoter's Pass (or grandfathered for careers from before challenges). */
+  tourPasses?: string[];
+  /** Gold energy refills used today: { day: 'YYYY-MM-DD', n }. */
+  refills?: { day: string; n: number };
   rivals: { weekKey: string; points: number; cooldowns: Record<string, number>; lastPaidWeek: string | null };
   pendingEvent: string | null;
   /** Times each setlist song has been played live (keys from game/setlist.ts). */

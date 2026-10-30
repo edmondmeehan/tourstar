@@ -27,3 +27,46 @@ export const LUXURIES: Luxury[] = [
   { id: "jet", name: "Private Jet", emoji: "🛩️", price: 40_000_000, level: 6, blurb: "Wheels up. Your name on the tail." },
   { id: "island", name: "Private Island", emoji: "🏝️", price: 150_000_000, level: 7, blurb: "The ultimate flex. Album release parties only." },
 ];
+
+/** Tour challenges: on top of the level, each bigger tour asks for a bit of proof first.
+ *  A Promoter's Pass (Gold) skips the challenge for that tour. It never adds fame, cash or points. */
+export interface TourChallenge { gigs: number; sellouts: number; releases: number }
+export const TOUR_CHALLENGES: Record<string, TourChallenge> = {
+  "club-tour": { gigs: 5, sellouts: 0, releases: 1 },
+  "theater-tour": { gigs: 15, sellouts: 3, releases: 2 },
+  "arena-tour": { gigs: 40, sellouts: 10, releases: 4 },
+  "stadium-tour": { gigs: 90, sellouts: 25, releases: 6 },
+  "stadium-encore": { gigs: 160, sellouts: 50, releases: 8 },
+};
+export const PASS_GOLD = 150;
+export const REFILL_GOLD = 40;
+
+export interface ChallengeStep { label: string; have: number; need: number }
+export function challengeSteps(c: Career, tourId: string): ChallengeStep[] {
+  const ch = TOUR_CHALLENGES[tourId];
+  if (!ch) return [];
+  const steps: ChallengeStep[] = [{ label: "Shows played", have: c.totals?.gigs ?? 0, need: ch.gigs }];
+  if (ch.sellouts) steps.push({ label: "Sellouts", have: c.totals?.sellouts ?? 0, need: ch.sellouts });
+  if (ch.releases) steps.push({ label: "Releases", have: c.releases?.length ?? 0, need: ch.releases });
+  return steps;
+}
+/** Careers started before challenges keep every tour they had already reached. */
+export const CHALLENGES_LAUNCH = Date.UTC(2026, 9, 31);
+export function grandfatheredPasses(c: Career): string[] {
+  if (c.createdAt >= CHALLENGES_LAUNCH) return [];
+  return Object.keys(TOUR_CHALLENGES).filter((id) => (c.unlockedTours ?? []).includes(id));
+}
+/** True once the challenge is done or a pass was used. */
+export function challengeMet(c: Career, tourId: string): boolean {
+  if (!TOUR_CHALLENGES[tourId]) return true;
+  if ((c.tourPasses ?? grandfatheredPasses(c)).includes(tourId)) return true;
+  return challengeSteps(c, tourId).every((s) => s.have >= s.need);
+}
+/** The next tour the player is working toward (unlocked by level but challenge not done), for goal cards and reminders. */
+export function nextChallenge(c: Career, level: number, tours: { id: string; level: number }[]) {
+  const t = tours.find((x) => x.level <= level && !challengeMet(c, x.id));
+  if (!t) return null;
+  const steps = challengeSteps(c, t.id);
+  const left = steps.reduce((n, s) => n + Math.max(0, s.need - s.have), 0);
+  return { tourId: t.id, steps, left };
+}
