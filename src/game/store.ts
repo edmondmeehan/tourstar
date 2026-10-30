@@ -1,3 +1,4 @@
+import { crewPayroll, LUXURIES } from "./economy";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { gameStorage } from "../lib/native";
@@ -7,7 +8,7 @@ import {
 } from "./data";
 import { EVENTS, type Outcome } from "./events";
 import {
-  applyDelta, buildChart, chartReward, crewBonuses, labelOf, levelFor, levelMult, scaleDelta,
+  applyDelta, buildChart, chartReward, crewBonuses, fmtMoney, labelOf, levelFor, levelMult, scaleDelta,
   todayKey, uid, weekKey, yesterdayKey,
 } from "./engine";
 import { useMembership } from "./settings";
@@ -101,6 +102,7 @@ interface GameState {
   signLabel: (id: string) => ActionResult;
   leaveLabel: () => ActionResult;
   hire: (id: CrewId) => ActionResult;
+  buyLuxury: (id: string) => ActionResult;
   buy: (id: string) => ActionResult;
   rest: () => ActionResult;
   beef: (rivalId: string) => ActionResult;
@@ -405,6 +407,8 @@ export const useGame = create<GameState>()(
           payM *= 1 + Math.max(0, Math.min(100, show.venue?.payBonus ?? 0)) / 100;
           let gross = Math.round(t.pay * attendance * b.payMult * (1 + c.stats.hype / 200) * cfg().tourPayMultiplier * payM);
           if (label) gross = Math.round(gross * (1 + label.boost) * (1 - label.share));
+          // The crew gets paid every night.
+          gross -= crewPayroll(c, gross);
           const net = gross - t.cost;
           const famex = (1 + c.stats.hype / 100) * b.tourFameMult * cfg().fameMultiplier;
           const playedRequest = !!show.requestKey && show.setlist.includes(show.requestKey);
@@ -624,6 +628,21 @@ export const useGame = create<GameState>()(
           newLog(c, "crew", `Added ${d.name} (${d.role}).`);
           commit(c);
           return { ok: true, title: "Hired!", message: `${d.emoji} ${d.name} joined the crew.`, delta: applied };
+        },
+
+        buyLuxury: (id) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const l = LUXURIES.find((x) => x.id === id);
+          if (!l) return { ok: false, message: "Not for sale." };
+          if ((c.luxury ?? []).includes(id)) return { ok: false, message: "You already own it." };
+          if (Math.max(levelFor(c.stats.fame).level, c.peakLevel) < l.level) return { ok: false, message: `Unlocks at level ${l.level}.` };
+          if (c.stats.cash < l.price) return { ok: false, message: `Need ${fmtMoney(l.price)}.` };
+          c.luxury = [...(c.luxury ?? []), id];
+          const applied = gain(c, { cash: -l.price }, { chart: false });
+          newLog(c, "milestone", `Bought the ${l.name}.`);
+          commit(c);
+          return { ok: true, title: "It's yours!", message: `${l.emoji} ${l.name}. Living the dream.`, delta: applied };
         },
 
         buy: (id) => {

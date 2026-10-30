@@ -33,8 +33,8 @@ export const PREMIUM_SKUS = [
   { sku: "gold_2500", kind: "consumable", name: "2,500 Gold Records", price: 19.99, emoji: "🏆", blurb: "25% bonus Gold. Best value." },
   { sku: "ai_songs_5", kind: "consumable", name: "Studio Session · 5 AI songs", price: 2.99, emoji: "🎧", blurb: "5 extra real AI recordings, on top of your free daily songs." },
   { sku: "ai_songs_15", kind: "consumable", name: "Studio Week · 15 AI songs", price: 6.99, emoji: "🎚️", blurb: "15 extra real AI recordings. Best value." },
-  { sku: "cash_small", kind: "consumable", name: "Cash Pack — $100K", price: 2.99, emoji: "💵", blurb: "$100,000 in game cash." },
-  { sku: "cash_large", kind: "consumable", name: "Cash Pack — $1M", price: 9.99, emoji: "💰", blurb: "$1,000,000 in game cash." },
+  { sku: "cash_small", kind: "consumable", name: "Small Cash Pack", price: 2.99, emoji: "💵", blurb: "About a quarter of a day's earnings at your level." },
+  { sku: "cash_large", kind: "consumable", name: "Big Cash Pack", price: 9.99, emoji: "💰", blurb: "About a full day's earnings at your level." },
 ] as const;
 
 /** VIP perks, shown on the Premium screen. Keep in sync with the game rules. */

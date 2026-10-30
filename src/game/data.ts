@@ -77,9 +77,9 @@ export const TOURS: TourDef[] = [
   { id: "bar-gig", name: "Bar Gig", emoji: "🍺", level: 1, energy: 15, health: 3, weeks: 1, cost: 0, pay: 300, fame: 20, fans: 40, hype: 3, credibility: 1, capacity: 150 },
   { id: "club-tour", name: "Club Tour", emoji: "🪩", level: 2, energy: 25, health: 6, weeks: 2, cost: 500, pay: 2500, fame: 70, fans: 250, hype: 6, credibility: 2, capacity: 800 },
   { id: "theater-tour", name: "Theater Tour", emoji: "🎭", level: 3, energy: 35, health: 10, weeks: 3, cost: 4000, pay: 15000, fame: 250, fans: 1500, hype: 8, credibility: 3, capacity: 2500 },
-  { id: "arena-tour", name: "Arena Tour", emoji: "🏟️", level: 4, energy: 45, health: 14, weeks: 4, cost: 25000, pay: 90000, fame: 900, fans: 8000, hype: 10, credibility: 3, capacity: 18000 },
-  { id: "stadium-tour", name: "Stadium Tour", emoji: "🌆", level: 5, energy: 60, health: 18, weeks: 6, cost: 120000, pay: 450000, fame: 3000, fans: 40000, hype: 12, credibility: 4, capacity: 60000 },
-  { id: "stadium-encore", name: "Stadium Encore", emoji: "🌍", level: 6, energy: 75, health: 22, weeks: 8, cost: 500000, pay: 2000000, fame: 10000, fans: 200000, hype: 15, credibility: 5, capacity: 90000 },
+  { id: "arena-tour", name: "Arena Tour", emoji: "🏟️", level: 4, energy: 45, health: 14, weeks: 4, cost: 25000, pay: 60000, fame: 900, fans: 8000, hype: 10, credibility: 3, capacity: 18000 },
+  { id: "stadium-tour", name: "Stadium Tour", emoji: "🌆", level: 5, energy: 60, health: 18, weeks: 6, cost: 120000, pay: 220000, fame: 3000, fans: 40000, hype: 12, credibility: 4, capacity: 60000 },
+  { id: "stadium-encore", name: "Stadium Encore", emoji: "🌍", level: 6, energy: 75, health: 22, weeks: 8, cost: 500000, pay: 750000, fame: 10000, fans: 200000, hype: 15, credibility: 5, capacity: 90000 },
 ];
 
 export interface ReleaseDef {

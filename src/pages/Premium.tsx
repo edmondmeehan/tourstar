@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PREMIUM_SKUS, VIP_PERKS, useMembership, type Sku } from "../game/settings";
 import { useGame } from "../game/store";
+import { cashPackAmount } from "../game/economy";
+import { fmtMoney } from "../game/engine";
 import { Card, PageTitle, Tag, toast } from "../components/ui";
 import { buy, manageSubscription, needsAccount, purchasesAvailable, restore, showVipPaywall, usePurchases } from "../lib/purchases";
 import { useAiFlags } from "../lib/ai";
@@ -14,6 +16,7 @@ const def = (sku: Sku) => PREMIUM_SKUS.find((p) => p.sku === sku)!;
 export default function Premium() {
   const m = useMembership();
   const grantCash = useGame((s) => s.grantCash);
+  const career = useGame((s) => s.career);
   const { status, products } = usePurchases();
   const credits = useAiFlags((s) => s.credits);
   const gold = useGold((s) => s.gold);
@@ -34,8 +37,7 @@ export default function Premium() {
     if (!real) {
       // Development builds only: test the perks without a store.
       m.buy(sku);
-      if (sku === "cash_small") grantCash(100_000, "Test purchase: $100K cash pack.");
-      if (sku === "cash_large") grantCash(1_000_000, "Test purchase: $1M cash pack.");
+      if (sku === "cash_small" || sku === "cash_large") grantCash(cashPackAmount(sku, useGame.getState().career), "Test purchase: cash pack.");
       toast({ ok: true, title: "Test purchase", message: "Development build: nothing was charged." });
       return;
     }
@@ -69,7 +71,7 @@ export default function Premium() {
       <div className="text-3xl">{def(sku).emoji}</div>
       <div className="flex-1 min-w-0">
         <div className="font-bold text-sm">{def(sku).name}</div>
-        <div className="text-xs text-muted-fg">{def(sku).blurb}</div>
+        <div className="text-xs text-muted-fg">{sku === "cash_small" || sku === "cash_large" ? <><b style={{ color: "var(--success)" }}>{fmtMoney(cashPackAmount(sku, career))}</b> at your level. {def(sku).blurb}</> : def(sku).blurb}</div>
       </div>
       <BuyButton sku={sku} />
     </Card>

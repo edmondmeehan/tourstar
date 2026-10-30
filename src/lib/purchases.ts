@@ -2,6 +2,7 @@
 // Product IDs live in App Store Connect / Play Console; RevenueCat "entitlements" unlock the
 // permanent perks. Cash packs are consumables granted once per transaction.
 // On the web (and in builds without a RevenueCat key) purchases are unavailable.
+import { cashPackAmount } from "../game/economy";
 import { create } from "zustand";
 import { Purchases, PRODUCT_CATEGORY, type CustomerInfo, type PurchasesStoreProduct } from "@revenuecat/purchases-capacitor";
 import { PAYWALL_RESULT, RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
@@ -41,7 +42,7 @@ export const productId = (sku: Sku) => `co.please.tourstar.${sku}`;
 const ENTITLEMENT: Partial<Record<Sku, "vip">> = { vip_monthly: "vip", vip_yearly: "vip" };
 const AI_PACK: Partial<Record<Sku, number>> = { ai_songs_5: 5, ai_songs_15: 15 };
 const GOLD_PACK: Partial<Record<Sku, number>> = { gold_100: 100, gold_550: 550, gold_1200: 1200, gold_2500: 2500 };
-const CASH: Partial<Record<Sku, number>> = { cash_small: 100_000, cash_large: 1_000_000 };
+const CASH: Partial<Record<Sku, true>> = { cash_small: true, cash_large: true };
 
 export type StoreStatus = "unavailable" | "loading" | "ready" | "error";
 export const usePurchases = create<{ status: StoreStatus; products: Partial<Record<Sku, PurchasesStoreProduct>>; error: string | null }>(() => ({
@@ -102,8 +103,7 @@ export async function buy(sku: Sku): Promise<{ ok: boolean; message: string; can
     if (!m.purchases.some((p) => p.id === txn)) {
       // Record the receipt locally (shown in Account) and grant consumables exactly once.
       useMembership.setState({ purchases: [{ id: txn, sku, name: def.name, price: product.price, at: Date.now(), simulated: false }, ...m.purchases] });
-      const cash = CASH[sku];
-      if (cash) useGame.getState().grantCash(cash, `Bought ${def.name}.`);
+      if (CASH[sku]) { const g = useGame.getState(); const amt = cashPackAmount(sku as "cash_small" | "cash_large", g.career); g.grantCash(amt, `Bought ${def.name} (${amt.toLocaleString()}).`); }
     }
     // AI credits and VIP status are added on the server (RevenueCat webhook); refresh them shortly.
     if (AI_PACK[sku] || ENTITLEMENT[sku]) for (const ms of [3000, 10000]) window.setTimeout(() => void refreshPerks(), ms);

@@ -36,11 +36,13 @@ export const DEFAULT_CONFIG: GameConfig = {
   pointActsPerDay: 12,
   bonusEnergyPerDay: 60,
   levelFame2: 150,
-  levelFame3: 700,
-  levelFame4: 6000,
-  levelFame5: 80000,
-  levelFame6: 800000,
-  levelFame7: 8000000,
+  // Tuned with the climb simulator: an average player (4 check-ins a day) reaches Legend in about 8 weeks,
+  // a dedicated one in about 3½ weeks, a casual one in about 4 months.
+  levelFame3: 6200,
+  levelFame4: 48000,
+  levelFame5: 210000,
+  levelFame6: 880000,
+  levelFame7: 3800000,
 };
 
 export const LEVEL_KEYS = ["levelFame2", "levelFame3", "levelFame4", "levelFame5", "levelFame6", "levelFame7"] as const;

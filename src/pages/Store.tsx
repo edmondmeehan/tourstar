@@ -1,3 +1,5 @@
+import { LUXURIES } from "../game/economy";
+import { sfx } from "../lib/fx";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useSite } from "../lib/site";
@@ -56,7 +58,7 @@ export default function Store() {
       {tab === "raffles" && <Raffles />}
       {tab === "drops" && <DropsTab />}
       {tab === "merch" && <MerchTab />}
-      {tab === "shop" && <Shop />}
+      {tab === "shop" && <><Lifestyle /><Shop /></>}
     </div>
   );
 }
@@ -314,6 +316,37 @@ function RaffleCard({ r, level, mine, signedIn }: { r: Raffle; level: number; mi
 // ---------------------------------------------------------------- shop (game cash boosts)
 
 const CATS: StoreItem["category"][] = ["VIP", "Merch", "Records", "Tickets", "Wellness"];
+
+/** Big cosmetic buys that show on your profile. */
+function Lifestyle() {
+  const c = useGame((s) => s.career)!;
+  const buyLuxury = useGame((s) => s.buyLuxury);
+  const lvl = Math.max(levelFor(c.stats.fame).level, c.peakLevel ?? 1);
+  const owned = c.luxury ?? [];
+  return (
+    <div className="mb-6">
+      <PageTitle title="LIFESTYLE" sub="Big-ticket buys for big careers. Just for show: they appear on your profile." />
+      <div className="space-y-2">
+        {LUXURIES.map((l) => {
+          const has = owned.includes(l.id);
+          const locked = lvl < l.level;
+          return (
+            <Card key={l.id} className={`flex items-center gap-3 ${locked ? "opacity-60" : ""}`}>
+              <div className="text-3xl">{l.emoji}</div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm">{l.name}</div>
+                <div className="text-xs text-muted-fg">{l.blurb}</div>
+              </div>
+              {has ? <span className="font-pixel text-[8px]" style={{ color: "var(--success)" }}>OWNED</span>
+                : locked ? <span className="font-pixel text-[8px] text-muted-fg">LV{l.level}</span>
+                : <button className="btn btn-gold text-[9px] px-3 py-2" disabled={c.stats.cash < l.price} onClick={() => { const r = buyLuxury(l.id); toast(r); if (r.ok) sfx("coin", "success"); }}>{fmtMoney(l.price)}</button>}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function Shop() {
   const c = useGame((s) => s.career)!;

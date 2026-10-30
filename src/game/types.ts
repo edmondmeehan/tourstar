@@ -104,6 +104,8 @@ export interface Career {
   /** Create-your-look: the artist's pixel look and the outfits bought with game cash. */
   look?: import("./looks").Look;
   ownedLooks?: string[];
+  /** Lifestyle buys (cosmetic): ids from LUXURIES. */
+  luxury?: string[];
   /** Drop purchases whose cash/energy has been added to this career (each only once). */
   claimedDrops?: string[];
   queue: string[]; // song ids, locker order

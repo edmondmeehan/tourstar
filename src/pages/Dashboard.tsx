@@ -1,3 +1,4 @@
+import { LUXURIES } from "../game/economy";
 import { PresalesTeaser } from "./Presales";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -152,6 +153,7 @@ export default function Dashboard() {
               <button aria-label="Rename" className="text-muted-fg hover:text-fg" onClick={() => { setNewName(c.name); setRenaming(true); }}>✏️</button>
             </div>
             <div className="text-xs text-muted-fg mt-1">{GENRES[c.genre].emoji} {GENRES[c.genre].name} · {PERSONAS[c.persona].emoji} {PERSONAS[c.persona].name}</div>
+            {!!c.luxury?.length && <div className="text-base mt-1" title="Lifestyle">{LUXURIES.filter((l) => c.luxury!.includes(l.id)).map((l) => <span key={l.id} title={l.name}>{l.emoji}</span>)}</div>}
           </div>
           <div className="text-right shrink-0">
             <div className="text-3xl">{mood.emoji}</div>
