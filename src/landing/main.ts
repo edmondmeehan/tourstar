@@ -197,7 +197,7 @@ function invitePanel(st: Status) {
       <a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${encodeURIComponent("I'm on the list for TourStar, the music career game where you play every show 🎸")}&url=${encodeURIComponent(inviteUrl(st.code))}">Post on X</a>
       <a class="btn btn-ghost btn-sm" href="sms:&body=${encodeURIComponent("Get on the TourStar list with me: " + inviteUrl(st.code))}">Text a friend</a></div>
     <ol class="tiers">${tiers}</ol>
-    <p class="fine">Rewards are added at launch to the TourStar account you create with this email.</p>
+    <p class="fine">Rewards are added automatically when you sign in to TourStar with this email.</p>
   </div>`;
 }
 
@@ -207,6 +207,14 @@ function waitlist() {
   // A friend's invite code: remember it so it still counts if they join later in the visit.
   const r = params.get("r");
   if (r && /^[a-z0-9]{4,12}$/i.test(r)) store.set("ts-invited-by", r.toLowerCase());
+  // A player's in-game invite code (?i=code): show it so the friend can enter it in the app.
+  const playerCode = params.get("i");
+  if (playerCode && /^[a-z0-9]{4,12}$/i.test(playerCode)) {
+    const note = document.createElement("p");
+    note.className = "invite-note";
+    note.innerHTML = `🎁 A friend invited you! Enter code <b>${playerCode.toUpperCase().replace(/[^A-Z0-9]/g, "")}</b> in TourStar (Friends tab) during your first week and you both get reward points.`;
+    $("form.waitlist")?.before(note);
+  }
 
   const forms = $$<HTMLFormElement>("form.waitlist");
   const showPanel = (st: Status) => forms.forEach((form) => {

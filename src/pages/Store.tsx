@@ -1,5 +1,7 @@
 import { LUXURIES } from "../game/economy";
 import { sfx } from "../lib/fx";
+import InviteCard from "../components/InviteCard";
+import { enterBonusTickets, useInvite } from "../lib/invites";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useSite } from "../lib/site";
@@ -94,6 +96,7 @@ function Rewards() {
     <div>
       <p className="text-xs text-muted-fg mb-3">Real merch, records and VIP experiences from Please &amp; Thank You. Some unlock as your career grows.</p>
       {!session && <SignInNudge what="redeem real rewards" />}
+      {session && <InviteCard compact />}
       {error && <p className="text-xs text-danger mb-3">{error} <button className="underline" onClick={() => void loadRewards()}>Retry</button></p>}
       {loading && !items.length && <p className="text-sm text-muted-fg text-center py-6">Loading rewards…</p>}
       {!loading && !items.length && !error && <p className="text-sm text-muted-fg text-center py-6">New rewards are on the way. Keep earning points!</p>}
@@ -257,9 +260,15 @@ function RaffleCard({ r, level, mine, signedIn }: { r: Raffle; level: number; mi
   const cost = n * r.ticket_cost;
   const balance = points?.balance ?? 0;
 
+  const bonus = useInvite((s) => s.invite?.bonus_tickets ?? 0);
   const act = async (free: boolean) => {
     setBusy(true);
     toast(await enterRaffle(r, free ? 1 : n, free));
+    setBusy(false);
+  };
+  const spendBonus = async () => {
+    setBusy(true);
+    toast(await enterBonusTickets(r));
     setBusy(false);
   };
 
@@ -283,6 +292,9 @@ function RaffleCard({ r, level, mine, signedIn }: { r: Raffle; level: number; mi
         <div className="mt-3 text-center"><Tag color="var(--gold)">🔒 OPENS AT LV{r.min_level} · {levelName(r.min_level).toUpperCase()}</Tag></div>
       ) : !signedIn ? null : (
         <div className="mt-3 space-y-2">
+          {bonus > 0 && cap > 0 && (
+            <button className="btn btn-gold w-full" disabled={busy} onClick={() => void spendBonus()}>🎟️ Use {Math.min(bonus, cap)} bonus ticket{Math.min(bonus, cap) === 1 ? "" : "s"} (free)</button>
+          )}
           {r.free_daily_entry && (
             <button className="btn btn-ghost w-full" disabled={busy || mine?.freeToday || cap < 1} onClick={() => act(true)}>
               {mine?.freeToday ? "✓ Today's free entry used" : "🎟️ Free daily entry"}

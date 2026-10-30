@@ -80,6 +80,7 @@ export function BetaSignupsTab() {
         <Kpi label="Joined via invites" value={rows ? invited : "—"} sub={rows?.length ? `${Math.round((invited / rows.length) * 100)}% of the list` : undefined} />
       </div>
 
+      <InviteStats />
       <Section title="Top referrers" sub="People whose invite links brought the most friends. Rewards at launch: 1 friend = +500 ⭐, 3 = Founding Fan badge + 1,500 ⭐, 10 = 5 launch-raffle tickets.">
         <RankBars rows={topReferrers} color="var(--gold)" empty="No referrals yet. Every new signup gets an invite link." />
       </Section>
@@ -127,5 +128,23 @@ export function BetaSignupsTab() {
         )}
       </Section>
     </>
+  );
+}
+
+/** In-game player invites (codes entered, paid out, points granted). */
+function InviteStats() {
+  const [d, setD] = useState<{ codes_used: number; paid: number; points_granted: number; waitlist_rewards: number; top: { name: string; invites: number }[] } | null>(null);
+  useEffect(() => { void supabase!.rpc("admin_invite_stats").then(({ data, error }) => { if (!error) setD(data as never); }); }, []);
+  if (!d) return null;
+  return (
+    <Section title="Player invites" sub="In-game invite codes. A friend enters a code in their first week; when they play a show the inviter gets 300 points and the friend 200 (up to 20 paid invites per player). Waitlist rewards are added when the same email signs in.">
+      <div className="grid sm:grid-cols-4 gap-3 mb-3">
+        <Kpi label="Codes used" value={d.codes_used} />
+        <Kpi label="Paid out" value={d.paid} sub="friend played a show" />
+        <Kpi label="Points granted" value={d.points_granted} />
+        <Kpi label="Waitlist rewards claimed" value={d.waitlist_rewards} />
+      </div>
+      {d.top.length > 0 && <RankBars rows={d.top.map((t) => ({ label: t.name, value: t.invites }))} color="var(--gold)" empty="" />}
+    </Section>
   );
 }

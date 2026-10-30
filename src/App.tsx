@@ -10,6 +10,7 @@ import { startNotifications } from "./lib/notify";
 import { startPurchases } from "./lib/purchases";
 import { startAi } from "./lib/ai";
 import { startGold } from "./lib/gold";
+import { startInvites } from "./lib/invites";
 import { startPush } from "./lib/push";
 import { startLeaderboard } from "./lib/leaderboard";
 import { startAnalytics } from "./lib/analytics";
@@ -85,6 +86,7 @@ export default function App() {
     void warmAudio((useGame.getState().career?.songs ?? []).map((s) => s.audioUrl).filter((u): u is string => !!u));
     startAi();
     startGold();
+    startInvites();
     startLeaderboard();
     startSocial();
     void loadTourEvent();

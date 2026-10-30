@@ -1,6 +1,7 @@
 // Friends & your band: add friends with a 6-letter code, see their week, and play toward a shared
 // "festival bill" goal (shows played this week by you and your friends together).
 import { useCallback, useEffect, useState } from "react";
+import InviteCard from "../components/InviteCard";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { Card, PageTitle, askConfirm, toast } from "../components/ui";
@@ -27,6 +28,7 @@ export default function Friends() {
   if (!signedIn) return (
     <div>
       <PageTitle title="FRIENDS" sub="Play together, climb together." />
+      <InviteCard />
       <Card glow="gold"><p className="text-sm">Add friends, see how their week is going and play toward a shared festival bill. <Link to="/login" className="underline text-electric">Sign in</Link> to start.</p></Card>
     </div>
   );
@@ -56,6 +58,7 @@ export default function Friends() {
   return (
     <div>
       <PageTitle title="FRIENDS" sub="Play together, climb together." />
+      <InviteCard />
 
       <Card glow="pink" className="mb-4">
         <div className="flex items-center justify-between gap-3">
