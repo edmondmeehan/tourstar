@@ -51,7 +51,7 @@ export default function Coach() {
       action = <button className="btn btn-pink text-[10px] px-4 py-2" onClick={() => next(1)}>Let's go</button>;
       break;
     case 1:
-      body = <>First stop: your first gig. Tap <b>Tour</b> down below.</>;
+      body = <>First stop: your first gig. Tap <b>Play</b> down below.</>;
       break;
     case 2:
       body = c.totals.gigs === 0
@@ -62,7 +62,7 @@ export default function Coach() {
       body = <>The crowd's waiting. Get back on stage and finish your show.</>;
       break;
     case 4:
-      body = <>That's your first show! 🎉 You earned <b style={{ color: "var(--gold)" }}>⭐ points</b>. Save them for real merch and VIP prizes in the Store. Now let's make music: tap <b>Album</b>.</>;
+      body = <>That's your first show! 🎉 You earned <b style={{ color: "var(--gold)" }}>⭐ points</b>. Save them for real merch and VIP prizes in the Store. Now let's make music: tap <b>Music</b> down below.</>;
       break;
     case 5:
       body = <>Drop a free <b>Mixtape</b> (or a Single for $200). Every release joins your setlist <i>and</i> earns royalties while you're away.</>;

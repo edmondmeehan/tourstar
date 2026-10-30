@@ -3,7 +3,7 @@ import { useConcert } from "../concert/useConcert";
 import { useLiveCorner } from "../lib/corner";
 
 const ConcertOverlay = lazy(() => import("../concert/ConcertOverlay"));
-import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useGame } from "../game/store";
 import { useMembership } from "../game/settings";
 import { fmtMoney, levelFor } from "../game/engine";
@@ -17,43 +17,14 @@ import { useRadio } from "../lib/radio";
 import Coach, { coachTarget } from "./Coach";
 import { useHelpSeen } from "../lib/help";
 import { unclaimedCount } from "../game/achievements";
+import { GROUPS, groupOf, groupOpen, isNew, openPages, pageOpen, useNav } from "../lib/nav";
+import { toast } from "./ui";
 
-const NAV = [
-  { to: "/dashboard", label: "Home", icon: "🏠" },
-  { to: "/tour", label: "Tour", icon: "🚐" },
-  { to: "/album", label: "Album", icon: "💿" },
-  { to: "/label", label: "Label", icon: "🏷️" },
-  { to: "/management", label: "Crew", icon: "🧑‍🤝‍🧑" },
-  { to: "/store", label: "Store", icon: "🛍️" },
-  { to: "/summary", label: "Stats", icon: "📊" },
-];
-
-// The ☰ menu, grouped by what players come for.
-const MORE: { group: string; items: { to: string; label: string; icon: string }[] }[] = [
-  { group: "Play", items: [
-    { to: "/drums", label: "Drum School", icon: "🥁" },
-    { to: "/radio", label: "TourStar Radio", icon: "📻" },
-  ] },
-  { group: "Compete & friends", items: [
-    { to: "/rivals", label: "Leagues & Rivals", icon: "⚔️" },
-    { to: "/friends", label: "Friends", icon: "🤝" },
-    { to: "/achievements", label: "Achievements & Hall of Fame", icon: "🏅" },
-  ] },
-  { group: "My artist", items: [
-    { to: "/look", label: "My Look", icon: "🧑‍🎤" },
-    { to: "/locker", label: "Locker", icon: "🎧" },
-    { to: "/releases", label: "Releases", icon: "📀" },
-    { to: "/log", label: "Career Log", icon: "📜" },
-  ] },
-  { group: "News", items: [
-    { to: "/press", label: "The Press", icon: "📰" },
-    { to: "/distribute", label: "TourStar Monthly", icon: "💿" },
-  ] },
-  { group: "Help & account", items: [
-    { to: "/how-to-play", label: "How to Play", icon: "❓" },
-    { to: "/premium", label: "VIP & Gold", icon: "💎" },
-    { to: "/account", label: "Account & Settings", icon: "⚙️" },
-  ] },
+// The ☰ menu only holds help and account; everything else lives in the bottom tabs (see lib/nav.ts).
+const MORE = [
+  { to: "/how-to-play", label: "How to Play", icon: "❓" },
+  { to: "/premium", label: "VIP & Gold", icon: "💎" },
+  { to: "/account", label: "Account & Settings", icon: "⚙️" },
 ];
 
 export function useGameTick() {
@@ -81,11 +52,18 @@ export default function Layout() {
   // Once Mo's walkthrough is done, nudge new players to How to Play until they've opened it.
   const helpDot = !helpSeen && !career?.tutorial;
   const ready = career ? unclaimedCount(career) : 0;
-  useEffect(() => setMenu(false), [loc.pathname]);
+  const nav = useNavigate();
+  const { seen, last, init, visit } = useNav();
+  const openKey = career ? openPages(career).join(",") : "";
+  useEffect(() => { if (openKey) init(openKey.split(",")); }, [openKey, init]);
+  useEffect(() => { setMenu(false); visit(loc.pathname); }, [loc.pathname, visit]);
   const skinKey = JSON.stringify(career?.style?.skin ?? null);
   useEffect(() => { applySkin(JSON.parse(skinKey)); }, [skinKey]);
   if (!career) return <Navigate to="/create" replace />;
   const lvl = levelFor(career.stats.fame);
+  const here = groupOf(loc.pathname);
+  // The tutorial points at a page; light up the tab (and sub-tab) that holds it.
+  const coachGroup = coach ? groupOf(coach)?.id : null;
 
   return (
     <div className={`min-h-screen max-w-md mx-auto relative ${career.tutorial ? "pb-64" : radioOn ? "pb-40" : "pb-24"}`}>
@@ -99,30 +77,42 @@ export default function Layout() {
           </Link>
           <div className="flex items-center gap-1.5 shrink-0">
             <SyncPill />
-            <span className="font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border border-line" style={{ color: "var(--success)" }}>{fmtMoney(career.stats.cash)}</span>
+            <Link to="/store" aria-label="Store" onClick={() => sfx("click")} className={`font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border ${here?.id === "store" ? "border-[var(--neon-pink)]" : "border-line"}`} style={{ color: "var(--success)" }}>🛍️ {fmtMoney(career.stats.cash)}</Link>
             <span className="font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border border-line" style={{ color: "oklch(85% .17 110)" }}>⚡{career.stats.energy}</span>
             <button aria-label="Menu" aria-expanded={menu} className="relative w-8 h-8 rounded border border-line bg-black/40" onClick={() => { sfx("click"); setMenu((m) => !m); }}>
-              ☰{(helpDot || ready > 0) && !menu && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--neon-pink)] animate-pulse" aria-hidden="true" />}
+              ☰{helpDot && !menu && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--neon-pink)] animate-pulse" aria-hidden="true" />}
             </button>
           </div>
         </div>
         {menu && <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} aria-hidden="true" />}
         {menu && (
           <nav className="absolute right-3 top-full mt-2 panel p-2 w-60 animate-pop z-50 overflow-y-auto" style={{ maxHeight: "calc(100dvh - 140px)", background: "#0b0b1e", boxShadow: "0 16px 40px #000c" }}>
-            {MORE.map((g, gi) => (
-              <div key={g.group} className={gi ? "mt-1 pt-1 border-t border-line" : ""}>
-                <div className="font-pixel text-[7px] text-muted-fg px-3 pt-2 pb-1 tracking-wider">{g.group.toUpperCase()}</div>
-                {g.items.map((m) => (
-                  <NavLink key={m.to} to={m.to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded text-sm ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}>
-                    <span className="w-5 text-center">{m.icon}</span>
-                    <span className="flex-1">{m.to === "/drums" && corner ? corner.title : m.label}</span>
-                    {m.to === "/how-to-play" && helpDot && <span className="font-pixel text-[7px] px-1.5 py-0.5 rounded bg-[var(--neon-pink)] text-white">NEW</span>}
-                    {m.to === "/achievements" && ready > 0 && <span className="font-pixel text-[7px] px-1.5 py-0.5 rounded bg-[var(--gold)] text-black">{ready}</span>}
-                  </NavLink>
-                ))}
-              </div>
+            {MORE.map((m) => (
+              <NavLink key={m.to} to={m.to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded text-sm ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}>
+                <span className="w-5 text-center">{m.icon}</span>
+                <span className="flex-1">{m.label}</span>
+                {m.to === "/how-to-play" && helpDot && <span className="font-pixel text-[7px] px-1.5 py-0.5 rounded bg-[var(--neon-pink)] text-white">NEW</span>}
+              </NavLink>
             ))}
           </nav>
+        )}
+        {here && (
+          <div className="flex gap-1 mt-3 -mx-1 overflow-x-auto no-scrollbar" role="tablist" aria-label={here.label}>
+            {here.pages.map((p) => {
+              const open = pageOpen(p, career);
+              const label = p.to === "/drums" && corner ? corner.title : p.label;
+              const active = loc.pathname === p.to;
+              const dot = isNew(p.to, career, seen) || (p.to === "/achievements" && ready > 0);
+              return (
+                <button key={p.to} role="tab" aria-selected={active}
+                  onClick={() => { sfx("click"); if (open) nav(p.to); else toast({ ok: false, message: p.hint ?? "Not unlocked yet." }); }}
+                  className={`relative shrink-0 font-pixel text-[8px] px-3 py-2 rounded-full border whitespace-nowrap ${active ? "border-[var(--neon-pink)] text-white bg-white/10" : coach === p.to ? "border-[var(--gold)] text-gold animate-pulse" : open ? "border-line text-muted-fg" : "border-line/50 text-muted-fg/50"}`}>
+                  {open ? p.icon : "🔒"} {label.toUpperCase()}
+                  {dot && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--neon-pink)]" aria-label="new" />}
+                </button>
+              );
+            })}
+          </div>
         )}
       </header>
 
@@ -132,17 +122,22 @@ export default function Layout() {
       </main>
 
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-[color-mix(in_oklch,var(--background)_92%,transparent)] backdrop-blur-md border-t border-line" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <div className="max-w-md mx-auto grid grid-cols-7">
-          {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} onClick={() => sfx("click")} className={({ isActive }) => `flex flex-col items-center py-2 gap-1 rounded-lg ${isActive ? "text-pink" : coach === n.to ? "text-gold ring-2 ring-[var(--gold)] bg-white/5" : "text-muted-fg"}`}>
-              {({ isActive }) => (
-                <>
-                  <span className={`text-lg ${isActive ? "animate-pulse-glow" : coach === n.to ? "animate-bounce" : "opacity-70"}`}>{n.icon}</span>
-                  <span className="font-pixel text-[7px]">{n.label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
+        <div className="max-w-md mx-auto grid grid-cols-4">
+          {GROUPS.map((g) => {
+            const open = groupOpen(g, career);
+            const active = here?.id === g.id;
+            const target = last[g.id] && g.pages.some((p) => p.to === last[g.id] && pageOpen(p, career)) ? last[g.id] : g.pages[0].to;
+            const dot = open && g.pages.some((p) => isNew(p.to, career, seen) || (p.to === "/achievements" && ready > 0));
+            const coached = coachGroup === g.id && !active;
+            return (
+              <button key={g.id} onClick={() => { sfx("click"); if (!open) return toast({ ok: false, message: g.hint ?? "Not unlocked yet." }); nav(coached && coach ? coach : target); }}
+                className={`relative flex flex-col items-center py-2 gap-1 rounded-lg ${active ? "text-pink" : coached ? "text-gold ring-2 ring-[var(--gold)] bg-white/5" : open ? "text-muted-fg" : "text-muted-fg/40"}`}>
+                <span className={`text-xl ${active ? "animate-pulse-glow" : coached ? "animate-bounce" : open ? "opacity-70" : "opacity-40 grayscale"}`}>{open ? g.icon : "🔒"}</span>
+                <span className="font-pixel text-[8px]">{g.label}</span>
+                {dot && <span className="absolute top-1 right-1/4 w-2 h-2 rounded-full bg-[var(--neon-pink)]" aria-label="new" />}
+              </button>
+            );
+          })}
         </div>
       </nav>
 
