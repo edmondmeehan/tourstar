@@ -18,7 +18,7 @@ import { BetaSignupsTab } from "./WaitlistAdmin";
 import { IntegrationsTab } from "./IntegrationsAdmin";
 import { AiTab } from "./AiAdmin";
 import { EmailJobsAdmin } from "./EmailJobsAdmin";
-import { EngagementTab, LeaguesAdmin, TourEventsAdmin } from "./EngageAdmin";
+import { EngagementTab, LeaguesAdmin, TitleSeasonAdmin, TourEventsAdmin } from "./EngageAdmin";
 import { EconomyTab } from "./EconomyAdmin";
 import { DropsTab } from "./DropsAdmin";
 import { PartnersTab } from "./PartnersAdmin";
@@ -45,7 +45,7 @@ const GROUPS: { title: string; icon: string; color: string; tabs: { id: Tab; lab
   { title: "Engage players", icon: "📣", color: "#ff9f1c", tabs: [
     { id: "push", label: "Notifications & emails", about: "Push messages, the daily admin report and win-back emails." },
     { id: "marketing", label: "In-game announcements", about: "Banners and pop-ups players see when they open the game." },
-    { id: "tourevent", label: "Tour events", about: "Limited-time event stages with an exclusive collectible." },
+    { id: "tourevent", label: "Tour events & seasons", about: "Limited-time event stages with an exclusive collectible, and the title screen's seasonal look." },
     { id: "events", label: "Events & gifts", about: "Trigger an event or send a gift to every player." },
   ] },
   { title: "Store & money", icon: "💰", color: "#f2c230", tabs: [
@@ -157,7 +157,7 @@ export default function Admin() {
           {tab === "monthly" && <MonthlyTab />}
           {tab === "leaderboard" && <><LeaguesAdmin /><LeaderboardTab /></>}
           {tab === "engagement" && <EngagementTab />}
-          {tab === "tourevent" && <TourEventsAdmin />}
+          {tab === "tourevent" && <><TourEventsAdmin /><TitleSeasonAdmin /></>}
           {tab === "merch" && <MerchAdminTab />}
           {tab === "presales" && <PresalesTab />}
           {tab === "push" && <><NotificationsTab /><EmailJobsAdmin /></>}

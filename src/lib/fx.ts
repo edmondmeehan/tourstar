@@ -2,23 +2,46 @@ import { useSettings } from "../game/settings";
 import { haptic, type HapticName, type Step } from "./haptics";
 
 let ctx: AudioContext | null = null;
-export function audio() {
-  if (!ctx) {
-    // iPhone: play game audio like a music app, so the ring/silent switch doesn't mute shows and drums.
-    try { (navigator as unknown as { audioSession?: { type: string } }).audioSession!.type = "playback"; } catch { /* older iOS */ }
-    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    ctx = new AC();
-  }
-  if (ctx.state === "suspended" || (ctx.state as string) === "interrupted") void ctx.resume();
+let born = 0;
+// Health probe: is the audio clock actually moving? iPhones can leave the engine "running" but frozen
+// (after a phone call, another app's audio, the radio, or the app going to the background).
+let probe = { t: -1, at: 0, stuckSince: 0 };
+
+function newContext() {
+  // iPhone: play game audio like a music app, so the ring/silent switch doesn't mute shows and drums.
+  try { (navigator as unknown as { audioSession?: { type: string } }).audioSession!.type = "playback"; } catch { /* older iOS */ }
+  const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  ctx = new AC();
+  born = performance.now();
+  probe = { t: -1, at: 0, stuckSince: 0 };
   return ctx;
+}
+
+export function audio() {
+  if (!ctx || ctx.state === "closed") newContext();
+  if (ctx!.state === "suspended" || (ctx!.state as string) === "interrupted") void ctx!.resume().catch(() => {});
+  return ctx!;
+}
+
+/** True when the engine is running and its clock moved recently. */
+function healthy() {
+  if (!ctx || ctx.state !== "running") return false;
+  if (performance.now() - born < 1500) return true;
+  return probe.stuckSince === 0 || performance.now() - probe.stuckSince < 700;
 }
 
 /**
  * Wake the audio engine. Call this directly inside a tap handler (iOS only lets sound start from a
- * user gesture). A silent one-sample buffer makes sure WebKit really unlocks output.
+ * user gesture). If the old engine is stuck, it's replaced with a fresh one (inside the tap, so iOS
+ * lets it play). A silent one-sample buffer makes sure WebKit really unlocks output.
  */
 export function unlockAudio() {
   try {
+    if (ctx && !healthy()) {
+      const old = ctx;
+      ctx = null;
+      void old.close().catch(() => {});
+    }
     const a = audio();
     const b = a.createBuffer(1, 1, a.sampleRate);
     const src = a.createBufferSource();
@@ -28,11 +51,18 @@ export function unlockAudio() {
   } catch { /* no audio on this device */ }
 }
 
-// Unlock on the first touch anywhere, so later sounds (scheduled outside a tap) can play.
 if (typeof window !== "undefined") {
-  const first = () => { unlockAudio(); window.removeEventListener("pointerdown", first, true); window.removeEventListener("keydown", first, true); };
-  window.addEventListener("pointerdown", first, true);
-  window.addEventListener("keydown", first, true);
+  // Every tap checks the engine and heals it if needed (cheap when it's fine).
+  const tap = () => { if (!ctx || !healthy()) unlockAudio(); };
+  window.addEventListener("pointerdown", tap, true);
+  window.addEventListener("keydown", tap, true);
+  window.setInterval(() => {
+    if (!ctx) return;
+    const t = ctx.currentTime, now = performance.now();
+    if (ctx.state === "running" && t === probe.t) { if (!probe.stuckSince) probe.stuckSince = now; }
+    else probe.stuckSince = 0;
+    probe.t = t; probe.at = now;
+  }, 500);
 }
 
 export function masterVolume() {

@@ -8,13 +8,15 @@ import { useGame } from "../game/store";
 import { levelFor } from "../game/engine";
 import { normalizeLook } from "../game/looks";
 import { sfx } from "../lib/fx";
+import { useSite } from "../lib/site";
+import { seasonFor, type Season } from "../lib/season";
 
 // Scene coordinates (viewBox 400×860, about a phone's shape). The horizon sits at 61%.
 const H = 860, HORIZON = 525, SUN_Y = 405, SUN_R = 118;
 
-function Scene() {
+function Scene({ season: z }: { season: Season }) {
   const city = useMemo(() => {
-    const out: { x: number; w: number; h: number; lit: number[] }[] = [];
+    const out: City = [];
     let x = -4, seed = 11;
     const r = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
     while (x < 404) {
@@ -38,25 +40,25 @@ function Scene() {
     <svg viewBox={`0 0 400 ${H}`} preserveAspectRatio="xMidYMid slice" className="absolute inset-0 w-full h-full" aria-hidden>
       <defs>
         <linearGradient id="t-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#05040f" />
-          <stop offset="0.3" stopColor="#140a33" />
-          <stop offset="0.5" stopColor="#3b0f57" />
-          <stop offset="0.61" stopColor="#8a1a6b" />
+          <stop offset="0" stopColor={z.sky[0]} />
+          <stop offset="0.3" stopColor={z.sky[1]} />
+          <stop offset="0.5" stopColor={z.sky[2]} />
+          <stop offset="0.61" stopColor={z.sky[3]} />
           <stop offset="0.611" stopColor="#0a0718" />
           <stop offset="1" stopColor="#05040f" />
         </linearGradient>
         <linearGradient id="t-sun" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffe46b" />
-          <stop offset="0.45" stopColor="#ff9a3d" />
-          <stop offset="1" stopColor="#ff2e88" />
+          <stop offset="0" stopColor={z.sun[0]} />
+          <stop offset="0.45" stopColor={z.sun[1]} />
+          <stop offset="1" stopColor={z.sun[2]} />
         </linearGradient>
         <radialGradient id="t-glow">
-          <stop offset="0.55" stopColor="#ff4fd8" stopOpacity="0.45" />
-          <stop offset="1" stopColor="#ff4fd8" stopOpacity="0" />
+          <stop offset="0.55" stopColor={z.glow} stopOpacity="0.45" />
+          <stop offset="1" stopColor={z.glow} stopOpacity="0" />
         </radialGradient>
         <linearGradient id="t-floor" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ff4fd8" stopOpacity="0.35" />
-          <stop offset="0.08" stopColor="#ff4fd8" stopOpacity="0" />
+          <stop offset="0" stopColor={z.rung} stopOpacity="0.35" />
+          <stop offset="0.08" stopColor={z.rung} stopOpacity="0" />
         </linearGradient>
         <mask id="t-sunmask">
           <rect x="0" y="0" width="400" height={H} fill="white" />
@@ -81,31 +83,119 @@ function Scene() {
         {city.map((b, i) => (
           <g key={i}>
             <rect x={b.x} y={HORIZON - b.h} width={b.w} height={b.h} fill={i % 3 ? "#120a2a" : "#1a0f38"} />
-            <rect x={b.x} y={HORIZON - b.h} width={b.w} height="1.5" fill="#ff4fd8" opacity="0.35" />
+            <rect x={b.x} y={HORIZON - b.h} width={b.w} height="1.5" fill={z.rung} opacity="0.35" />
             {b.lit.map((v, j) => v > 0.62
               ? <rect key={j} x={b.x + 3 + (j % 2) * (b.w / 2 - 1)} y={HORIZON - b.h + 7 + Math.floor(j / 2) * 12} width="3" height="4" fill={v > 0.88 ? "#ffd56b" : "#ff7ad9"} opacity="0.8" />
               : null)}
           </g>
         ))}
+        {z.roof && <Roof kind={z.roof} city={city} />}
       </g>
 
       {/* Horizon line */}
-      <rect x="0" y={HORIZON - 1} width="400" height="2" fill="#ff7ad9" />
-      <rect x="0" y={HORIZON - 6} width="400" height="12" fill="#ff4fd8" opacity="0.18" />
+      <rect x="0" y={HORIZON - 1} width="400" height="2" fill={z.rung} />
+      <rect x="0" y={HORIZON - 6} width="400" height="12" fill={z.rung} opacity="0.18" />
       <rect x="0" y={HORIZON} width="400" height={H - HORIZON} fill="url(#t-floor)" />
 
       {/* Neon grid floor: rails fan out from the vanishing point; rungs roll toward you */}
       {Array.from({ length: 21 }, (_, i) => (
-        <line key={`v${i}`} x1="200" y1={HORIZON} x2={-800 + i * 80} y2={H} stroke="#4f8bff" strokeOpacity="0.35" strokeWidth="1" />
+        <line key={`v${i}`} x1="200" y1={HORIZON} x2={-800 + i * 80} y2={H} stroke={z.rail} strokeOpacity="0.35" strokeWidth="1" />
       ))}
       {Array.from({ length: 10 }, (_, i) => (
-        <line key={`h${i}`} x1="0" x2="400" y1={HORIZON} y2={HORIZON} stroke="#ff4fd8" strokeWidth="1.2">
+        <line key={`h${i}`} x1="0" x2="400" y1={HORIZON} y2={HORIZON} stroke={z.rung} strokeWidth="1.2">
           <animate attributeName="y1" values={`${HORIZON};${H + 10}`} dur="4s" begin={`-${(i * 0.4).toFixed(1)}s`} repeatCount="indefinite" calcMode="spline" keyTimes="0;1" keySplines="0.55 0 1 0.45" />
           <animate attributeName="y2" values={`${HORIZON};${H + 10}`} dur="4s" begin={`-${(i * 0.4).toFixed(1)}s`} repeatCount="indefinite" calcMode="spline" keyTimes="0;1" keySplines="0.55 0 1 0.45" />
           <animate attributeName="stroke-opacity" values="0.1;0.75" dur="4s" begin={`-${(i * 0.4).toFixed(1)}s`} repeatCount="indefinite" />
         </line>
       ))}
+      {z.particles && <Particles kind={z.particles} />}
     </svg>
+  );
+}
+
+type City = { x: number; w: number; h: number; lit: number[] }[];
+
+/** Rooftop decorations: jack-o'-lanterns or holiday string lights. */
+function Roof({ kind, city }: { kind: "pumpkins" | "lights"; city: City }) {
+  if (kind === "pumpkins") {
+    return (
+      <>
+        {city.filter((_, i) => i % 3 === 1).map((b, i) => {
+          const x = b.x + b.w / 2, y = HORIZON - b.h - 5;
+          return (
+            <g key={i}>
+              <ellipse cx={x} cy={y} rx="6" ry="5" fill="#ff7a1a" />
+              <rect x={x - 0.8} y={y - 7.5} width="1.6" height="3" fill="#3d7a1f" />
+              <polygon points={`${x - 3.5},${y - 1} ${x - 1.5},${y - 1} ${x - 2.5},${y - 2.6}`} fill="#ffe46b" />
+              <polygon points={`${x + 1.5},${y - 1} ${x + 3.5},${y - 1} ${x + 2.5},${y - 2.6}`} fill="#ffe46b" />
+              <rect x={x - 3} y={y + 1.2} width="6" height="1.2" fill="#ffe46b" />
+              <animate attributeName="opacity" values="1;0.75;1" dur={`${1.5 + (i % 3) * 0.4}s`} repeatCount="indefinite" />
+            </g>
+          );
+        })}
+      </>
+    );
+  }
+  const colors = ["#ff4f6d", "#7cff6b", "#ffd23f", "#4fb4ff"];
+  return (
+    <>
+      {city.map((b, i) => Array.from({ length: Math.max(1, Math.floor(b.w / 6)) }, (_, j) => (
+        <circle key={`${i}-${j}`} cx={b.x + 3 + j * 6} cy={HORIZON - b.h + 2 + (j % 2)} r="1.3" fill={colors[(i + j) % 4]}>
+          <animate attributeName="opacity" values="1;0.3;1" dur="1.8s" begin={`-${((i + j) % 4) * 0.45}s`} repeatCount="indefinite" />
+        </circle>
+      )))}
+    </>
+  );
+}
+
+/** Seasonal weather: bats flying past, falling leaves or snow. */
+function Particles({ kind }: { kind: "bats" | "leaves" | "snow" }) {
+  const items = useMemo(() => {
+    let seed = 17;
+    const r = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+    const n = kind === "snow" ? 60 : kind === "leaves" ? 18 : 7;
+    return Array.from({ length: n }, () => ({ x: r() * 400, y: r() * 400, d: kind === "snow" ? 7 + r() * 8 : kind === "leaves" ? 8 + r() * 7 : 9 + r() * 8, o: r() * 15, s: kind === "bats" ? 1.1 + r() * 0.9 : 0.6 + r() * 0.8, k: r() }));
+  }, [kind]);
+
+  if (kind === "bats") {
+    return (
+      <>
+        {items.map((b, i) => (
+          <g key={i} opacity="0.95">
+            <path d="M0,0 q-4,-5 -9,-2 q3,1 3,4 q-3,-1 -5,1 q5,0 6,2 q2,-3 5,-3 q3,0 5,3 q1,-2 6,-2 q-2,-2 -5,-1 q0,-3 3,-4 q-5,-3 -9,2 z" fill="#0a0612" stroke="#ff7a1a" strokeOpacity="0.35" strokeWidth="0.4" transform={`scale(${b.s})`}>
+              <animateTransform attributeName="transform" type="scale" values={`${b.s} ${b.s};${b.s} ${b.s * 0.45};${b.s} ${b.s}`} dur="0.35s" repeatCount="indefinite" />
+            </path>
+            <animateMotion dur={`${b.d}s`} begin={`-${b.o}s`} repeatCount="indefinite"
+              path={`M-30,${250 + b.y * 0.35} C 110,${180 + b.y * 0.3} 290,${420 - b.y * 0.2} 430,${230 + b.y * 0.3}`} />
+          </g>
+        ))}
+      </>
+    );
+  }
+  if (kind === "leaves") {
+    const fills = ["#f59e0b", "#c2410c", "#eab308", "#9a3412"];
+    return (
+      <>
+        {items.map((l, i) => (
+          <g key={i}>
+            <path d="M0,-5 q5,2 0,10 q-5,-8 0,-10 z" fill={fills[i % 4]} opacity="0.85" transform={`scale(${l.s})`}>
+              <animateTransform attributeName="transform" type="rotate" values="0;180;360" dur={`${2 + l.k * 2}s`} repeatCount="indefinite" additive="sum" />
+            </path>
+            <animateMotion dur={`${l.d}s`} begin={`-${l.o}s`} repeatCount="indefinite"
+              path={`M${l.x},-20 C ${l.x + 40},150 ${l.x - 40},350 ${l.x + 20},560`} />
+          </g>
+        ))}
+      </>
+    );
+  }
+  return (
+    <>
+      {items.map((f, i) => (
+        <circle key={i} r={0.8 + f.s * 1.2} fill="#ffffff" opacity={0.5 + f.k * 0.4}>
+          <animateMotion dur={`${f.d}s`} begin={`-${f.o}s`} repeatCount="indefinite" path={`M${f.x},-10 C ${f.x + 15},300 ${f.x - 15},600 ${f.x + 10},${H + 10}`} />
+        </circle>
+      ))}
+    </>
   );
 }
 
@@ -138,13 +228,15 @@ export default function Title() {
     return () => window.removeEventListener("keydown", h);
   }, [start]);
 
+  const setting = useSite((s) => s.season);
+  const season = useMemo(() => seasonFor(new Date(), setting), [setting]);
   const fans = String(career?.stats.fans ?? 0).padStart(6, "0").slice(-6);
   const lvl = career ? levelFor(career.stats.fame) : null;
 
   return (
     <div className="fixed inset-0 flex justify-center bg-[#05040f] cursor-pointer select-none" onClick={start} role="button" aria-label="Press start">
       <div className="relative w-full max-w-md h-full overflow-hidden scanlines">
-        <Scene />
+        <Scene season={season} />
 
         {/* Arcade HUD, framed */}
         <div className="absolute inset-x-4 z-10" style={{ top: "calc(14px + env(safe-area-inset-top))" }}>
@@ -162,6 +254,11 @@ export default function Title() {
           <div className="font-pixel text-[8px] mt-4 tracking-[0.3em] px-3 py-1.5 rounded-sm" style={{ color: "#ffe9f6", background: "rgba(5,4,15,.55)", textShadow: "0 0 8px #ff4fd8" }}>
             BASEMENT <span style={{ color: "#f2c230" }}>→</span> SUPERSTAR
           </div>
+          {season.badge && (
+            <div className="font-pixel text-[8px] mt-2 tracking-[0.25em] px-2.5 py-1 rounded-sm border" style={{ color: season.sun[0], borderColor: `${season.glow}88`, background: "rgba(5,4,15,.6)", textShadow: `0 0 8px ${season.glow}` }}>
+              {season.badge}
+            </div>
+          )}
         </div>
 
         {/* On the grid floor: start, and who you're playing as */}

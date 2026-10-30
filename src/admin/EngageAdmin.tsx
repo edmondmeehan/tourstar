@@ -215,3 +215,29 @@ export function TourEventsAdmin() {
     </Section>
   );
 }
+
+/** Title screen season: follows the calendar by default (Halloween in October, Harvest Nov 1–24, Holidays Nov 25–Jan 1). */
+export function TitleSeasonAdmin() {
+  const [v, setV] = useState<string | null>(null);
+  useEffect(() => {
+    void supabase!.from("app_public_config").select("value").eq("key", "title_season").maybeSingle().then(({ data }) => setV(String(data?.value ?? "auto")));
+  }, []);
+  const save = async (value: string) => {
+    const { error } = await supabase!.from("app_public_config").upsert({ key: "title_season", value, updated_at: new Date().toISOString() });
+    if (error) return fail(error);
+    setV(value);
+    toast({ ok: true, message: "Saved. Players see it next time they open the game." });
+  };
+  if (v === null) return null;
+  return (
+    <Section title="Title screen season" sub="The title screen dresses up for the season: Halloween (Oct 1–31), Harvest for Thanksgiving (Nov 1–24) and Holidays (Nov 25–Jan 1). Pin one, or switch it off.">
+      <select className={`${input} max-w-xs`} value={v} onChange={(e) => void save(e.target.value)}>
+        <option value="auto">Follow the calendar</option>
+        <option value="halloween">🎃 Halloween</option>
+        <option value="harvest">🍂 Harvest (Thanksgiving)</option>
+        <option value="holiday">❄️ Holidays</option>
+        <option value="none">Off (regular sunset)</option>
+      </select>
+    </Section>
+  );
+}
