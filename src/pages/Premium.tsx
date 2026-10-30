@@ -81,6 +81,9 @@ export default function Premium() {
       {!real && !dev && (
         <Card className="mb-4" glow="gold"><p className="text-sm">Purchases are made in the TourStar app for iPhone and Android, through your App Store or Google Play account. Prices below are for reference.</p></Card>
       )}
+      {real && status === "ready" && Object.keys(products).length === 0 && (
+        <Card className="mb-4"><p className="text-sm">The store is being set up. Purchases will appear here soon.</p></Card>
+      )}
       {real && status === "error" && (
         <Card className="mb-4"><p className="text-sm">The store isn't reachable right now. Check your connection and try again.</p></Card>
       )}
@@ -101,7 +104,7 @@ export default function Premium() {
           </>
         ) : (
           <>
-          {real && status === "ready" && (
+          {real && status === "ready" && (price("vip_monthly") || price("vip_yearly")) && (
             <button className="btn btn-gold w-full mt-4" disabled={busy !== null} onClick={() => void openPaywall()}>{busy === "paywall" ? "…" : "👑 See VIP plans"}</button>
           )}
           <div className="grid grid-cols-2 gap-2 mt-4">

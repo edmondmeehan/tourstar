@@ -140,7 +140,10 @@ export async function showVipPaywall(): Promise<{ ok: boolean; message: string; 
   if (!purchasesAvailable() || usePurchases.getState().status !== "ready") return { ok: false, result: "unavailable", message: "" };
   try {
     const offerings = await Purchases.getOfferings();
-    if (!offerings.current || !offerings.current.availablePackages.length) return { ok: false, result: "unavailable", message: "" };
+    // Only show the paywall when it sells TourStar's own VIP products (not RevenueCat's sample ones).
+    const vipIds = [productId("vip_monthly"), productId("vip_yearly")];
+    const pkgs = offerings.current?.availablePackages ?? [];
+    if (!offerings.current || !pkgs.length || !pkgs.every((p) => vipIds.includes(p.product.identifier))) return { ok: false, result: "unavailable", message: "" };
     const { result } = await RevenueCatUI.presentPaywall({ offering: offerings.current, displayCloseButton: true });
     if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
       const { customerInfo } = await Purchases.getCustomerInfo();
