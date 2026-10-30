@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" sizes="48x48" href="/brand/favicon-48.png">
+<title>TourStar Views & Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a flow map read left-to-right, top-to-bottom — the entry path first, then the shared game shell and its sections as dashed containers, like the original 1.0 chart. Single dark "arcade" look by choice. */
+:root {
+  color-scheme: dark;
+  --bg: #08061a;
+  --panel: #110d2c;
+  --line: #2e2860;
+  --ink: #ece9ff;
+  --muted: #9a94c7;
+  --pink: #ff4fd8;
+  --gold: #f2c230;
+  --green: #3ddc97;
+  --blue: #4fb4ff;
+  --display: "Press Start 2P", ui-monospace, monospace;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--body); }
+.wrap { max-width: 1400px; margin: 0 auto; padding-block: 32px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+h1 { font: 22px/1.4 var(--display); margin: 0; color: var(--ink); text-wrap: balance; }
+h1 span { color: var(--pink); }
+.sub { color: var(--muted); margin: 10px 0 0; max-width: 62ch; }
+.legend { display: grid; gap: 8px; font-size: 13px; }
+.legend div { display: flex; gap: 10px; align-items: center; }
+.legend i { width: 34px; height: 20px; flex: none; border: 1.5px solid var(--ink); background: var(--panel); }
+.legend i.btn { border-radius: 10px; }
+.legend i.scene { border-color: var(--pink); }
+.legend i.dlg { border-color: var(--green); }
+.legend i.ext { border-style: dashed; border-color: var(--blue); }
+
+/* Nodes */
+.n { background: var(--panel); border: 1.5px solid var(--ink); padding: 8px 10px; min-width: 0; font-size: 13px; }
+.n b { display: block; font-weight: 600; font-size: 13.5px; }
+.n small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.n.scene { border-color: var(--pink); box-shadow: 0 0 0 1px #ff4fd822 inset; }
+.n.dlg { border-color: var(--green); }
+.n.ext { border: 1.5px dashed var(--blue); }
+.pill { display: inline-block; border: 1.5px solid var(--ink); border-radius: 12px; padding: 3px 10px; font-size: 12px; background: #0c0a22; margin: 6px 4px 0 0; }
+.pill.hot { border-color: var(--gold); color: var(--gold); }
+
+/* Flow rows */
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; }
+.flow > .n { flex: 1 1 140px; }
+.arrow { align-self: center; color: var(--muted); font: 12px var(--mono); padding: 0 2px; }
+.col { display: grid; gap: 6px; }
+.col .arrow { justify-self: center; }
+
+/* Containers */
+.box { border: 1.5px dashed var(--line); padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.box > h2 { font: 10px/1.6 var(--display); letter-spacing: .04em; margin: 0; color: var(--gold); }
+.box > h2 em { font: italic 12px var(--body); color: var(--muted); letter-spacing: 0; text-transform: none; margin-left: 6px; }
+.note { color: var(--muted); font-size: 12px; font-style: italic; }
+.go { color: var(--blue); font: 12px var(--mono); }
+
+.grid-top { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr); gap: 16px; margin-bottom: 16px; }
+.shell { border: 2px dashed #4a4290; padding: 16px; display: grid; gap: 16px; }
+.shell > h2 { font: 11px/1.6 var(--display); margin: 0; color: var(--pink); }
+.nav { display: flex; flex-wrap: wrap; gap: 6px; }
+.nav .pill { margin: 0; }
+.sections { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.wide { grid-column: span 2; }
+.menu { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.menu .box { padding: 10px; }
+.around { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .n { flex: 1 1 150px; }
+
+@media (max-width: 1000px) {
+  .grid-top, .around { grid-template-columns: minmax(0, 1fr); }
+  .sections { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .menu { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 620px) {
+  h1 { font-size: 16px; }
+  .sections, .menu { grid-template-columns: minmax(0, 1fr); }
+  .wide { grid-column: auto; }
+}
+</style>
+
+</head>
+<body>
+<p style="max-width:1400px;margin:0 auto;padding:16px max(16px, env(safe-area-inset-left, 0px)) 0;font:13px 'IBM Plex Sans',system-ui,sans-serif"><a href="/investors" style="color:#9a94c7">← Investor materials</a></p>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>TourStar views and user flow <span>2.0</span></h1>
+      <p class="sub">Every screen in the iPhone app as of build 1.0, how players move between them, and what pops up over the game. Arrows show the main path; <span class="go">→ name</span> means it jumps to another section.</p>
+    </div>
+    <div class="legend" aria-label="Legend">
+      <div><i></i>A screen (2D UI)</div>
+      <div><i class="btn"></i>A button or tab inside a screen</div>
+      <div><i class="scene"></i>A live animated scene (stage, drums, title)</div>
+      <div><i class="dlg"></i>A sheet or pop-up over the game</div>
+      <div><i class="ext"></i>Outside the app (server, store, web)</div>
+    </div>
+  </header>
+
+  <!-- ===== Entry ===== -->
+  <div class="grid-top">
+    <section class="box" aria-label="Start">
+      <h2>START</h2>
+      <div class="n scene"><b>Title screen</b><small>Synthwave sunset that changes for 8 holidays. Fans, Player 1 and level in the top bar; version and build at the bottom.</small>
+        <span class="pill hot">▶ Press Start</span><span class="pill">Continue as your artist</span>
+      </div>
+      <div class="flow">
+        <div class="n"><b>New player: Create artist</b><small>Stage name + genre, then Start. Persona and theme song are optional.</small></div>
+        <span class="arrow">→</span>
+        <div class="n"><b>Tour</b><small>Lands on the Open Mic with Mo</small></div>
+      </div>
+      <div class="flow">
+        <div class="n"><b>Returning player</b><small>Picks up where they left off</small></div>
+        <span class="arrow">→</span>
+        <div class="n"><b>Home</b></div>
+      </div>
+      <div class="n"><b>Sign in / create account</b><small>Email, or Continue with Apple (iPhone only). Saves the career to the cloud and links purchases.</small></div>
+    </section>
+
+    <section class="box" aria-label="First session">
+      <h2>FIRST SESSION <em>Mo, your manager, walks new players through it</em></h2>
+      <div class="flow">
+        <div class="n dlg"><b>Mo: "Hit the road"</b><small>Points at the Open Mic</small></div><span class="arrow">→</span>
+        <div class="n dlg"><b>Setlist</b><small>Songs picked for you</small></div><span class="arrow">→</span>
+        <div class="n scene"><b>First show</b><small>Tap the notes</small></div><span class="arrow">→</span>
+        <div class="n dlg"><b>Mo: "Tap Album"</b></div><span class="arrow">→</span>
+        <div class="n"><b>First release</b><small>Free mixtape</small></div><span class="arrow">→</span>
+        <div class="n dlg"><b>Done: +25 ⭐</b><small>or open How to Play</small></div>
+      </div>
+      <p class="note">After the first show the app asks once for notification permission. Players who finish or skip Mo see a dot on ☰ until they open How to Play.</p>
+    </section>
+  </div>
+
+  <!-- ===== Game shell ===== -->
+  <section class="shell" aria-label="Shared game UI">
+    <h2>SHARED GAME UI</h2>
+    <div class="flow">
+      <div class="n"><b>Top bar</b><small>Artist, level, week · cloud save · cash · ⚡ energy</small><span class="pill">☰ Menu</span></div>
+      <div class="n"><b>Bottom bar</b>
+        <div class="nav"><span class="pill">Home</span><span class="pill">Tour</span><span class="pill">Album</span><span class="pill">Label</span><span class="pill">Crew</span><span class="pill">Store</span><span class="pill">Stats</span></div>
+      </div>
+      <div class="n"><b>Radio bar</b><small>Mini player while TourStar Radio plays</small></div>
+    </div>
+
+    <div class="sections">
+      <!-- Home -->
+      <section class="box" aria-label="Home">
+        <h2>HOME</h2>
+        <div class="n"><b>Home</b><small>Artist card and level progress, then the day's to-dos</small></div>
+        <div class="chips">
+          <div class="n"><b>Tour event</b><small>Limited stage + collectible</small><span class="go">→ Tour</span></div>
+          <div class="n"><b>Gig offer</b><small>Expires in hours</small><span class="go">→ Tour</span></div>
+          <div class="n"><b>League spot</b><small>"#8 of 28 · 601 to move up"</small><span class="go">→ Rivals</span></div>
+          <div class="n"><b>Achievements ready</b><span class="go">→ Achievements</span></div>
+          <div class="n"><b>Daily quests</b><small>3 a day, claim for ⭐</small></div>
+          <div class="n"><b>Royalties</b><small>Collect what songs earned</small></div>
+          <div class="n"><b>Daily reward</b><small>Streak 3/7/14/30</small></div>
+          <div class="n"><b>Presales teaser</b><small>VIP ticket codes</small></div>
+        </div>
+      </section>
+
+      <!-- Tour -->
+      <section class="box wide" aria-label="Tour">
+        <h2>TOUR <em>the main loop</em></h2>
+        <div class="flow">
+          <div class="n"><b>Tour</b><small>Event stage · gig offer · Drum School · featured venues · tour circuit (Open Mic → Stadium Encore)</small></div>
+          <span class="arrow">→</span>
+          <div class="n dlg"><b>Setlist</b><small>Order songs, fan request, difficulty (Easy/Normal/Hard)</small><span class="pill hot">Go on stage</span></div>
+          <span class="arrow">→</span>
+          <div class="n scene"><b>Concert</b><small>Announcer intro, crowd, pyro, note highway. Auto-play available.</small></div>
+          <span class="arrow">→</span>
+          <div class="n dlg"><b>Encore</b><small>Play the hit · debut a new song · walk off</small></div>
+          <span class="arrow">→</span>
+          <div class="n dlg"><b>Show result</b><small>Grade S–D, crowd, cash, points</small><span class="pill">Share</span><span class="pill">Timing check</span></div>
+        </div>
+        <div class="flow">
+          <div class="n dlg"><b>Random event</b><small>Temptation, scandal or scam after a show: pick safe or wild</small></div>
+          <span class="arrow">→</span>
+          <div class="n dlg"><b>Lockout</b><small>Jail or rehab countdown; pay bail or look around</small></div>
+          <div class="n dlg"><b>Celebration</b><small>Level up, new tour, sellout, quest done</small><span class="pill">Share it</span></div>
+        </div>
+      </section>
+
+      <!-- Album -->
+      <section class="box" aria-label="Album">
+        <h2>ALBUM</h2>
+        <div class="col">
+          <div class="n"><b>Album</b><small>Mixtape · Single · EP · Album (by level)</small></div>
+          <span class="arrow">↓</span>
+          <div class="n dlg"><b>New release</b><small>Name it, add a crate sample, record a real AI song (optional)</small></div>
+          <span class="arrow">↓</span>
+          <div class="n"><b>Release out</b><small>Streams, fans, royalties; critic review in The Press</small></div>
+        </div>
+        <div class="n dlg"><b>Crate digging</b><small>1 free dig a day, samples boost quality</small></div>
+      </section>
+
+      <section class="box" aria-label="Label, Crew, Stats">
+        <h2>LABEL · CREW · STATS</h2>
+        <div class="n"><b>Label</b><small>Sign for an advance and a pay boost; they keep a share. Leave any time.</small></div>
+        <div class="n"><b>Crew</b><small>Manager, tour bus, lighting, pyro, security: each multiplies show pay</small></div>
+        <div class="n"><b>Stats</b><small>Career summary and totals</small></div>
+      </section>
+
+      <!-- Store -->
+      <section class="box" aria-label="Store">
+        <h2>STORE <em>tabs</em></h2>
+        <div class="chips">
+          <div class="n"><b>Rewards</b><small>Spend ⭐ points on real prizes</small></div>
+          <div class="n"><b>Drops</b><small>Packs bought with Gold · My style (equip)</small></div>
+          <div class="n"><b>Merch</b><small>Real TourStar merch, unlocks matching in-game items</small></div>
+          <div class="n"><b>Shop</b><span class="go">→ VIP &amp; Gold</span></div>
+          <div class="n"><b>Raffles</b><small>Hidden until switched on in admin</small></div>
+        </div>
+        <div class="flow">
+          <div class="n"><b>Reward / product detail</b></div><span class="arrow">→</span>
+          <div class="n ext"><b>Shopify checkout</b><small>Merch only</small></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ☰ menu -->
+    <section class="box" aria-label="Menu">
+      <h2>☰ MENU <em>grouped by use</em></h2>
+      <div class="menu">
+        <section class="box">
+          <h2>PLAY</h2>
+          <div class="col">
+            <div class="n scene"><b>Drum School</b><small>Or the licensed host's corner</small></div>
+            <span class="arrow">↓</span>
+            <div class="n dlg"><b>Lesson / practice</b><small>Grade → chops boost every show</small></div>
+          </div>
+          <div class="n"><b>TourStar Radio</b><small>Stations of players' AI songs; Curator's Picks</small></div>
+        </section>
+        <section class="box">
+          <h2>COMPETE &amp; FRIENDS</h2>
+          <div class="n"><b>Leagues &amp; Rivals</b>
+            <span class="pill hot">League</span><span class="pill">Leaderboard</span><span class="pill">Rivals</span>
+            <small>6 divisions, move up/down Mondays, top 3 win Gold</small></div>
+          <div class="n"><b>Friends</b><small>Friend code · their week · festival bill goals</small></div>
+          <div class="col">
+            <div class="n"><b>Achievements &amp; Hall of Fame</b><small>24 goals with rewards</small></div>
+            <span class="arrow">↓ Legend only</span>
+            <div class="n dlg"><b>Retire</b><small>Enter the Hall of Fame</small><span class="go">→ Create artist (+fame bonus)</span></div>
+          </div>
+        </section>
+        <section class="box">
+          <h2>MY ARTIST</h2>
+          <div class="n"><b>My Look</b><small>Skin, hair, outfits, instruments</small></div>
+          <div class="n"><b>Locker</b><small>Songs and AI recordings, play queue</small></div>
+          <div class="n"><b>Releases</b></div>
+          <div class="n"><b>Career Log</b></div>
+        </section>
+        <section class="box">
+          <h2>NEWS</h2>
+          <div class="n"><b>The Press</b><small>AI news stories, release reviews, weekly recap</small><span class="pill">Ask your manager</span></div>
+          <div class="n"><b>TourStar Monthly</b><small>Best AI songs released to real streaming services</small></div>
+        </section>
+        <section class="box">
+          <h2>HELP &amp; ACCOUNT</h2>
+          <div class="n"><b>How to Play</b><small>Topics, numbers pulled from the live game</small></div>
+          <div class="col">
+            <div class="n"><b>VIP &amp; Gold</b><small>VIP · Gold Records · AI song packs · cash packs · restore</small><span class="pill hot">See VIP plans</span></div>
+            <span class="arrow">↓</span>
+            <div class="n dlg"><b>VIP paywall</b><small>Designed in RevenueCat</small></div>
+            <div class="n dlg"><b>Manage subscription</b><small>RevenueCat Customer Center</small></div>
+          </div>
+          <div class="n"><b>Account &amp; Settings</b><small>Save &amp; sign in · sound · vibration · timing check · reminders · emails · version</small></div>
+        </section>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===== Around the app ===== -->
+  <div class="around">
+    <section class="box" aria-label="Over any screen">
+      <h2>OVER ANY SCREEN</h2>
+      <div class="chips">
+        <div class="n dlg"><b>Mo's tips</b><small>Tutorial coach</small></div>
+        <div class="n dlg"><b>Announcement</b><small>Banner or pop-up from admin</small></div>
+        <div class="n dlg"><b>Save your career</b><small>Prompt to sign in</small></div>
+        <div class="n dlg"><b>Gift / outcome</b><small>Admin gifts, event results</small></div>
+        <div class="n dlg"><b>Timing check</b><small>Tap along to 12 clicks</small></div>
+        <div class="n"><b>Presales</b><small>VIP ticket codes</small></div>
+      </div>
+    </section>
+    <section class="box" aria-label="Outside the app">
+      <h2>OUTSIDE THE APP</h2>
+      <div class="chips">
+        <div class="n ext"><b>Phone alerts</b><small>Energy full, royalties, streak, gig offer expiring, event ending, league finish</small><span class="go">→ opens the right screen</span></div>
+        <div class="n ext"><b>Push from server</b><small>"You just got passed", presales, admin messages</small><span class="go">→ Rivals / Store</span></div>
+        <div class="n ext"><b>Win-back emails</b><small>After 3, 7 and 14 days away</small></div>
+        <div class="n ext"><b>App Store / RevenueCat</b><small>Purchases, VIP renewals</small></div>
+        <div class="n ext"><b>Admin (web)</b><small>tourstarapp.com/play/admin</small></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+</body>
+</html>

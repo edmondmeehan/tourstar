@@ -37,7 +37,15 @@
       "destination": "/play.html"
     },
     {
-      "source": "/((?!assets/|landing/|brand/).*)",
+      "source": "/investors",
+      "destination": "/investors/index.html"
+    },
+    {
+      "source": "/investors/flow",
+      "destination": "/investors/flow.html"
+    },
+    {
+      "source": "/((?!assets/|landing/|brand/|investors).*)",
       "destination": "/index.html"
     }
   ],
@@ -48,6 +56,19 @@
         {
           "key": "X-Robots-Tag",
           "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/investors(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
         }
       ]
     }
