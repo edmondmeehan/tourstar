@@ -118,6 +118,7 @@ interface GameState {
   receiveGift: (gift: Delta, message: string) => void;
   receiveEvent: (eventId: string) => boolean;
   dismissCelebration: () => void;
+  clearCelebrations: () => void;
 }
 
 const isLocked = (c: Career) => !!c.lockout && c.lockout.until > Date.now();
@@ -979,6 +980,7 @@ export const useGame = create<GameState>()(
         },
 
         dismissCelebration: () => set((s) => ({ celebrations: s.celebrations.slice(1) })),
+        clearCelebrations: () => set({ celebrations: [] }),
       };
     },
     {

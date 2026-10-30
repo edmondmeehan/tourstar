@@ -11,7 +11,9 @@ export function EventModal() {
   const id = useGame((s) => s.career?.pendingEvent);
   const resolve = useGame((s) => s.resolveEvent);
   const concert = useConcert((s) => s.open);
-  const ev = concert ? undefined : EVENTS.find((e) => e.id === id);
+  // Wait until any rewards screen is closed, so only one thing pops up at a time.
+  const celebrating = useGame((s) => s.celebrations.length > 0);
+  const ev = concert || celebrating ? undefined : EVENTS.find((e) => e.id === id);
   useEffect(() => {
     if (ev) { sfx("event"); }
   }, [ev]);
@@ -101,25 +103,38 @@ export function LockoutOverlay() {
   );
 }
 
+/** Everything worth celebrating (level-ups, unlocked tours, quests, streaks) on one screen, one tap to close. */
 export function CelebrationOverlay() {
   const concert = useConcert((s) => s.open);
-  const first = useGame((s) => s.celebrations[0]);
-  const c = concert ? undefined : first;
-  const dismiss = useGame((s) => s.dismissCelebration);
+  const list = useGame((s) => s.celebrations);
+  const clear = useGame((s) => s.clearCelebrations);
   const career = useGame((s) => s.career);
+  const show = !concert && list.length > 0;
   useEffect(() => {
-    if (c) { sfx("levelup"); }
-  }, [c]);
-  if (!c) return null;
-  const color = c.kind === "sellout" ? "var(--neon-pink)" : c.kind === "tour" ? "var(--electric)" : "var(--gold)";
+    if (show) { sfx("levelup"); }
+  }, [show]);
+  if (!show) return null;
+  const top = list.find((c) => c.kind === "level") ?? list[0];
+  const rest = list.filter((c) => c !== top);
+  const colorOf = (k: string) => (k === "sellout" ? "var(--neon-pink)" : k === "tour" ? "var(--electric)" : "var(--gold)");
   return (
-    <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 overflow-hidden" onClick={dismiss}>
+    <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 overflow-hidden" onClick={clear}>
       <Confetti />
-      <div className="text-center px-6 animate-pop relative z-10">
-        <div className="font-pixel text-xl mb-4 crt-flicker" style={{ color, textShadow: `0 0 18px ${color}` }}>{c.title}</div>
-        <div className="text-lg mb-8">{c.subtitle}</div>
-        {c.kind === "level" && career && (
-          <button className="btn btn-gold mb-6" onClick={(e) => { e.stopPropagation(); void shareCard({ kind: "level", title: "LEVEL UP!", big: "⭐", bigColor: "#f2c230", sub: c.subtitle.split(" · ")[0], career }); }}>Share it</button>
+      <div className="text-center px-6 animate-pop relative z-10 w-full max-w-sm">
+        <div className="font-pixel text-xl mb-4 crt-flicker" style={{ color: colorOf(top.kind), textShadow: `0 0 18px ${colorOf(top.kind)}` }}>{top.title}</div>
+        <div className="text-lg mb-6">{top.subtitle}</div>
+        {rest.length > 0 && (
+          <ul className="panel p-3 mb-6 space-y-2 text-left">
+            {rest.map((c) => (
+              <li key={c.id} className="flex items-baseline gap-2 text-sm">
+                <span className="font-pixel text-[8px] shrink-0" style={{ color: colorOf(c.kind) }}>{c.title}</span>
+                <span className="text-muted-fg truncate">{c.subtitle}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {top.kind === "level" && career && (
+          <button className="btn btn-gold mb-6" onClick={(e) => { e.stopPropagation(); void shareCard({ kind: "level", title: "LEVEL UP!", big: "⭐", bigColor: "#f2c230", sub: top.subtitle.split(" · ")[0], career }); }}>Share it</button>
         )}
         <div className="font-pixel text-[9px] text-muted-fg animate-press-start">TAP TO CONTINUE</div>
       </div>
