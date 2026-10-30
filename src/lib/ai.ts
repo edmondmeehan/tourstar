@@ -2,6 +2,7 @@
 //  • AI songs for releases   → functions/ai-song
 //  • Mo's voice + stadium intro → functions/ai-voice
 // Admins switch each on/off in /admin → AI music.
+import { cachedFetch, playableUrl } from "./offline";
 import { create } from "zustand";
 import { supabase, useCloud } from "./cloud";
 import { audio, masterVolume } from "./fx";
@@ -99,15 +100,17 @@ export async function ensureAnnouncer() {
 export interface ClipHandle { stop: () => void; done: Promise<void> }
 /** Play an audio file at the game's volume. Resolves when it ends (or fails). */
 export function playClip(url: string, opts: { onEnd?: () => void; gain?: number } = {}): ClipHandle {
-  const el = new Audio(url);
+  const el = new Audio();
   el.volume = Math.max(0, Math.min(1, masterVolume() * (opts.gain ?? 1)));
   let resolve!: () => void;
   const done = new Promise<void>((r) => { resolve = r; });
   const end = () => { opts.onEnd?.(); resolve(); };
   el.addEventListener("ended", end, { once: true });
   el.addEventListener("error", end, { once: true });
-  if (el.volume > 0) void el.play().catch(end); else end();
-  return { stop: () => { el.pause(); el.src = ""; resolve(); }, done };
+  let stopped = false;
+  // Plays the copy saved on the phone when there is one, so songs work offline.
+  if (el.volume > 0) void playableUrl(url).then((u) => { if (stopped) return; el.src = u; return el.play(); }).catch(end); else end();
+  return { stop: () => { stopped = true; el.pause(); el.removeAttribute("src"); resolve(); }, done };
 }
 
 /**
@@ -122,7 +125,7 @@ export function playClipInGame(url: string, opts: { gain?: number } = {}): ClipH
   void (async () => {
     try {
       const a = audio();
-      const buf = await (await fetch(url)).arrayBuffer();
+      const buf = await (await cachedFetch(url)).arrayBuffer();
       const decoded = await a.decodeAudioData(buf);
       if (stopped) return;
       const g = a.createGain();

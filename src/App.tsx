@@ -1,9 +1,10 @@
+import { startOffline, warmAudio } from "./lib/offline";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useGame } from "./game/store";
 import { useMembership, useSettings } from "./game/settings";
 import { hideSplash, initNative } from "./lib/native";
-import { startCloud, useCloud } from "./lib/cloud";
+import { startCloud, syncNow, useCloud } from "./lib/cloud";
 import { startLive, useLive } from "./lib/live";
 import { startNotifications } from "./lib/notify";
 import { startPurchases } from "./lib/purchases";
@@ -80,6 +81,8 @@ export default function App() {
     startLive();
     startNotifications();
     startPurchases();
+    startOffline(() => void syncNow());
+    void warmAudio((useGame.getState().career?.songs ?? []).map((s) => s.audioUrl).filter((u): u is string => !!u));
     startAi();
     startGold();
     startLeaderboard();

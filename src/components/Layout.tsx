@@ -19,6 +19,7 @@ import { useHelpSeen } from "../lib/help";
 import { unclaimedCount } from "../game/achievements";
 import { GROUPS, groupOf, groupOpen, isNew, openPages, pageOpen, useNav } from "../lib/nav";
 import { toast } from "./ui";
+import { ONLINE_ONLY, useOnline } from "../lib/offline";
 
 // The ☰ menu only holds help and account; everything else lives in the bottom tabs (see lib/nav.ts).
 const MORE = [
@@ -53,6 +54,8 @@ export default function Layout() {
   const helpDot = !helpSeen && !career?.tutorial;
   const ready = career ? unclaimedCount(career) : 0;
   const nav = useNavigate();
+  const online = useOnline((s) => s.online);
+  const offlineBlock = !online ? ONLINE_ONLY[loc.pathname] : undefined;
   const { seen, last, init, visit } = useNav();
   const openKey = career ? openPages(career).join(",") : "";
   useEffect(() => { if (openKey) init(openKey.split(",")); }, [openKey, init]);
@@ -76,8 +79,8 @@ export default function Layout() {
             <div className="font-pixel text-[8px] text-muted-fg mt-1 truncate">{career.style?.title ? <span style={{ color: "var(--neon-pink)" }}>{career.style.title.toUpperCase()} · </span> : null}LV{lvl.level} · {lvl.name.toUpperCase()} · WK {career.week}</div>
           </Link>
           <div className="flex items-center gap-1.5 shrink-0">
-            <SyncPill />
-            <Link to="/store" aria-label="Store" onClick={() => sfx("click")} className={`font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border ${here?.id === "store" ? "border-[var(--neon-pink)]" : "border-line"}`} style={{ color: "var(--success)" }}>🛍️ {fmtMoney(career.stats.cash)}</Link>
+            {online ? <SyncPill /> : <span className="font-pixel text-[7px] px-2 py-1.5 rounded bg-black/40 border border-line whitespace-nowrap" style={{ color: "var(--gold)" }} title="No connection: playing offline">✈️ OFFLINE</span>}
+            <Link to="/store" aria-label="Store" onClick={() => sfx("click")} className={`font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border ${here?.id === "store" ? "border-[var(--neon-pink)]" : "border-line"}`} style={{ color: "var(--success)" }}>🛍️ {fmtMoney(career.stats.cash)} <span className="text-[7px] opacity-80">STORE</span></Link>
             <span className="font-pixel text-[9px] px-2 py-1 rounded bg-black/40 border border-line" style={{ color: "oklch(85% .17 110)" }}>⚡{career.stats.energy}</span>
             <button aria-label="Menu" aria-expanded={menu} className="relative w-8 h-8 rounded border border-line bg-black/40" onClick={() => { sfx("click"); setMenu((m) => !m); }}>
               ☰{helpDot && !menu && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--neon-pink)] animate-pulse" aria-hidden="true" />}
@@ -118,7 +121,14 @@ export default function Layout() {
 
       <main className="px-4 pt-4 animate-slide-up" key={loc.pathname}>
         <AnnouncementBanner />
-        <Outlet />
+        {offlineBlock ? (
+          <div className="panel p-6 text-center mt-6">
+            <div className="text-4xl mb-3">✈️</div>
+            <div className="font-pixel text-[10px] mb-3" style={{ color: "var(--gold)" }}>YOU'RE OFFLINE</div>
+            <p className="text-sm text-muted-fg mb-5">{offlineBlock} need a connection. Shows, the studio, Drum School and your stats all work offline, and everything syncs when you're back.</p>
+            <Link to="/tour" className="btn btn-pink">🎤 Play a show</Link>
+          </div>
+        ) : <Outlet />}
       </main>
 
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-[color-mix(in_oklch,var(--background)_92%,transparent)] backdrop-blur-md border-t border-line" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
