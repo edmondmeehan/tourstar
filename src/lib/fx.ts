@@ -4,11 +4,35 @@ import { haptic, type HapticName, type Step } from "./haptics";
 let ctx: AudioContext | null = null;
 export function audio() {
   if (!ctx) {
+    // iPhone: play game audio like a music app, so the ring/silent switch doesn't mute shows and drums.
+    try { (navigator as unknown as { audioSession?: { type: string } }).audioSession!.type = "playback"; } catch { /* older iOS */ }
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     ctx = new AC();
   }
-  if (ctx.state === "suspended") void ctx.resume();
+  if (ctx.state === "suspended" || (ctx.state as string) === "interrupted") void ctx.resume();
   return ctx;
+}
+
+/**
+ * Wake the audio engine. Call this directly inside a tap handler (iOS only lets sound start from a
+ * user gesture). A silent one-sample buffer makes sure WebKit really unlocks output.
+ */
+export function unlockAudio() {
+  try {
+    const a = audio();
+    const b = a.createBuffer(1, 1, a.sampleRate);
+    const src = a.createBufferSource();
+    src.buffer = b;
+    src.connect(a.destination);
+    src.start(0);
+  } catch { /* no audio on this device */ }
+}
+
+// Unlock on the first touch anywhere, so later sounds (scheduled outside a tap) can play.
+if (typeof window !== "undefined") {
+  const first = () => { unlockAudio(); window.removeEventListener("pointerdown", first, true); window.removeEventListener("keydown", first, true); };
+  window.addEventListener("pointerdown", first, true);
+  window.addEventListener("keydown", first, true);
 }
 
 export function masterVolume() {

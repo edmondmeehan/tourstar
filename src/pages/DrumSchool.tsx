@@ -11,7 +11,7 @@ import { Card, DeltaChips, PageTitle, Tag, toast } from "../components/ui";
 import NoteHighway, { type HighwayResult, type Judge } from "../concert/NoteHighway";
 import { playLesson, type DrumHandle } from "../lib/drumkit";
 import { haptic } from "../lib/haptics";
-import { sfx } from "../lib/fx";
+import { sfx, unlockAudio } from "../lib/fx";
 import { useLiveCorner, type DrumCorner } from "../lib/corner";
 import type { ActionResult } from "../game/store";
 
@@ -30,6 +30,7 @@ export default function DrumSchool() {
   const left = Math.max(0, LESSONS_PER_DAY - (c.drums?.day === today ? c.drums.n ?? 0 : 0));
 
   const go = (lesson: Lesson, practice: boolean) => {
+    unlockAudio();
     if (!practice) {
       const r = start(lesson.id);
       if (!r.ok) return toast(r);
