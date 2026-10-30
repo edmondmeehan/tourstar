@@ -97,7 +97,7 @@ export default function Admin() {
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       <header className="border-b border-line px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-30" style={{ background: "color-mix(in oklch, var(--background) 92%, transparent)", backdropFilter: "blur(8px)", paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
         <div className="flex items-center gap-3">
-          <Logo size="xs" />
+          <Logo size="xs" className="-ml-3" />
           <span className="font-pixel text-[9px] text-pink">ADMIN</span>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-fg">

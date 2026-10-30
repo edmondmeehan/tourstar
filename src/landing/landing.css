@@ -75,9 +75,9 @@ kbd { font-family: var(--sans); font-size: 14px; font-weight: 700; padding: 3px 
 .nav-link { font-size: 14px; color: var(--muted); text-decoration: none; }
 .nav-link:hover { color: var(--fg); }
 .logo { display: block; text-decoration: none; line-height: 0; }
-.logo img { width: clamp(118px, 13vw, 160px); height: auto; filter: drop-shadow(0 0 14px oklch(72% 0.27 340 / 0.4)); }
-.logo.small img { width: 110px; }
-.final-logo { width: min(420px, 80%); height: auto; margin: 0 auto 36px; filter: drop-shadow(0 0 30px oklch(72% 0.27 340 / 0.45)) drop-shadow(4px 4px 0 #2a0b46); }
+.logo img { --w: clamp(130px, 14.3vw, 176px); width: var(--w); margin-left: calc(var(--w) * -0.09); height: auto; filter: drop-shadow(0 0 14px oklch(72% 0.27 340 / 0.4)); }
+.logo.small img { --w: 121px; }
+.final-logo { width: min(462px, 88%); height: auto; margin: 0 auto 36px; filter: drop-shadow(0 0 30px oklch(72% 0.27 340 / 0.45)) drop-shadow(4px 4px 0 #2a0b46); }
 
 /* ---------- hero */
 .hero { position: relative; min-height: 100svh; display: grid; align-items: end; overflow: hidden; isolation: isolate; }

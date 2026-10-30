@@ -41,7 +41,7 @@ export function HeroBackdrop({ dim = false }: { dim?: boolean }) {
           </linearGradient>
         </defs>
         <rect width="400" height="700" fill="url(#sky)" />
-        <circle cx="62" cy="120" r="26" fill="url(#moon)" opacity="0.9" />
+        <circle cx="200" cy="96" r="30" fill="url(#moon)" opacity="0.55" />
         <polygon points="200,470 120,0 170,0" fill="url(#beam)" opacity="0.6" />
         <polygon points="200,470 250,0 300,0" fill="url(#beam)" opacity="0.45" />
         <g transform="translate(0,470)">
@@ -69,12 +69,12 @@ export function HeroBackdrop({ dim = false }: { dim?: boolean }) {
 
 /** The TourStar wordmark (public/brand/tourstar-logo.webp). */
 export function Logo({ size = "lg", className = "" }: { size?: "lg" | "sm" | "xs"; className?: string }) {
-  const w = size === "lg" ? "w-[300px] max-w-[82vw]" : size === "sm" ? "w-[190px]" : "w-[120px]";
+  const w = size === "lg" ? "w-[330px] max-w-[90vw]" : size === "sm" ? "w-[209px]" : "w-[132px]";
   return (
     <img
       src="/brand/tourstar-logo.webp"
       alt="TourStar"
-      width={671}
+      width={737}
       height={204}
       draggable={false}
       className={`${w} h-auto select-none ${className}`}
