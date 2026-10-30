@@ -10,7 +10,7 @@ import { normalizeLook } from "../game/looks";
 import { sfx } from "../lib/fx";
 import { useSite } from "../lib/site";
 import { useVersion, versionLabel } from "../lib/version";
-import { seasonFor, type Season } from "../lib/season";
+import { seasonFor, type Particle, type Season } from "../lib/season";
 
 // Scene coordinates (viewBox 400×860, about a phone's shape). The horizon sits at 61%.
 const H = 860, HORIZON = 525, SUN_Y = 405, SUN_R = 118;
@@ -150,11 +150,11 @@ function Roof({ kind, city }: { kind: "pumpkins" | "lights"; city: City }) {
 }
 
 /** Seasonal weather: bats flying past, falling leaves or snow. */
-function Particles({ kind }: { kind: "bats" | "leaves" | "snow" }) {
+function Particles({ kind }: { kind: Particle }) {
   const items = useMemo(() => {
     let seed = 17;
     const r = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-    const n = kind === "snow" ? 60 : kind === "leaves" ? 18 : 7;
+    const n = kind === "snow" ? 60 : kind === "fireworks" ? 7 : kind === "bats" ? 7 : 18;
     return Array.from({ length: n }, () => ({ x: r() * 400, y: r() * 400, d: kind === "snow" ? 7 + r() * 8 : kind === "leaves" ? 8 + r() * 7 : 9 + r() * 8, o: r() * 15, s: kind === "bats" ? 1.1 + r() * 0.9 : 0.6 + r() * 0.8, k: r() }));
   }, [kind]);
 
@@ -168,6 +168,53 @@ function Particles({ kind }: { kind: "bats" | "leaves" | "snow" }) {
             </path>
             <animateMotion dur={`${b.d}s`} begin={`-${b.o}s`} repeatCount="indefinite"
               path={`M-30,${250 + b.y * 0.35} C 110,${180 + b.y * 0.3} 290,${420 - b.y * 0.2} 430,${230 + b.y * 0.3}`} />
+          </g>
+        ))}
+      </>
+    );
+  }
+  if (kind === "fireworks") {
+    const colors = ["#f2c230", "#ff4f6d", "#4fb4ff", "#ffffff", "#ff4fd8", "#7cff6b"];
+    return (
+      <>
+        {items.map((f, i) => {
+          const cx = 40 + f.x * 0.8, cy = 60 + f.y * 0.55, dur = 2.2 + f.k * 1.6, begin = `-${(f.o % dur).toFixed(2)}s`;
+          const c = colors[i % colors.length];
+          return (
+            <g key={i}>
+              {Array.from({ length: 12 }, (_, j) => {
+                const a = (j / 12) * Math.PI * 2, R = 26 + f.s * 18;
+                return (
+                  <circle key={j} r="1.6" fill={c}>
+                    <animate attributeName="cx" values={`${cx};${cx + Math.cos(a) * R}`} dur={`${dur}s`} begin={begin} repeatCount="indefinite" calcMode="spline" keyTimes="0;1" keySplines="0.1 0.8 0.3 1" />
+                    <animate attributeName="cy" values={`${cy};${cy + Math.sin(a) * R + 10}`} dur={`${dur}s`} begin={begin} repeatCount="indefinite" calcMode="spline" keyTimes="0;1" keySplines="0.1 0.8 0.3 1" />
+                    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.05;0.55;1" dur={`${dur}s`} begin={begin} repeatCount="indefinite" />
+                  </circle>
+                );
+              })}
+            </g>
+          );
+        })}
+      </>
+    );
+  }
+  if (kind === "hearts" || kind === "shamrocks" || kind === "petals") {
+    const fills = kind === "hearts" ? ["#ff4f8b", "#ff9ccc", "#ff2e6d"] : kind === "shamrocks" ? ["#3ddc84", "#2fb36b", "#7cff6b"] : ["#ffc6e6", "#fff3a6", "#c8a6ff", "#a6e3ff"];
+    const shape = kind === "hearts"
+      ? "M0,3 C-6,-2 -4,-7 0,-4 C4,-7 6,-2 0,3 z"
+      : kind === "shamrocks"
+        ? "M0,0 C-5,-1 -5,-6 0,-3 C5,-6 5,-1 0,0 C4,1 4,6 0,3 C-4,6 -4,1 0,0 M0,0 L1,6"
+        : "M0,-4 q4,4 0,8 q-4,-4 0,-8 z";
+    const rising = kind === "hearts";
+    return (
+      <>
+        {items.map((l, i) => (
+          <g key={i} opacity="0.85">
+            <path d={shape} fill={fills[i % fills.length]} stroke={kind === "shamrocks" ? fills[i % fills.length] : "none"} strokeWidth="0.6" transform={`scale(${l.s * 1.3})`}>
+              <animateTransform attributeName="transform" type="rotate" values="-20;20;-20" dur={`${2 + l.k * 2}s`} repeatCount="indefinite" additive="sum" />
+            </path>
+            <animateMotion dur={`${l.d}s`} begin={`-${l.o}s`} repeatCount="indefinite"
+              path={rising ? `M${l.x},${H * 0.62} C ${l.x + 30},420 ${l.x - 30},200 ${l.x + 10},-20` : `M${l.x},-20 C ${l.x + 40},150 ${l.x - 40},350 ${l.x + 20},560`} />
           </g>
         ))}
       </>

@@ -8,6 +8,7 @@ import { TOURS } from "../game/data";
 import { STAGE_THEMES } from "../game/cosmetics";
 import { BLANK_EVENT, parseEvent, type TourEvent } from "../lib/tourEvent";
 import { TIERS } from "../lib/social";
+import { SEASON_OPTIONS } from "../lib/season";
 
 interface Eng {
   days: number;
@@ -230,12 +231,10 @@ export function TitleSeasonAdmin() {
   };
   if (v === null) return null;
   return (
-    <Section title="Title screen season" sub="The title screen dresses up for the season: Halloween (Oct 1–31), Harvest for Thanksgiving (Nov 1–24) and Holidays (Nov 25–Jan 1). Pin one, or switch it off.">
+    <Section title="Title screen season" sub="The title screen dresses up for holidays on its own: New Year's, Valentine's, St. Patrick's, Easter, 4th of July, Halloween, Thanksgiving and the Holidays. Pin one to preview it, or switch them off.">
       <select className={`${input} max-w-xs`} value={v} onChange={(e) => void save(e.target.value)}>
         <option value="auto">Follow the calendar</option>
-        <option value="halloween">🎃 Halloween</option>
-        <option value="harvest">🍂 Harvest (Thanksgiving)</option>
-        <option value="holiday">❄️ Holidays</option>
+        {SEASON_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label} ({o.when})</option>)}
         <option value="none">Off (regular sunset)</option>
       </select>
     </Section>
