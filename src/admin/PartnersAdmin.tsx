@@ -1,6 +1,7 @@
 // Admin → Partners & venues: licensed artists/venues/brands, sponsored venues on the Tour page,
 // and partner statements (pack sales, revenue share owed, venue views/plays/ticket taps).
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ImageField } from "./ImageField";
 import { supabase } from "../lib/cloud";
 import { askConfirm, toast } from "../components/ui";
 import { TOURS } from "../game/data";
@@ -275,7 +276,7 @@ function VenueEditor({ form, set, save, busy, partners }: { form: VenueForm; set
           <span className="block mt-1">Reason to play here. 10–15% is plenty.</span></label>
         <label className="block text-xs text-muted-fg">Stage look<select className={`${input} mt-1`} value={form.stage_theme} onChange={(e) => up({ stage_theme: e.target.value })}>
           <option value="">Player's own stage</option>{STAGE_THEMES.map((s) => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}</select></label>
-        <label className="block text-xs text-muted-fg">Banner image link (optional, https)<input className={`${input} mt-1`} value={form.image_url} onChange={(e) => up({ image_url: e.target.value })} placeholder="https://…" /></label>
+        <ImageField label="Venue banner image (optional)" folder="venues" value={form.image_url} onChange={(url) => up({ image_url: url })} />
         <label className="block text-xs text-muted-fg md:col-span-2">Real tickets link (https; taps are counted)<input className={`${input} mt-1`} value={form.ticket_url} onChange={(e) => up({ ticket_url: e.target.value })} placeholder="https://www.ryman.com/events" /></label>
         <label className="block text-xs text-muted-fg">Ticket button text<input className={`${input} mt-1`} maxLength={40} value={form.ticket_label} onChange={(e) => up({ ticket_label: e.target.value })} /></label>
         <label className="block text-xs text-muted-fg">Starts<input type="datetime-local" className={`${input} mt-1`} value={form.starts_at} onChange={(e) => up({ starts_at: e.target.value })} /></label>

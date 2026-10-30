@@ -1,5 +1,6 @@
 // Admin: rewards store items + redemptions, and raffles.
 import { useCallback, useEffect, useState } from "react";
+import { ImageField } from "./ImageField";
 import { supabase } from "../lib/cloud";
 import { LEVELS } from "../game/data";
 import { toast, askConfirm } from "../components/ui";
@@ -158,7 +159,7 @@ export function RewardsTab() {
                 <label className="block text-xs text-muted-fg">Name<input className={`${input} mt-1`} maxLength={80} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Signed tour poster" /></label>
               </div>
               <label className="block text-xs text-muted-fg">Description<textarea className={`${input} mt-1 h-20`} maxLength={600} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="18×24, signed by the band." /></label>
-              <label className="block text-xs text-muted-fg">Image link (optional, https)<input className={`${input} mt-1`} value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://…" /></label>
+              <ImageField label="Photo of the reward (optional)" folder="rewards" value={form.image_url} onChange={(url) => setForm({ ...form, image_url: url })} />
               <label className="block text-xs text-muted-fg">Options players pick from (comma separated, optional)<input className={`${input} mt-1`} value={form.options} onChange={(e) => setForm({ ...form, options: e.target.value })} placeholder="S, M, L, XL" /></label>
             </div>
             <div className="space-y-3">
@@ -393,7 +394,7 @@ export function RafflesTab() {
               </div>
               <label className="block text-xs text-muted-fg">Prize<input className={`${input} mt-1`} maxLength={200} value={form.prize} onChange={(e) => setForm({ ...form, prize: e.target.value })} placeholder="2 VIP tickets + meet & greet + hotel" /></label>
               <label className="block text-xs text-muted-fg">Description<textarea className={`${input} mt-1 h-20`} maxLength={1000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
-              <label className="block text-xs text-muted-fg">Image link (optional, https)<input className={`${input} mt-1`} value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://…" /></label>
+              <ImageField label="Raffle image (optional)" folder="raffles" value={form.image_url} onChange={(url) => setForm({ ...form, image_url: url })} />
               <label className="block text-xs text-muted-fg">Official rules<textarea className={`${input} mt-1 h-40 text-xs`} value={form.rules} onChange={(e) => setForm({ ...form, rules: e.target.value })} /></label>
             </div>
             <div className="space-y-3">

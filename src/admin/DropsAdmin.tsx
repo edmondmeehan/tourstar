@@ -1,6 +1,7 @@
 // Admin → Drops: create and schedule limited packs sold for Gold Records, see sales, manage Gold.
 // Drops go live in the app at their start time with no app update.
 import { useCallback, useEffect, useState } from "react";
+import { ImageField } from "./ImageField";
 import { supabase } from "../lib/cloud";
 import { askConfirm, toast } from "../components/ui";
 import { ITEM_TYPES, MOVES, SKIN_PRESETS, STAGE_THEMES, itemLabel, type DropItem, type MoveId } from "../game/cosmetics";
@@ -270,7 +271,7 @@ function DropEditor({ form, setForm, save, busy, partners, venues, perkStats }: 
             <label className="block text-xs text-muted-fg">Name<input className={`${input} mt-1`} maxLength={80} value={form.name} onChange={(e) => set({ name: e.target.value })} /></label>
           </div>
           <label className="block text-xs text-muted-fg">Description<textarea className={`${input} mt-1 h-20`} maxLength={600} value={form.description} onChange={(e) => set({ description: e.target.value })} /></label>
-          <label className="block text-xs text-muted-fg">Banner image link (optional, https)<input className={`${input} mt-1`} value={form.image_url} onChange={(e) => set({ image_url: e.target.value })} placeholder="https://…" /></label>
+          <ImageField label="Pack banner image (optional)" folder="drops" value={form.image_url} onChange={(url) => set({ image_url: url })} />
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs text-muted-fg">Type<select className={`${input} mt-1`} value={form.kind} onChange={(e) => set({ kind: e.target.value as Form["kind"] })}>
               <option value="bundle">Limited drop</option><option value="artist">Official artist pack</option><option value="starter">New player offer</option><option value="season">Season</option></select></label>

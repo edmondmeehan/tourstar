@@ -2,6 +2,7 @@
 // download everything DistroKid needs (audio, tracklist CSV, 3000×3000 cover), then paste the
 // streaming links back here and go live so players can find it in the game.
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ImageField } from "./ImageField";
 import { zipSync } from "fflate";
 import { supabase } from "../lib/cloud";
 import { askConfirm, toast } from "../components/ui";
@@ -273,7 +274,7 @@ export function MonthlyTab() {
             <label className="block text-xs text-muted-fg">Status<select className={`${input} mt-1`} value={rel.status} onChange={(e) => setRel({ ...rel, status: e.target.value as ReleaseRow["status"] })}>
               <option value="draft">Draft</option><option value="submitted">Submitted to DistroKid</option><option value="live">Live (players can see it)</option></select></label>
             <label className="block text-xs text-muted-fg">Release date<input type="date" className={`${input} mt-1`} value={rel.released_on ?? ""} onChange={(e) => setRel({ ...rel, released_on: e.target.value || null })} /></label>
-            <label className="block text-xs text-muted-fg md:col-span-2">Cover image link for the game (https, optional)<input className={`${input} mt-1`} value={rel.cover_url ?? ""} onChange={(e) => setRel({ ...rel, cover_url: e.target.value || null })} placeholder="https://… (e.g. the Spotify album art)" /></label>
+            <ImageField wide label="Cover art shown in the game (optional)" folder="monthly" value={rel.cover_url} onChange={(url) => setRel({ ...rel, cover_url: url || null })} hint="Upload the album art, or paste its link (for example from Spotify)." />
             {LINK_KEYS.map((l) => (
               <label key={l.key} className={`block text-xs text-muted-fg ${l.key === "hyperfollow" ? "md:col-span-3" : ""}`}>{l.key === "hyperfollow" ? "DistroKid HyperFollow (all services)" : l.label}
                 <input className={`${input} mt-1`} value={rel.links[l.key] ?? ""} onChange={(e) => setRel({ ...rel, links: { ...rel.links, [l.key]: e.target.value.trim() } })} placeholder="https://" /></label>
