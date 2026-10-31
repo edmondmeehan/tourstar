@@ -5,6 +5,8 @@ import { Card, Modal, toast } from "../components/ui";
 import { itemLabel } from "../game/cosmetics";
 import { buyMerch, loadProducts, money, useMerch, vipCode, type MerchProduct } from "../lib/merch";
 import { supabase, useCloud } from "../lib/cloud";
+import { useGold } from "../lib/gold";
+import { useGame } from "../game/store";
 
 interface MyOrder { id: number; order_number: string; total: number; currency: string; created_at: string; items: { title: string; qty: number }[] }
 
@@ -14,6 +16,8 @@ export function MerchTab() {
   const [open, setOpen] = useState<MerchProduct | null>(null);
   const [code, setCode] = useState<string | null>(null);
   const [orders, setOrders] = useState<MyOrder[]>([]);
+  const crew = useGold((s) => s.owned.some((o) => o.items.some((i) => i.type === "badge" && i.name === "Merch Crew")));
+  const wearing = useGame((s) => s.career?.style?.badge === "👕");
   useEffect(() => {
     void loadProducts();
     void vipCode().then(setCode);
@@ -29,6 +33,7 @@ export function MerchTab() {
         <p className="text-xs text-muted-fg mt-2">Real gear, printed and shipped to your door. Every order also unlocks in-game items and the 👕 Merch Crew badge on your account.</p>
         {code ? <p className="text-xs mt-2" style={{ color: "var(--gold)" }}>👑 VIP discount <b>{code}</b> is applied at checkout.</p>
           : <p className="text-[11px] text-muted-fg mt-2">TourStar VIP members get a merch discount. <Link to="/premium" className="underline">See VIP</Link></p>}
+        {crew && <p className="text-xs mt-2">👕 You're <b>Merch Crew</b>. {wearing ? "It shows next to your name." : <Link to="/look" className="underline" style={{ color: "var(--gold)" }}>Wear the badge</Link>}</p>}
         {!signedIn && <p className="text-[11px] mt-2">Sign in before you buy so your in-game unlocks land on your account. <Link to="/login" className="underline">Sign in</Link></p>}
       </Card>
 

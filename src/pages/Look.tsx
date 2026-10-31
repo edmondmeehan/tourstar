@@ -1,6 +1,7 @@
 // My Look: build your artist's pixel look. Starter items are free; more come from cash, levels, Gold drops,
 // artist packs and real merch. Cosmetic only.
 import { useMemo, useState } from "react";
+import { MyStyle, PackPerks } from "./Drops";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { Card, PageTitle, Tag, toast } from "../components/ui";
@@ -104,6 +105,8 @@ export default function LookPage() {
           })}
         </div>
       )}
+      <MyStyle />
+      <PackPerks />
       <p className="text-[11px] text-muted-fg text-center mt-4">Tap anything to try it on. ⭐ items unlock with levels, 💿 come in Store drops and artist packs, 👕 come with real TourStar merch. Looks never change your stats.</p>
     </div>
   );

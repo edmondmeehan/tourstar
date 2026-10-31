@@ -151,9 +151,10 @@ export default function Dashboard() {
           </Link>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold truncate">{c.name}</h2>
+              <h2 className="text-xl font-bold truncate">{c.name}{c.style?.badge && <span className="ml-1.5" title="Your badge">{c.style.badge}</span>}</h2>
               <button aria-label="Rename" className="text-muted-fg hover:text-fg" onClick={() => { setNewName(c.name); setRenaming(true); }}>✏️</button>
             </div>
+            {c.style?.title && <div className="text-[11px] font-pixel mt-1" style={{ color: "var(--gold)" }}>{c.style.title}</div>}
             <div className="text-xs text-muted-fg mt-1">{GENRES[c.genre].emoji} {GENRES[c.genre].name} · {PERSONAS[c.persona].emoji} {PERSONAS[c.persona].name}</div>
             {!!c.luxury?.length && <div className="text-base mt-1" title="Lifestyle">{LUXURIES.filter((l) => c.luxury!.includes(l.id)).map((l) => <span key={l.id} title={l.name}>{l.emoji}</span>)}</div>}
           </div>

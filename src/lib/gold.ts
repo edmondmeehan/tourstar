@@ -33,6 +33,7 @@ export async function refreshGold() {
   const owned = (data?.owned ?? []) as Owned[];
   useGold.setState({ gold: Number(data?.gold) || 0, owned, accountDays: Number(data?.account_days) || 0, drops: (drops ?? []) as Drop[], loaded: true });
   void import("./packperks").then((m) => m.refreshPackPerks());
+  announceNewItems(owned);
   // Unpack game cash/energy from drops bought on another device (each purchase only once).
   for (const o of owned) useGame.getState().claimDrop(o.id, o.items as { type: string; amount?: number }[], o.name);
 }
@@ -71,4 +72,25 @@ export function ownedRegions(): string[] {
     return ids;
   }
   try { return JSON.parse(localStorage.getItem(REGIONS_KEY) ?? "[]") as string[]; } catch { return []; }
+}
+
+const SEEN_KEY = "ts_seen_badges";
+/** When a new badge or title arrives (a merch order, a waitlist reward, a pack), say so and wear it if nothing is equipped. */
+function announceNewItems(owned: Owned[]) {
+  const c = useGame.getState().career;
+  if (!c) return;
+  const items = owned.flatMap((o) => o.items).filter((i): i is Extract<DropItem, { type: "badge" }> | Extract<DropItem, { type: "title" }> => i.type === "badge" || i.type === "title");
+  const keys = items.map((i) => (i.type === "badge" ? `b:${i.emoji}` : `t:${i.name}`));
+  let seen: string[] | null = null;
+  try { const v = localStorage.getItem(SEEN_KEY); seen = v ? (JSON.parse(v) as string[]) : null; } catch { /* private mode */ }
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set(keys)])); } catch { /* fine */ }
+  // First run on this device: just remember what they have (but still wear a badge if none is on).
+  const fresh = seen === null ? [] : items.filter((_, n) => !seen!.includes(keys[n]));
+  const style = c.style ?? {};
+  const badge = (fresh.find((i) => i.type === "badge") ?? (!style.badge ? items.find((i) => i.type === "badge") : undefined)) as Extract<DropItem, { type: "badge" }> | undefined;
+  if (badge && !style.badge) useGame.getState().setStyle({ badge: badge.emoji });
+  for (const i of fresh) {
+    void import("../components/ui").then(({ toast }) => toast({ ok: true, title: i.type === "badge" ? "New badge!" : "New title!",
+      message: i.type === "badge" ? `${i.emoji} ${i.name ?? "Badge"} is yours${!style.badge ? " and now shows next to your name" : ""}. Change it in Career → Look.` : `"${i.name}" is yours. Wear it from Career → Look.` }));
+  }
 }

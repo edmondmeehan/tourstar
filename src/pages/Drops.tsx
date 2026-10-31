@@ -138,7 +138,7 @@ export function MyStyle() {
         <div className="flex flex-wrap gap-2">
           <button className={chip(!style.badge)} onClick={() => setStyle({ badge: undefined })}>None</button>
           {badges.map((b) => <button key={b.emoji} className={chip(style.badge === b.emoji)} onClick={() => setStyle({ badge: b.emoji })}>{b.emoji} {b.name ?? ""}</button>)}
-          {!badges.length && <span className="text-xs text-muted-fg self-center">Badges come in drops.</span>}
+          {!badges.length && <span className="text-xs text-muted-fg self-center">Badges come with packs, merch orders and invite rewards.</span>}
         </div>
         <div className="text-xs text-muted-fg mb-2 mt-4">App colors</div>
         <div className="flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ export function MyStyle() {
 }
 
 /** Real-world perks from packs you own: merch discount codes and the artist's store. */
-function PackPerks() {
+export function PackPerks() {
   const list = usePackPerks((s) => s.list);
   if (!list.length) return null;
   return (
