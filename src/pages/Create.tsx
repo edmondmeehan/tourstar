@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { CITIES, DEFAULT_HOMETOWN } from "../game/cities";
 import { cloudConfigured, useCloud } from "../lib/cloud";
 import { BASE_STATS, GENRES, PERSONAS } from "../game/data";
 import { applyDelta } from "../game/engine";
@@ -18,6 +19,7 @@ export default function Create() {
   const [name, setName] = useState("");
   const [genre, setGenre] = useState<GenreId>("pop");
   const [persona, setPersona] = useState<PersonaId>("underdog");
+  const [home, setHome] = useState<string>("");
   const [theme, setTheme] = useState<{ seed: number; title: string } | null>(null);
   const [gens, setGens] = useState<Generation[]>([]);
   const [more, setMore] = useState(false);
@@ -30,7 +32,7 @@ export default function Create() {
   const submit = () => {
     if (name.trim().length < 2) return toast({ ok: false, message: "Give your artist a name (2+ characters)." });
     const go = () => {
-      createCareer({ name, genre, persona, themeSeed: theme?.seed, legacy });
+      createCareer({ name, genre, persona, themeSeed: theme?.seed, legacy, hometown: home || DEFAULT_HOMETOWN[genre] });
       sfx("levelup");
       // New players go straight to their first stage; Mo takes it from there.
       nav(legacy ? "/dashboard" : "/tour");
@@ -64,6 +66,14 @@ export default function Create() {
             ))}
           </div>
           <p className="text-xs text-muted-fg mt-3">{GENRES[genre].blurb}</p>
+        </Card>
+
+        <Card className="mb-4">
+          <div className="font-pixel text-[9px] text-muted-fg mb-3">HOMETOWN</div>
+          <select value={home || DEFAULT_HOMETOWN[genre]} onChange={(e) => setHome(e.target.value)} className="w-full px-3 py-3 rounded bg-black/50 border border-line outline-none focus:border-pink">
+            {CITIES.filter((x) => x.region === "core").map((x) => <option key={x.id} value={x.id}>{x.name}{(x.taste[genre] ?? 1) > 1 ? ` ❤️ loves ${GENRES[genre].name}` : ""}</option>)}
+          </select>
+          <p className="text-xs text-muted-fg mt-2">Where your first fans are. Tour other cities to grow.</p>
         </Card>
 
         <button className="btn btn-primary w-full py-4 text-[11px] mb-3" onClick={submit}>▶ {legacy ? "Start the new career" : "Start career"}</button>

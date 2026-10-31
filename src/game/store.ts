@@ -1,4 +1,5 @@
 import { challengeMet, crewPayroll, grandfatheredPasses, LUXURIES } from "./economy";
+import { DEFAULT_HOMETOWN, cityById, cityDraw, regionOpen, spreadFans, travelCost } from "./cities";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { gameStorage } from "../lib/native";
@@ -62,7 +63,11 @@ interface GameState {
   celebrations: Celebration[];
   lastOutcome: { title: string; text: string; delta: Delta } | null;
 
-  createCareer: (p: { name: string; genre: GenreId; persona: PersonaId; themeSeed?: number; legacy?: boolean }) => void;
+  createCareer: (p: { name: string; genre: GenreId; persona: PersonaId; themeSeed?: number; legacy?: boolean; hometown?: string }) => void;
+  /** Move to another city (costs cash and energy). ownedRegions = region packs the player owns. */
+  travel: (cityId: string, ownedRegions: string[]) => ActionResult;
+  /** One-time hometown pick for careers that started before cities. */
+  setHometown: (cityId: string) => ActionResult;
   /** Achievements: pay out one that's complete. */
   claimAchievement: (id: string) => ActionResult;
   /** Festival bill: claim the next goal reached by you and your friends this week. */
@@ -249,7 +254,7 @@ export const useGame = create<GameState>()(
         celebrations: [],
         lastOutcome: null,
 
-        createCareer: ({ name, genre, persona, themeSeed, legacy }) => {
+        createCareer: ({ name, genre, persona, themeSeed, legacy, hometown }) => {
           const prev = get().career;
           const retiring = legacy && prev && prev.peakLevel >= LEVELS.length ? prev : null;
           let stats: Stats = applyDelta(BASE_STATS, PERSONAS[persona].mods);
@@ -262,6 +267,8 @@ export const useGame = create<GameState>()(
             lastEnergyTick: now, daily: { lastClaim: null, streak: 0, best: 0 }, renameCount: 0,
             totals: { gigs: 0, earnings: 0, sellouts: 0, scandals: 0, collabs: 0, beefs: 0 },
             peakLevel: 1, unlockedTours: TOURS.filter((t) => t.level === 1).map((t) => t.id), tourPasses: [],
+            hometown: cityById(hometown)?.region === "core" ? hometown : DEFAULT_HOMETOWN[genre], hometownPicked: !!hometown,
+            city: cityById(hometown)?.region === "core" ? hometown : DEFAULT_HOMETOWN[genre], cityFans: {}, cityRecent: {},
             rivals: { weekKey: weekKey(), points: 0, cooldowns: {}, lastPaidWeek: null }, pendingEvent: null,
             tutorial: { step: 2 },
             look: defaultLook(genre, Math.floor(Math.random() * 64)),
@@ -308,6 +315,14 @@ export const useGame = create<GameState>()(
             changed = true;
           }
           if (!c.tourPasses) { c.tourPasses = grandfatheredPasses(c); changed = true; }
+          if (!c.hometown) {
+            // Careers from before cities: a hometown that fits the genre, holding the fans they already have.
+            c.hometown = DEFAULT_HOMETOWN[c.genre] ?? "new-york";
+            c.city = c.hometown;
+            c.cityFans = { [c.hometown]: Math.round(c.stats.fans) };
+            c.cityRecent = {};
+            changed = true;
+          }
           if (c.releases.length && !c.royaltiesAt) { c.royaltiesAt = now; changed = true; }
           if (c.lockout && c.lockout.until <= now) {
             newLog(c, "system", `Back in action after ${c.lockout.kind}.`);
@@ -356,7 +371,8 @@ export const useGame = create<GameState>()(
           const keys = setlist.filter((k, i) => pool.some((p) => p.key === k) && setlist.indexOf(k) === i).slice(0, SET_SLOTS[t.id] ?? 3);
           if (!keys.length) return { ok: false, message: "Pick at least one song." };
 
-          const draw = Math.min(1, 0.35 + c.stats.hype / 160 + Math.log10(1 + c.stats.fans) / 12 + b.selloutBonus);
+          const cd = cityDraw(c, c.city ?? c.hometown ?? "");
+          const draw = Math.min(1, (0.35 + c.stats.hype / 160 + Math.log10(1 + c.stats.fans) / 12 + b.selloutBonus) * cd.factor);
           const sellout = Math.random() < draw * 0.7;
           const attendance = sellout ? 1 : 0.4 + Math.random() * 0.5 * draw;
           c.stats = applyDelta(c.stats, { energy: -energy, cash: -t.cost });
@@ -429,6 +445,7 @@ export const useGame = create<GameState>()(
             relationships: -Math.min(8, t.weeks * 2),
           };
           const applied = gain(c, delta);
+          spreadFans(c, c.city ?? c.hometown ?? "", applied.fans ?? 0);
           // Report the full cost of the show alongside the payout.
           applied.cash = net;
           applied.energy = -energyUsed;
@@ -634,6 +651,45 @@ export const useGame = create<GameState>()(
           newLog(c, "crew", `Added ${d.name} (${d.role}).`);
           commit(c);
           return { ok: true, title: "Hired!", message: `${d.emoji} ${d.name} joined the crew.`, delta: applied };
+        },
+
+        travel: (cityId, ownedRegions) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          if (c.pendingShow) return { ok: false, message: "Finish your show first." };
+          if (isLocked(c)) return lockMsg(c);
+          const to = cityById(cityId);
+          const from = cityById(c.city ?? c.hometown);
+          if (!to || !from) return { ok: false, message: "Unknown city." };
+          if (to.id === from.id) return { ok: false, message: `You're already in ${to.name}.` };
+          if (!regionOpen(to.region, ownedRegions)) return { ok: false, message: "Get that region's tour pack to play there." };
+          const cost = travelCost(from, to, levelFor(c.stats.fame).level);
+          if (c.stats.energy < cost.energy) return { ok: false, message: `Need ${cost.energy} energy to travel.` };
+          if (c.stats.cash < cost.cash) return { ok: false, message: `Need ${fmtMoney(cost.cash)} for travel.` };
+          c.stats = applyDelta(c.stats, { energy: -cost.energy, cash: -cost.cash });
+          c.city = to.id;
+          newLog(c, "system", `Travelled ${from.name} → ${to.name} (${cost.km.toLocaleString()} km).`);
+          commit(c);
+          return { ok: true, title: `Welcome to ${to.name}`, message: to.vibe };
+        },
+
+        setHometown: (cityId) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const city = cityById(cityId);
+          if (!city || city.region !== "core") return { ok: false, message: "Pick a city in North America or London." };
+          if (c.hometownPicked) return { ok: false, message: "Your hometown is already set." };
+          const old = c.hometown;
+          const fans = { ...(c.cityFans ?? {}) };
+          // Move the starting crowd with you.
+          if (old && old !== cityId && fans[old]) { fans[cityId] = (fans[cityId] ?? 0) + fans[old]; delete fans[old]; }
+          c.cityFans = fans;
+          c.hometown = cityId;
+          c.hometownPicked = true;
+          if (!c.pendingShow) c.city = cityId;
+          newLog(c, "milestone", `Hometown: ${city.name}.`);
+          commit(c);
+          return { ok: true, title: "Hometown set", message: `${city.name}. ${city.vibe}` };
         },
 
         grantPass: (tourId) => {

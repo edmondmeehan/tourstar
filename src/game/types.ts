@@ -119,6 +119,12 @@ export interface Career {
   unlockedTours: string[];
   /** Tours whose challenge was skipped with a Promoter's Pass (or grandfathered for careers from before challenges). */
   tourPasses?: string[];
+  /** Touring cities: hometown, where you are now, fans per city and recent shows per city (market rest). */
+  hometown?: string;
+  hometownPicked?: boolean;
+  city?: string;
+  cityFans?: Record<string, number>;
+  cityRecent?: Record<string, number[]>;
   /** Gold energy refills used today: { day: 'YYYY-MM-DD', n }. */
   refills?: { day: string; n: number };
   rivals: { weekKey: string; points: number; cooldowns: Record<string, number>; lastPaidWeek: string | null };

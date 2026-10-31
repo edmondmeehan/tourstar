@@ -1,6 +1,7 @@
 // Admin → Drops: create and schedule limited packs sold for Gold Records, see sales, manage Gold.
 // Drops go live in the app at their start time with no app update.
 import { useCallback, useEffect, useState } from "react";
+import { REGIONS } from "../game/cities";
 import { ImageField } from "./ImageField";
 import { supabase } from "../lib/cloud";
 import { askConfirm, toast } from "../components/ui";
@@ -257,6 +258,7 @@ function DropEditor({ form, setForm, save, busy, partners, venues, perkStats }: 
     : t === "venue" ? { type: "venue", id: venues[0]?.id ?? "", name: venues[0]?.name ?? "" }
     : t === "skin" ? { type: "skin", ...SKIN_PRESETS[0] } : t === "moves" ? { type: "moves", id: "boyband", members: 5 } : t === "perk" ? { type: "perk", text: "" }
     : t === "look" ? { type: "look", id: LOOK_ITEMS.find((x) => x.source === "gold")!.id }
+    : t === "region" ? { type: "region", id: "europe", name: "Europe" }
     : { type: "cash", amount: 25000 };
   const partner = partners.find((x) => x.id === form.partner_id);
   const lic = licenseState(partner);
@@ -334,6 +336,11 @@ function DropEditor({ form, setForm, save, busy, partners, venues, perkStats }: 
                 {it.type === "look" && (
                   <select className={`${input} !w-auto`} value={it.id} onChange={(e) => setItem(i, { type: "look", id: e.target.value })}>
                     {LOOK_ITEMS.filter((x) => x.source === "gold").map((x) => <option key={x.id} value={x.id}>{x.name} ({x.slot})</option>)}
+                  </select>
+                )}
+                {it.type === "region" && (
+                  <select className={`${input} !w-auto`} value={it.id} onChange={(e) => setItem(i, { type: "region", id: e.target.value, name: REGIONS.find((r) => r.id === e.target.value)?.name })}>
+                    {REGIONS.filter((r) => r.id !== "core").map((r) => <option key={r.id} value={r.id}>{r.emoji} {r.name}</option>)}
                   </select>
                 )}
                 {it.type === "perk" && <input className={`${input} flex-1`} maxLength={80} placeholder="15% off the official store" value={it.text} onChange={(e) => setItem(i, { ...it, text: e.target.value })} />}

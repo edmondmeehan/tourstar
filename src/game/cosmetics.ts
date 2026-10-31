@@ -36,7 +36,8 @@ export type DropItem =
   | { type: "skin"; name: string; a: string; b: string; bg: string }
   | { type: "moves"; id: MoveId; name?: string; members?: number; match?: boolean }
   | { type: "perk"; text: string }
-  | { type: "look"; id: string };
+  | { type: "look"; id: string }
+  | { type: "region"; id: string; name?: string };
 
 // ------------------------------------------------------------------ app colors ("skins")
 
@@ -99,6 +100,7 @@ export const ITEM_TYPES: { type: DropItem["type"]; label: string }[] = [
   { type: "moves", label: "Dance moves / formation" },
   { type: "perk", label: "Perk line (shown in the pack, e.g. merch discount)" },
   { type: "look", label: "Outfit / look item (hair, clothes, accessory, instrument)" },
+  { type: "region", label: "Touring region (unlocks a region's cities)" },
 ];
 
 export function itemLabel(i: DropItem) {
@@ -114,5 +116,6 @@ export function itemLabel(i: DropItem) {
     case "moves": return `🕺 ${i.name || moveName(i.id)} moves${(i.members ?? 1) > 1 ? ` · ${i.members}-piece formation${i.match ? " in matching outfits" : ""}` : ""}`;
     case "perk": return `🎁 ${i.text}`;
     case "look": return `👕 ${lookItem(i.id)?.name ?? "Outfit"} (look)`;
+    case "region": return `🌍 Tour ${i.name || i.id}`;
   }
 }

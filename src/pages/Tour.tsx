@@ -17,6 +17,7 @@ import { EventCard, OfferCard } from "../components/Engage";
 import type { ShowVenue } from "../game/setlist";
 import { challengeMet } from "../game/economy";
 import { ChallengeBox, useEnergySheet } from "../components/KeepPlaying";
+import { CityBar } from "../components/Cities";
 
 export default function Tour() {
   const corner = useLiveCorner();
@@ -41,6 +42,7 @@ export default function Tour() {
           <button className="btn btn-pink w-full mt-3" onClick={() => resume(pending)}>Back on stage</button>
         </Card>
       )}
+      <CityBar />
       {!pending && <EventCard onBook={(tour, special) => setBooking({ tour, special })} />}
       {!pending && <OfferCard onBook={(tour, special) => setBooking({ tour, special })} />}
       <Link to="/drums" className="panel flex items-center gap-3 px-4 py-3 mb-4 hover:border-pink">

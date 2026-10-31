@@ -60,3 +60,15 @@ export function startGold() {
   window.setInterval(() => void refreshGold(), 5 * 60_000);
   useCloud.subscribe((s, p) => { if (s.session?.user.id !== p.session?.user.id) void refreshGold(); });
 }
+
+const REGIONS_KEY = "ts_owned_regions";
+/** Touring regions this player owns (from packs). Cached on the device so they still work offline. */
+export function ownedRegions(): string[] {
+  const { owned, loaded } = useGold.getState();
+  if (loaded) {
+    const ids = owned.flatMap((o) => o.items).filter((i): i is { type: "region"; id: string } => i.type === "region").map((i) => i.id);
+    try { localStorage.setItem(REGIONS_KEY, JSON.stringify(ids)); } catch { /* fine */ }
+    return ids;
+  }
+  try { return JSON.parse(localStorage.getItem(REGIONS_KEY) ?? "[]") as string[]; } catch { return []; }
+}
