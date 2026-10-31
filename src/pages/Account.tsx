@@ -216,6 +216,7 @@ function MadeBy() {
 /** Optional zip / postal code: change or remove. */
 function AreaCard() {
   const saved = usePostal((s) => s.postal);
+  const marketing = usePostal((s) => s.marketing);
   const [v, setV] = useState(saved ?? "");
   const [busy, setBusy] = useState(false);
   const place = saved ? parsePostal(saved) : null;
@@ -228,7 +229,13 @@ function AreaCard() {
         <input value={v} onChange={(e) => setV(e.target.value.slice(0, 10))} placeholder="Zip or postal code" autoComplete="postal-code" className="flex-1 bg-black/40 border border-line rounded px-3 py-2 text-sm" />
         <button className="btn btn-primary !px-4" disabled={busy || !v.trim()} onClick={() => void save(v)}>Save</button>
       </div>
-      {saved && <button className="text-xs underline text-muted-fg mt-2" disabled={busy} onClick={() => void save(null)}>Remove my postal code</button>}
+      {saved && (
+        <label className="flex items-start gap-2 text-xs mt-3">
+          <input type="checkbox" className="mt-0.5" checked={marketing} disabled={busy} onChange={async (e) => { setBusy(true); const r = await savePostal(saved, e.target.checked); setBusy(false); if (r.ok) toast({ ok: true, message: e.target.checked ? "You'll hear about shows and presales near you." : "Local emails turned off." }); }} />
+          <span>Email me about real shows, presales and offers near me.</span>
+        </label>
+      )}
+      {saved && <button className="text-xs underline text-muted-fg mt-2 block" disabled={busy} onClick={() => void save(null)}>Remove my postal code</button>}
     </Card>
   );
 }

@@ -72,18 +72,20 @@ export function nearestCity(p: Place, coreOnly = false): City {
 }
 
 const KEY = "ts_postal";
-export const usePostal = create<{ postal: string | null }>(() => {
-  let v: string | null = null;
-  try { v = localStorage.getItem(KEY); } catch { /* private mode */ }
-  return { postal: v };
+const MKT = "ts_postal_marketing";
+export const usePostal = create<{ postal: string | null; marketing: boolean }>(() => {
+  let v: string | null = null, m = false;
+  try { v = localStorage.getItem(KEY); m = localStorage.getItem(MKT) === "1"; } catch { /* private mode */ }
+  return { postal: v, marketing: m };
 });
 
 /** Save (or clear with null) the player's postal code: on the device, and on their account when signed in. */
-export async function savePostal(raw: string | null): Promise<{ ok: boolean; message: string }> {
+export async function savePostal(raw: string | null, marketing = usePostal.getState().marketing): Promise<{ ok: boolean; message: string }> {
   const place = raw ? parsePostal(raw) : null;
   if (raw && !place) return { ok: false, message: "That doesn't look like a US zip, Canadian postal code or UK postcode." };
-  try { if (place) localStorage.setItem(KEY, place.postal); else localStorage.removeItem(KEY); } catch { /* fine */ }
-  usePostal.setState({ postal: place?.postal ?? null });
+  const mkt = !!place && marketing;
+  try { if (place) localStorage.setItem(KEY, place.postal); else localStorage.removeItem(KEY); localStorage.setItem(MKT, mkt ? "1" : "0"); } catch { /* fine */ }
+  usePostal.setState({ postal: place?.postal ?? null, marketing: mkt });
   await syncPostal();
   return { ok: true, message: place ? `Saved. Nearest tour city: ${nearestCity(place).name}.` : "Removed your postal code." };
 }
@@ -93,14 +95,25 @@ export async function syncPostal() {
   if (!supabase || !useCloud.getState().session) return;
   const postal = usePostal.getState().postal;
   const place = postal ? parsePostal(postal) : null;
-  if (!place) { await supabase.rpc("set_my_location", { p_postal: null, p_country: null, p_area: null, p_city: null }); return; }
-  await supabase.rpc("set_my_location", { p_postal: place.postal, p_country: place.country, p_area: place.area, p_city: nearestCity(place).id });
+  if (!place) { await supabase.rpc("set_my_location", { p_postal: null, p_country: null, p_area: null, p_city: null, p_marketing: false }); return; }
+  await supabase.rpc("set_my_location", { p_postal: place.postal, p_country: place.country, p_area: place.area, p_city: nearestCity(place).id, p_marketing: usePostal.getState().marketing });
 }
 
 let started = false;
 export function startPostal() {
   if (started) return;
   started = true;
-  if (useCloud.getState().session && usePostal.getState().postal) void syncPostal();
-  useCloud.subscribe((s, p) => { if (s.session?.user.id && s.session.user.id !== p.session?.user.id && usePostal.getState().postal) void syncPostal(); });
+  const onSignIn = async () => {
+    // This device has a code: send it up. Otherwise pick up one saved from another device.
+    if (usePostal.getState().postal) return syncPostal();
+    if (!supabase) return;
+    const { data } = await supabase.rpc("my_location");
+    const row = data as { postal_code?: string; marketing_ok?: boolean } | null;
+    if (row?.postal_code) {
+      try { localStorage.setItem(KEY, row.postal_code); localStorage.setItem(MKT, row.marketing_ok ? "1" : "0"); } catch { /* fine */ }
+      usePostal.setState({ postal: row.postal_code, marketing: !!row.marketing_ok });
+    }
+  };
+  if (useCloud.getState().session) void onSignIn();
+  useCloud.subscribe((s, p) => { if (s.session?.user.id && s.session.user.id !== p.session?.user.id) void onSignIn(); });
 }

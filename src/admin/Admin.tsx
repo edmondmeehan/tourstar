@@ -23,12 +23,13 @@ import { EconomyTab } from "./EconomyAdmin";
 import { DropsTab } from "./DropsAdmin";
 import { PartnersTab } from "./PartnersAdmin";
 import { MonthlyTab } from "./MonthlyAdmin";
+import { AreasTab } from "./AreasAdmin";
 import { LeaderboardTab } from "./LeaderboardAdmin";
 import { MerchAdminTab } from "./MerchAdmin";
 import { NotificationsTab, PresalesTab } from "./PresalesAdmin";
 import { refreshSite, useSite } from "../lib/site";
 
-type Tab = "engagement" | "tourevent" | "insights" | "beta" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "leaderboard" | "merch" | "presales" | "push" | "raffles" | "traffic" | "music" | "integrations" | "admins";
+type Tab = "engagement" | "tourevent" | "insights" | "beta" | "areas" | "players" | "finance" | "economy" | "marketing" | "balance" | "events" | "rewards" | "drops" | "partners" | "monthly" | "leaderboard" | "merch" | "presales" | "push" | "raffles" | "traffic" | "music" | "integrations" | "admins";
 /** Admin sections, grouped by what you're there to do. Order inside a group = most used first. */
 const GROUPS: { title: string; icon: string; color: string; tabs: { id: Tab; label: string; about: string }[] }[] = [
   { title: "Overview", icon: "📊", color: "#1aa3ff", tabs: [
@@ -40,6 +41,7 @@ const GROUPS: { title: string; icon: string; color: string; tabs: { id: Tab; lab
   { title: "Players", icon: "🎤", color: "#ff42d8", tabs: [
     { id: "players", label: "Players", about: "Look up a player, see their save, and handle support." },
     { id: "beta", label: "Waitlist", about: "Early-access signups, referrals and waitlist emails." },
+    { id: "areas", label: "Players by area", about: "Find players by radius, state, county, city or zip range, from their optional postal codes." },
     { id: "leaderboard", label: "Leaderboard & leagues", about: "Weekly charts, leagues, rewards, the festival bill and removing cheaters." },
   ] },
   { title: "Engage players", icon: "📣", color: "#ff9f1c", tabs: [
@@ -145,6 +147,7 @@ export default function Admin() {
           )}
           {tab === "insights" && <Insights />}
           {tab === "beta" && <BetaSignupsTab />}
+          {tab === "areas" && <AreasTab />}
           {tab === "players" && <Players />}
           {tab === "finance" && <Finance />}
           {tab === "economy" && <EconomyTab />}

@@ -22,6 +22,7 @@ export default function Create() {
   const [persona, setPersona] = useState<PersonaId>("underdog");
   const [home, setHome] = useState<string>("");
   const [zip, setZip] = useState<string>(usePostal.getState().postal ?? "");
+  const [mkt, setMkt] = useState<boolean>(usePostal.getState().marketing);
   const place = zip.trim() ? parsePostal(zip) : null;
   const onZip = (v: string) => {
     setZip(v);
@@ -41,7 +42,7 @@ export default function Create() {
     if (name.trim().length < 2) return toast({ ok: false, message: "Give your artist a name (2+ characters)." });
     if (zip.trim() && !place) return toast({ ok: false, message: "Check your zip / postal code, or leave it blank." });
     const go = () => {
-      if (place) void savePostal(place.postal);
+      if (place) void savePostal(place.postal, mkt);
       createCareer({ name, genre, persona, themeSeed: theme?.seed, legacy, hometown: home || DEFAULT_HOMETOWN[genre] });
       sfx("levelup");
       // New players go straight to their first stage; Mo takes it from there.
@@ -83,6 +84,12 @@ export default function Create() {
           <input value={zip} onChange={(e) => onZip(e.target.value.slice(0, 10))} placeholder="e.g. 10010, M5V 2T6 or SW1A 1AA" autoComplete="postal-code" inputMode="text"
             className="w-full px-3 py-3 rounded bg-black/50 border border-line outline-none focus:border-pink mb-1" />
           <p className="text-[11px] text-muted-fg mb-4">{place ? `📍 Near ${nearestCity(place).name}.` : "We use it to suggest your hometown and show real shows and presales near you."} Skip it if you like. You can change or remove it in Account.</p>
+          {place && (
+            <label className="flex items-start gap-2 text-[11px] mb-4 -mt-2">
+              <input type="checkbox" className="mt-0.5" checked={mkt} onChange={(e) => setMkt(e.target.checked)} />
+              <span>Email me about real shows, presales and offers near me. Unsubscribe anytime.</span>
+            </label>
+          )}
           <div className="font-pixel text-[9px] text-muted-fg mb-3">HOMETOWN</div>
           <select value={home || DEFAULT_HOMETOWN[genre]} onChange={(e) => setHome(e.target.value)} className="w-full px-3 py-3 rounded bg-black/50 border border-line outline-none focus:border-pink">
             {CITIES.filter((x) => x.region === "core").map((x) => <option key={x.id} value={x.id}>{x.name}{(x.taste[genre] ?? 1) > 1 ? ` ❤️ loves ${GENRES[genre].name}` : ""}</option>)}
