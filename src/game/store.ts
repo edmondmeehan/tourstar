@@ -1,4 +1,4 @@
-import { challengeMet, crewPayroll, grandfatheredPasses, LUXURIES } from "./economy";
+import { ASSETS, CHARITY_COOLDOWN_DAYS, HOMES, LABEL_ACTS, LUXURIES, challengeMet, charityCost, cityHomePrice, crewPayroll, dailyUpkeep, grandfatheredPasses, homeOf, labelIncome, ownsAsset } from "./economy";
 import { DEFAULT_HOMETOWN, cityById, cityDraw, regionOpen, spreadFans, travelCost } from "./cities";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
@@ -108,6 +108,13 @@ interface GameState {
   leaveLabel: () => ActionResult;
   hire: (id: CrewId) => ActionResult;
   buyLuxury: (id: string) => ActionResult;
+  buyHome: (id: string) => ActionResult;
+  buyAsset: (id: string) => ActionResult;
+  signAct: (id: string) => ActionResult;
+  collectLabel: () => ActionResult;
+  buyCityHome: (cityId: string) => ActionResult;
+  charityShow: () => ActionResult;
+  donate: (amount: number) => ActionResult;
   /** Record a Promoter's Pass (already paid for in Gold on the server). */
   grantPass: (tourId: string) => void;
   /** Fill the energy bar (already paid for in Gold on the server). */
@@ -309,12 +316,24 @@ export const useGame = create<GameState>()(
             if (c.stats.energy < MAX_ENERGY) {
               c.stats.energy = Math.min(MAX_ENERGY, c.stats.energy + steps);
               // Slow passive health recovery while resting.
-              c.stats.health = Math.min(100, c.stats.health + Math.floor(steps / 6));
+              c.stats.health = Math.min(100, c.stats.health + Math.floor(steps / Math.max(2, 6 - homeOf(c).restBonus)));
             }
             c.lastEnergyTick += steps * interval;
             changed = true;
           }
           if (!c.tourPasses) { c.tourPasses = grandfatheredPasses(c); changed = true; }
+          // Daily upkeep for homes and assets.
+          const upDay = todayKey();
+          if (c.upkeepDay !== upDay) {
+            const bill = dailyUpkeep(c);
+            if (c.upkeepDay && bill > 0) {
+              const paid = Math.min(bill, Math.max(0, c.stats.cash));
+              c.stats.cash -= paid;
+              newLog(c, "system", paid < bill ? `Couldn't cover today's bills (${fmtMoney(bill)}). Book some shows!` : `Daily upkeep: ${fmtMoney(bill)} for your homes and businesses.`);
+            }
+            c.upkeepDay = upDay;
+            changed = true;
+          }
           if (!c.hometown) {
             // Careers from before cities: a hometown that fits the genre, holding the fans they already have.
             c.hometown = DEFAULT_HOMETOWN[c.genre] ?? "new-york";
@@ -427,6 +446,8 @@ export const useGame = create<GameState>()(
           }
 
           payM *= 1 + Math.max(0, Math.min(100, show.venue?.payBonus ?? 0)) / 100;
+          if (ownsAsset(c, "venue") && c.city && c.city === c.hometown) payM *= 1.15;
+          if (ownsAsset(c, "production") && t.level >= 4) payM *= 1.1;
           let gross = Math.round(t.pay * attendance * b.payMult * (1 + c.stats.hype / 200) * cfg().tourPayMultiplier * payM);
           if (label) gross = Math.round(gross * (1 + label.boost) * (1 - label.share));
           // The crew gets paid every night.
@@ -511,7 +532,7 @@ export const useGame = create<GameState>()(
           const q = quality / 60;
           const label = labelOf(c);
           const m = levelMult(lvl);
-          let earnings = Math.round(r.pay * q * m * cfg().releasePayMultiplier);
+          let earnings = Math.round(r.pay * q * m * cfg().releasePayMultiplier * (ownsAsset(c, "studio-pro") ? 1.2 : 1));
           if (label) earnings = Math.round(earnings * (1 + label.boost) * (1 - label.share));
           const fansGained = Math.round(r.fans * q * m * (1 + (label?.boost ?? 0) * 0.5));
           const streams = Math.round(fansGained * (8 + Math.random() * 20));
@@ -664,6 +685,7 @@ export const useGame = create<GameState>()(
           if (to.id === from.id) return { ok: false, message: `You're already in ${to.name}.` };
           if (!regionOpen(to.region, ownedRegions)) return { ok: false, message: "Get that region's tour pack to play there." };
           const cost = travelCost(from, to, levelFor(c.stats.fame).level);
+          if ((c.cityHomes ?? []).includes(to.id)) cost.energy = 0;
           if (c.stats.energy < cost.energy) return { ok: false, message: `Need ${cost.energy} energy to travel.` };
           if (c.stats.cash < cost.cash) return { ok: false, message: `Need ${fmtMoney(cost.cash)} for travel.` };
           c.stats = applyDelta(c.stats, { energy: -cost.energy, cash: -cost.cash });
@@ -710,6 +732,118 @@ export const useGame = create<GameState>()(
           c.lastEnergyTick = Date.now();
           newLog(c, "system", "Energy refilled.");
           commit(c);
+        },
+
+        buyHome: (id) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const h = HOMES.find((x) => x.id === id);
+          const cur = homeOf(c);
+          if (!h || h.price <= cur.price) return { ok: false, message: "That's not an upgrade." };
+          if (Math.max(levelFor(c.stats.fame).level, c.peakLevel) < h.level) return { ok: false, message: `Unlocks at level ${h.level}.` };
+          const cost = h.price - Math.round(cur.price * 0.6);
+          if (c.stats.cash < cost) return { ok: false, message: `Need ${fmtMoney(cost)} (after selling your ${cur.name}).` };
+          c.home = h.id;
+          const applied = gain(c, { cash: -cost, relationships: 4 }, { chart: false });
+          newLog(c, "milestone", `Moved into the ${h.name}.`);
+          commit(c);
+          return { ok: true, title: "New place!", message: `${h.emoji} Welcome home to your ${h.name}.`, delta: applied };
+        },
+
+        buyAsset: (id) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const a = ASSETS.find((x) => x.id === id);
+          if (!a) return { ok: false, message: "Not for sale." };
+          if (ownsAsset(c, id)) return { ok: false, message: "You already own it." };
+          if (Math.max(levelFor(c.stats.fame).level, c.peakLevel) < a.level) return { ok: false, message: `Unlocks at level ${a.level}.` };
+          if (c.stats.cash < a.price) return { ok: false, message: `Need ${fmtMoney(a.price)}.` };
+          c.assets = [...(c.assets ?? []), id];
+          if (id === "imprint") c.labelIncomeAt = Date.now();
+          const applied = gain(c, { cash: -a.price, credibility: 3 }, { chart: false });
+          newLog(c, "milestone", `Bought ${a.name}.`);
+          commit(c);
+          return { ok: true, title: "It's yours!", message: `${a.emoji} ${a.name}: ${a.perk}.`, delta: applied };
+        },
+
+        signAct: (id) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          if (!ownsAsset(c, "imprint")) return { ok: false, message: "Start your own label first." };
+          const act = LABEL_ACTS.find((x) => x.id === id);
+          if (!act || (c.labelActs ?? []).includes(id)) return { ok: false, message: "Already signed." };
+          if (c.stats.cash < act.price) return { ok: false, message: `Need ${fmtMoney(act.price)} to sign them.` };
+          // Bank what's already earned before the daily rate goes up.
+          const { pending } = labelIncome(c);
+          c.labelActs = [...(c.labelActs ?? []), id];
+          c.labelIncomeAt = Date.now();
+          const applied = gain(c, { cash: pending - act.price, hype: 4 }, { chart: false });
+          newLog(c, "milestone", `Signed ${act.name} to your label.`);
+          commit(c);
+          return { ok: true, title: "Signed!", message: `${act.emoji} ${act.name} earns you ${fmtMoney(act.perDay)} a day.`, delta: applied };
+        },
+
+        collectLabel: () => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const { pending } = labelIncome(c);
+          if (pending < 1) return { ok: false, message: "Nothing to collect yet." };
+          c.labelIncomeAt = Date.now();
+          const applied = gain(c, { cash: pending }, { chart: false });
+          newLog(c, "system", `Collected ${fmtMoney(pending)} from your label.`);
+          commit(c);
+          return { ok: true, title: "Label money", message: `+${fmtMoney(pending)} from your acts.`, delta: applied };
+        },
+
+        buyCityHome: (cityId) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          if ((c.cityHomes ?? []).includes(cityId)) return { ok: false, message: "You already have a place there." };
+          if (cityId === c.hometown) return { ok: false, message: "That's your hometown." };
+          const lvl = Math.max(levelFor(c.stats.fame).level, c.peakLevel);
+          if (lvl < 3) return { ok: false, message: "Homes in other cities unlock at level 3." };
+          const price = cityHomePrice(lvl);
+          if (c.stats.cash < price) return { ok: false, message: `Need ${fmtMoney(price)}.` };
+          c.cityHomes = [...(c.cityHomes ?? []), cityId];
+          c.cityHomesPaid = (c.cityHomesPaid ?? 0) + price;
+          const applied = gain(c, { cash: -price }, { chart: false });
+          newLog(c, "milestone", `Bought a place in ${cityId.replace(/-/g, " ")}.`);
+          commit(c);
+          return { ok: true, title: "Home away from home", message: "Travel there costs no energy, and you draw a little better there.", delta: applied };
+        },
+
+        charityShow: () => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          if (c.pendingShow || c.pendingEvent) return { ok: false, message: "Finish what you're doing first." };
+          const left = (c.charityAt ?? 0) + CHARITY_COOLDOWN_DAYS * 864e5 - Date.now();
+          if (left > 0) return { ok: false, message: `Your next benefit show is in ${Math.ceil(left / 864e5)} day(s).` };
+          const lvl = levelFor(c.stats.fame).level;
+          const cost = charityCost(lvl);
+          if (c.stats.energy < 20) return { ok: false, message: "Need 20 energy." };
+          if (c.stats.cash < cost) return { ok: false, message: `Need ${fmtMoney(cost)} to put it on.` };
+          c.charityAt = Date.now();
+          const applied = gain(c, { cash: -cost, energy: -20, credibility: 8, hype: 6, relationships: 6, fans: Math.round(c.stats.fans * 0.02) + 50 });
+          newLog(c, "milestone", "Played a benefit show. The money went to music programs in your hometown.");
+          commit(c);
+          return { ok: true, title: "Benefit show", message: "The press loved it. So did the kids.", delta: applied };
+        },
+
+        donate: (amount) => {
+          const c = draft();
+          if (!c) return { ok: false, message: "No career." };
+          const amt = Math.round(amount);
+          if (amt < 1000) return { ok: false, message: "Donate at least $1,000." };
+          if (c.stats.cash < amt) return { ok: false, message: "Not enough cash." };
+          // Credibility for giving, scaled to your wealth, at most +5 a day.
+          const day = todayKey();
+          const cred = Math.min(5, Math.max(1, Math.round((amt / Math.max(10_000, c.stats.cash)) * 20)));
+          c.donated = (c.donated ?? 0) + amt;
+          const applied = gain(c, { cash: -amt, credibility: c.lastDonateDay === day ? 0 : cred }, { chart: false });
+          c.lastDonateDay = day;
+          newLog(c, "milestone", `Donated ${fmtMoney(amt)} through your foundation.`);
+          commit(c);
+          return { ok: true, title: "Thank you", message: `${fmtMoney(amt)} to your foundation.`, delta: applied };
         },
 
         buyLuxury: (id) => {

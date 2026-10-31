@@ -337,7 +337,7 @@ function Lifestyle() {
   const owned = c.luxury ?? [];
   return (
     <div className="mb-6">
-      <PageTitle title="LIFESTYLE" sub="Big-ticket buys for big careers. Just for show: they appear on your profile." />
+      <PageTitle title="LIFESTYLE" sub="Big-ticket buys for big careers. Just for show: they appear on your profile." right={<Link to="/wealth" className="font-pixel text-[8px] underline" style={{ color: "var(--gold)" }}>HOMES & BUSINESSES ›</Link>} />
       <div className="space-y-2">
         {LUXURIES.map((l) => {
           const has = owned.includes(l.id);

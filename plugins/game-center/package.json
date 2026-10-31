@@ -1,0 +1,11 @@
+{
+  "name": "tourstar-game-center",
+  "version": "1.0.0",
+  "description": "TourStar's Game Center bridge (sign-in, leaderboards, achievements) for Capacitor 7 on iOS.",
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "files": ["ios/Sources", "Package.swift", "index.js"],
+  "capacitor": { "ios": { "src": "ios" } },
+  "peerDependencies": { "@capacitor/core": ">=7.0.0" }
+}

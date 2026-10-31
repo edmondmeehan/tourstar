@@ -1,5 +1,6 @@
 import { COPYRIGHT } from "../lib/site";
 import { useVersion } from "../lib/version";
+import { available as gcAvailable, openGameCenter, signInGameCenter, useGameCenter } from "../lib/gamecenter";
 import { nearestCity, parsePostal, savePostal, usePostal } from "../lib/postal";
 import { useEffect, useState } from "react";
 import Calibrate from "../components/Calibrate";
@@ -136,6 +137,7 @@ export default function Account() {
 
       <CloudCard />
       <AreaCard />
+      <GameCenterCard />
 
       <Card className="mb-4">
         <div className="font-pixel text-[8px] text-muted-fg mb-2">MEMBERSHIP</div>
@@ -236,6 +238,32 @@ function AreaCard() {
         </label>
       )}
       {saved && <button className="text-xs underline text-muted-fg mt-2 block" disabled={busy} onClick={() => void save(null)}>Remove my postal code</button>}
+    </Card>
+  );
+}
+
+/** Game Center (iPhone): achievements and leaderboards mirrored from TourStar. */
+function GameCenterCard() {
+  const player = useGameCenter((s) => s.player);
+  if (!gcAvailable) return null;
+  return (
+    <Card className="mb-4">
+      <div className="font-pixel text-[8px] text-muted-fg mb-2">GAME CENTER</div>
+      {player?.authenticated ? (
+        <>
+          <p className="text-xs text-muted-fg mb-3">Signed in as <b className="text-fg">{player.alias}</b>. Your achievements, fame and net worth show up in Game Center.</p>
+          <div className="flex gap-2">
+            <button className="btn btn-ghost flex-1 text-xs" onClick={() => openGameCenter("achievements")}>🏅 Achievements</button>
+            <button className="btn btn-ghost flex-1 text-xs" onClick={() => openGameCenter("leaderboards")}>🏆 Leaderboards</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-xs text-muted-fg mb-3">Optional. Sign in to Game Center to see your TourStar achievements and compare fame and net worth with friends.</p>
+          <button className="btn btn-ghost w-full text-xs" onClick={() => void signInGameCenter()}>Sign in to Game Center</button>
+          {player?.error && <p className="text-[11px] text-muted-fg mt-2">If nothing happens, open Settings → Game Center on your iPhone and sign in there.</p>}
+        </>
+      )}
     </Card>
   );
 }

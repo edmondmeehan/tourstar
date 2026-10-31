@@ -70,3 +70,66 @@ export function nextChallenge(c: Career, level: number, tours: { id: string; lev
   const left = steps.reduce((n, s) => n + Math.max(0, s.need - s.have), 0);
   return { tourId: t.id, steps, left };
 }
+
+/* ---------------- Wealth: things worth spending a fortune on ---------------- */
+
+/** Where you live. One at a time; upgrading trades in the old place at 60%. Better homes help you recover. */
+export interface HomeTier { id: string; name: string; emoji: string; price: number; level: number; upkeep: number; restBonus: number; blurb: string }
+export const HOMES: HomeTier[] = [
+  { id: "basement", name: "Mom's Basement", emoji: "🛋️", price: 0, level: 1, upkeep: 0, restBonus: 0, blurb: "Free rent. Mom does your laundry." },
+  { id: "apartment", name: "City Apartment", emoji: "🏢", price: 60_000, level: 2, upkeep: 300, restBonus: 1, blurb: "Your own place. Thin walls." },
+  { id: "loft", name: "Downtown Loft", emoji: "🏙️", price: 500_000, level: 3, upkeep: 2_000, restBonus: 2, blurb: "Exposed brick, a rehearsal corner." },
+  { id: "house", name: "Hillside House", emoji: "🏡", price: 3_500_000, level: 4, upkeep: 10_000, restBonus: 3, blurb: "A yard, a pool, a home studio." },
+  { id: "mansion", name: "Mansion", emoji: "🏰", price: 18_000_000, level: 5, upkeep: 45_000, restBonus: 4, blurb: "Gates, guests and a guitar-shaped pool." },
+  { id: "estate", name: "Legend's Estate", emoji: "🏛️", price: 75_000_000, level: 6, upkeep: 150_000, restBonus: 5, blurb: "Your own museum wing." },
+];
+export const homeOf = (c: Career) => HOMES.find((h) => h.id === (c.home ?? "basement")) ?? HOMES[0];
+
+/** Career assets: each one makes money or makes shows better. Upkeep is charged once a day. */
+export interface Asset { id: string; name: string; emoji: string; price: number; level: number; upkeep: number; perk: string; blurb: string }
+export const ASSETS: Asset[] = [
+  { id: "venue", name: "Your Own Club", emoji: "🎟️", price: 1_500_000, level: 4, upkeep: 4_000, perk: "+15% pay on shows in your hometown", blurb: "Your name over the door in your hometown." },
+  { id: "studio-pro", name: "Pro Recording Studio", emoji: "🎚️", price: 2_500_000, level: 4, upkeep: 5_000, perk: "+20% pay on releases", blurb: "Better rooms, better records." },
+  { id: "production", name: "Arena Production", emoji: "💡", price: 6_000_000, level: 5, upkeep: 15_000, perk: "+10% pay on arena and stadium shows", blurb: "Video walls, lifts and a light show." },
+  { id: "imprint", name: "Your Own Label", emoji: "🏷️", price: 10_000_000, level: 5, upkeep: 20_000, perk: "Sign acts that earn you money every day", blurb: "Find the next you, and keep a cut." },
+];
+export const ownsAsset = (c: Career, id: string) => (c.assets ?? []).includes(id);
+
+/** Acts you sign to your own label. Each pays a daily income you collect (holds up to 2 days). */
+export interface LabelAct { id: string; name: string; emoji: string; price: number; perDay: number }
+export const LABEL_ACTS: LabelAct[] = [
+  { id: "neon-kid", name: "Neon Kid", emoji: "🧑‍🎤", price: 2_000_000, perDay: 40_000 },
+  { id: "velvet-skyline", name: "Velvet Skyline", emoji: "🌃", price: 5_000_000, perDay: 105_000 },
+  { id: "basement-saints", name: "The Basement Saints", emoji: "🎸", price: 12_000_000, perDay: 260_000 },
+];
+export const LABEL_HOLD_HOURS = 48;
+export function labelIncome(c: Career, now = Date.now()) {
+  const perDay = LABEL_ACTS.filter((a) => (c.labelActs ?? []).includes(a.id)).reduce((n, a) => n + a.perDay, 0);
+  if (!perDay || !c.labelIncomeAt) return { perDay, pending: 0, full: false };
+  const hours = Math.min(LABEL_HOLD_HOURS, (now - c.labelIncomeAt) / 36e5);
+  return { perDay, pending: Math.floor((perDay * hours) / 24), full: hours >= LABEL_HOLD_HOURS };
+}
+
+/** A home in a tour city: travel there costs no energy and you draw a bit better there. */
+export function cityHomePrice(level: number) {
+  return Math.round(150_000 * Math.pow(2.4, Math.max(0, level - 2)) / 1000) * 1000;
+}
+
+/** Giving back: a charity show (once a week) and donations to your foundation (credibility). */
+export const CHARITY_COOLDOWN_DAYS = 7;
+export function charityCost(level: number) { return Math.round(20_000 * Math.pow(2.6, Math.max(0, level - 1)) / 1000) * 1000; }
+
+/** Daily upkeep for everything you own. */
+export function dailyUpkeep(c: Career) {
+  return homeOf(c).upkeep + ASSETS.filter((a) => ownsAsset(c, a.id)).reduce((n, a) => n + a.upkeep, 0)
+    + (c.cityHomes?.length ?? 0) * Math.round(cityHomePrice(3) * 0.004);
+}
+
+/** Net worth: cash plus what you own (valued at 70% of what you paid). */
+export function netWorth(c: Career) {
+  const lux = LUXURIES.filter((l) => (c.luxury ?? []).includes(l.id)).reduce((n, l) => n + l.price, 0);
+  const assets = ASSETS.filter((a) => ownsAsset(c, a.id)).reduce((n, a) => n + a.price, 0);
+  const acts = LABEL_ACTS.filter((a) => (c.labelActs ?? []).includes(a.id)).reduce((n, a) => n + a.price, 0);
+  const homes = homeOf(c).price + (c.cityHomesPaid ?? 0);
+  return Math.max(0, Math.round(c.stats.cash + 0.7 * (lux + assets + acts + homes)));
+}

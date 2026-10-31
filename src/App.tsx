@@ -12,6 +12,7 @@ import { startAi } from "./lib/ai";
 import { startGold } from "./lib/gold";
 import { startInvites } from "./lib/invites";
 import { startPostal } from "./lib/postal";
+import { startGameCenter } from "./lib/gamecenter";
 import { startPush } from "./lib/push";
 import { startLeaderboard } from "./lib/leaderboard";
 import { startAnalytics } from "./lib/analytics";
@@ -44,6 +45,7 @@ import Radio from "./pages/Radio";
 import HowToPlay from "./pages/HowToPlay";
 import Friends from "./pages/Friends";
 import Achievements from "./pages/Achievements";
+import Wealth from "./pages/Wealth";
 import LookPage from "./pages/Look";
 import DrumSchool from "./pages/DrumSchool";
 import Premium from "./pages/Premium";
@@ -89,6 +91,7 @@ export default function App() {
     startGold();
     startInvites();
     startPostal();
+    startGameCenter();
     startLeaderboard();
     startSocial();
     void loadTourEvent();
@@ -138,6 +141,7 @@ export default function App() {
           <Route path="/how-to-play" element={<HowToPlay />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/achievements" element={<Achievements />} />
+          <Route path="/wealth" element={<Wealth />} />
           <Route path="/look" element={<LookPage />} />
           <Route path="/drums" element={<DrumSchool />} />
           <Route path="/press" element={<Press />} />

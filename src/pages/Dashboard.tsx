@@ -1,4 +1,4 @@
-import { LUXURIES } from "../game/economy";
+import { LUXURIES, homeOf, netWorth } from "../game/economy";
 import { NextGoalCard } from "../components/KeepPlaying";
 import { PresalesTeaser } from "./Presales";
 import { useEffect, useMemo, useState } from "react";
@@ -156,6 +156,7 @@ export default function Dashboard() {
             </div>
             {c.style?.title && <div className="text-[11px] font-pixel mt-1" style={{ color: "var(--gold)" }}>{c.style.title}</div>}
             <div className="text-xs text-muted-fg mt-1">{GENRES[c.genre].emoji} {GENRES[c.genre].name} · {PERSONAS[c.persona].emoji} {PERSONAS[c.persona].name}</div>
+            <Link to="/wealth" className="block text-[11px] text-muted-fg mt-1">{homeOf(c).emoji} {homeOf(c).name} · 💰 {fmtMoney(netWorth(c))} net worth</Link>
             {!!c.luxury?.length && <div className="text-base mt-1" title="Lifestyle">{LUXURIES.filter((l) => c.luxury!.includes(l.id)).map((l) => <span key={l.id} title={l.name}>{l.emoji}</span>)}</div>}
           </div>
           <div className="text-right shrink-0">

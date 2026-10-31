@@ -125,6 +125,17 @@ export interface Career {
   city?: string;
   cityFans?: Record<string, number>;
   cityRecent?: Record<string, number[]>;
+  /** Wealth: home tier, career assets, signed label acts, homes in tour cities, giving back, and upkeep. */
+  home?: string;
+  assets?: string[];
+  labelActs?: string[];
+  labelIncomeAt?: number;
+  cityHomes?: string[];
+  cityHomesPaid?: number;
+  charityAt?: number;
+  donated?: number;
+  lastDonateDay?: string;
+  upkeepDay?: string;
   /** Gold energy refills used today: { day: 'YYYY-MM-DD', n }. */
   refills?: { day: string; n: number };
   rivals: { weekKey: string; points: number; cooldowns: Record<string, number>; lastPaidWeek: string | null };

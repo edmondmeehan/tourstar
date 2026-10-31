@@ -30,6 +30,7 @@ export const GROUPS: NavGroup[] = [
     { to: "/look", label: "Look", icon: "👕" },
     { to: "/label", label: "Label", icon: "🏷️", unlock: (c) => level(c) >= 2, hint: "Reach level 2 to sign with a label." },
     { to: "/management", label: "Crew", icon: "🧑‍🤝‍🧑", unlock: (c) => level(c) >= 2, hint: "Reach level 2 to hire a crew." },
+    { to: "/wealth", label: "Wealth", icon: "💰", unlock: (c) => level(c) >= 2, hint: "Reach level 2 to start spending your fortune." },
     { to: "/achievements", label: "Awards", icon: "🏅" },
     { to: "/log", label: "Log", icon: "📜" },
   ] },

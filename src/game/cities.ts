@@ -112,7 +112,8 @@ export function cityDraw(c: Career, cityId: string, now = Date.now()) {
   const taste = city.taste[c.genre] ?? 1;
   const fatigue = Math.max(0.6, 1 - 0.1 * recentPlays(c, cityId, now));
   const home = c.hometown === cityId;
-  const factor = (0.65 + 0.5 * localScore) * taste * fatigue * (home ? 1.1 : 1);
+  const pad = (c.cityHomes ?? []).includes(cityId) ? 1.05 : 1;
+  const factor = (0.65 + 0.5 * localScore) * taste * fatigue * (home ? 1.1 : 1) * pad;
   return { factor, local, taste, fatigue, home };
 }
 
