@@ -38,7 +38,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "million", emoji: "💰", name: "Millionaire", about: "Earn $1,000,000 from shows.", group: "Career", target: 1000000, progress: (c) => c.totals.earnings, size: 3 },
   { id: "home", emoji: "🏰", name: "Moved On Up", about: "Move into a mansion.", group: "Career", target: 1, progress: (c) => (["mansion", "estate"].includes(c.home ?? "") ? 1 : 0), size: 2 },
   { id: "worth10m", emoji: "💎", name: "Eight Figures", about: "Reach a net worth of $10 million.", group: "Career", target: 10_000_000, progress: (c) => netWorth(c), size: 2 },
-  { id: "mogul", emoji: "🏷️", name: "Mogul", about: "Sign 3 acts to your own label.", group: "Career", target: 3, progress: (c) => c.labelActs?.length ?? 0, size: 3 },
+  { id: "mogul", emoji: "💼", name: "Mogul", about: "Sign 3 acts to your own label.", group: "Career", target: 3, progress: (c) => c.labelActs?.length ?? 0, size: 3 },
   { id: "giveback", emoji: "💗", name: "Giving Back", about: "Play a benefit show.", group: "Community", target: 1, progress: (c) => (c.charityAt ? 1 : 0), size: 1 },
   { id: "label", emoji: "🏷️", name: "Signed", about: "Sign with a record label.", group: "Career", target: 1, progress: (c) => (c.labelId || c.log.some((l) => l.type === "label") ? 1 : 0), size: 1 },
   { id: "streak7", emoji: "📅", name: "Week Streak", about: "Claim your daily reward 7 days in a row.", group: "Habits", target: 7, progress: (c) => Math.max(c.daily.best, c.daily.streak), size: 2 },

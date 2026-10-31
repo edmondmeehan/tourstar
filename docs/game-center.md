@@ -14,7 +14,7 @@ TourStar mirrors its own achievements and two leaderboards into Game Center. The
 | `co.please.tourstar.networth` | Net Worth | Money, whole dollars (e.g. "$12,500,000") |
 
 ## 3. Achievements (28, 975 of 1,000 points)
-For each one: Achievement ID as below, reference name = the name, points as listed, "Hidden" off, "Achievable more than once" off. Description (pre-earned and earned) = the text. Image: 512×512 or 1024×1024 PNG (the emoji on a TourStar-colored square works; I can make these).
+For each one: Achievement ID as below, reference name = the name, points as listed, "Hidden" off, "Achievable more than once" off. Description (pre-earned and earned) = the text. Image: upload `docs/game-center-images/<id>.png` (1024×1024 PNG; the file name matches the end of the Achievement ID). Emoji artwork: Noto Color Emoji (Apache 2.0).
 
 | Achievement ID | Name | Description | Points |
 |---|---|---|---|
@@ -37,7 +37,7 @@ For each one: Achievement ID as below, reference name = the name, points as list
 | `co.please.tourstar.ach.million` | 💰 Millionaire | Earn $1,000,000 from shows. | 55 |
 | `co.please.tourstar.ach.home` | 🏰 Moved On Up | Move into a mansion. | 30 |
 | `co.please.tourstar.ach.worth10m` | 💎 Eight Figures | Reach a net worth of $10 million. | 30 |
-| `co.please.tourstar.ach.mogul` | 🏷️ Mogul | Sign 3 acts to your own label. | 55 |
+| `co.please.tourstar.ach.mogul` | 💼 Mogul | Sign 3 acts to your own label. | 55 |
 | `co.please.tourstar.ach.giveback` | 💗 Giving Back | Play a benefit show. | 15 |
 | `co.please.tourstar.ach.label` | 🏷️ Signed | Sign with a record label. | 15 |
 | `co.please.tourstar.ach.streak7` | 📅 Week Streak | Claim your daily reward 7 days in a row. | 30 |
