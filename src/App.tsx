@@ -11,6 +11,7 @@ import { startPurchases } from "./lib/purchases";
 import { startAi } from "./lib/ai";
 import { startGold } from "./lib/gold";
 import { startInvites } from "./lib/invites";
+import { startPostal } from "./lib/postal";
 import { startPush } from "./lib/push";
 import { startLeaderboard } from "./lib/leaderboard";
 import { startAnalytics } from "./lib/analytics";
@@ -87,6 +88,7 @@ export default function App() {
     startAi();
     startGold();
     startInvites();
+    startPostal();
     startLeaderboard();
     startSocial();
     void loadTourEvent();

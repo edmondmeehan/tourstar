@@ -18,6 +18,7 @@ import type { ShowVenue } from "../game/setlist";
 import { challengeMet } from "../game/economy";
 import { ChallengeBox, useEnergySheet } from "../components/KeepPlaying";
 import { CityBar } from "../components/Cities";
+import { nearestCity, parsePostal, usePostal } from "../lib/postal";
 
 export default function Tour() {
   const corner = useLiveCorner();
@@ -25,7 +26,11 @@ export default function Tour() {
   const payMultiplier = useConfig((s) => s.config.tourPayMultiplier);
   const resume = useConcert((s) => s.start);
   const [booking, setBooking] = useState<{ tour: TourDef; venue?: Venue; special?: ShowVenue } | null>(null);
-  const venues = useVenues((s) => s.venues);
+  const allVenues = useVenues((s) => s.venues);
+  const postal = usePostal((s) => s.postal);
+  const nearName = (() => { const p = postal ? parsePostal(postal) : null; return p ? nearestCity(p).name.toLowerCase() : null; })();
+  const isNear = (v: Venue) => !!nearName && !!v.city && v.city.toLowerCase().includes(nearName);
+  const venues = [...allVenues].sort((a, b) => Number(isNear(b)) - Number(isNear(a)));
   useGold((s) => s.owned); // re-check pack-only venues after a purchase
   useEffect(() => { void refreshVenues(); }, []);
   const pending = c.pendingShow;
@@ -54,7 +59,7 @@ export default function Tour() {
         <>
           <h2 className="font-pixel text-[10px] mb-2" style={{ color: "var(--gold)" }}>★ FEATURED VENUES</h2>
           <div className="space-y-3 mb-6">
-            {venues.map((v) => <VenueCard key={v.id} v={v} lvl={lvl} busy={!!pending} onBook={(tour) => setBooking({ tour, venue: v })} />)}
+            {venues.map((v) => <VenueCard key={v.id} v={v} near={isNear(v)} lvl={lvl} busy={!!pending} onBook={(tour) => setBooking({ tour, venue: v })} />)}
           </div>
           <h2 className="font-pixel text-[10px] mb-2 text-muted-fg">TOUR CIRCUIT</h2>
         </>
@@ -106,7 +111,7 @@ export default function Tour() {
   );
 }
 
-function VenueCard({ v, lvl, busy, onBook }: { v: Venue; lvl: number; busy: boolean; onBook: (t: TourDef) => void }) {
+function VenueCard({ v, lvl, busy, onBook, near }: { v: Venue; lvl: number; busy: boolean; onBook: (t: TourDef) => void; near?: boolean }) {
   const c = useGame((s) => s.career)!;
   const t = TOURS.find((x) => x.id === v.base_tour);
   useEffect(() => { trackVenue(v.id, "view"); }, [v.id]);
@@ -129,7 +134,7 @@ function VenueCard({ v, lvl, busy, onBook }: { v: Venue; lvl: number; busy: bool
             <div className="text-xs text-muted-fg mt-0.5">{[v.city, `${fmtNum(v.capacity || t.capacity)} capacity`].filter(Boolean).join(" · ")}</div>
           </div>
         </div>
-        {v.sponsored ? <Tag color="var(--gold)">FEATURED</Tag> : v.pack_only ? <Tag color="var(--neon-pink)">PACK</Tag> : null}
+        {near ? <Tag color="var(--success)">📍 NEAR YOU</Tag> : v.sponsored ? <Tag color="var(--gold)">FEATURED</Tag> : v.pack_only ? <Tag color="var(--neon-pink)">PACK</Tag> : null}
       </div>
       {v.tagline && <p className="text-xs mt-2">{v.tagline}</p>}
       <div className="flex flex-wrap gap-1.5 mt-3 text-[11px]">

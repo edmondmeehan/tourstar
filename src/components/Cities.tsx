@@ -1,5 +1,6 @@
 // Touring cities UI: the "where you are" bar on the Tour page, the travel map/list, and the hometown picker.
 import { useMemo, useState } from "react";
+import { nearestCity, parsePostal, usePostal } from "../lib/postal";
 import { Link } from "react-router-dom";
 import { CITIES, REGIONS, cityById, cityDraw, distanceKm, drawLabel, recentPlays, regionOpen, travelCost, type City } from "../game/cities";
 import { fmtMoney, fmtNum, levelFor } from "../game/engine";
@@ -100,11 +101,15 @@ export function CityPicker({ onClose }: { onClose: () => void }) {
 
 export function HometownPicker({ onClose }: { onClose: () => void }) {
   const setHometown = useGame((s) => s.setHometown);
+  const postal = usePostal((s) => s.postal);
+  const pl = postal ? parsePostal(postal) : null;
+  const suggest = pl ? nearestCity(pl, true) : null;
   const c = useGame((s) => s.career)!;
   return (
     <Modal open onClose={onClose}>
       <div className="font-pixel text-[10px] mb-1" style={{ color: "var(--gold)" }}>🏠 PICK YOUR HOMETOWN</div>
       <p className="text-xs text-muted-fg mb-3">Your fans so far move with you. You draw a little better at home. You can only pick once.</p>
+      {suggest && <p className="text-xs mb-3">📍 Closest to you: <b>{suggest.name}</b></p>}
       <div className="grid grid-cols-2 gap-2">
         {CITIES.filter((x) => x.region === "core").map((city) => (
           <button key={city.id} className={`panel px-3 py-2 text-left ${city.id === c.hometown ? "border-gold" : ""}`} onClick={() => { const r = setHometown(city.id); toast(r); if (r.ok) onClose(); }}>

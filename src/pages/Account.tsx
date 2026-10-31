@@ -1,5 +1,6 @@
 import { COPYRIGHT } from "../lib/site";
 import { useVersion } from "../lib/version";
+import { nearestCity, parsePostal, savePostal, usePostal } from "../lib/postal";
 import { useEffect, useState } from "react";
 import Calibrate from "../components/Calibrate";
 import { openTickets } from "../lib/presales";
@@ -134,6 +135,7 @@ export default function Account() {
       </Card>
 
       <CloudCard />
+      <AreaCard />
 
       <Card className="mb-4">
         <div className="font-pixel text-[8px] text-muted-fg mb-2">MEMBERSHIP</div>
@@ -208,5 +210,25 @@ function MadeBy() {
       <div className="text-[10px] text-muted-fg mt-4">{COPYRIGHT}. Prizes fulfilled by Please and Thank You, Inc.</div>
       <div className="text-[10px] text-muted-fg mt-1 opacity-70">{ver.version ? `Version ${ver.version} · Build ${ver.build}` : `Web build ${__BUILD__}`}</div>
     </a>
+  );
+}
+
+/** Optional zip / postal code: change or remove. */
+function AreaCard() {
+  const saved = usePostal((s) => s.postal);
+  const [v, setV] = useState(saved ?? "");
+  const [busy, setBusy] = useState(false);
+  const place = saved ? parsePostal(saved) : null;
+  const save = async (val: string | null) => { setBusy(true); const r = await savePostal(val); setBusy(false); toast(r); if (r.ok && !val) setV(""); };
+  return (
+    <Card className="mb-4">
+      <div className="font-pixel text-[8px] text-muted-fg mb-2">YOUR AREA (OPTIONAL)</div>
+      <p className="text-xs text-muted-fg mb-2">Your zip or postal code helps us show real shows and presales near you. {place ? <>Saved: <b className="text-fg">{place.postal}</b> · near {nearestCity(place).name}.</> : "Not set."}</p>
+      <div className="flex gap-2">
+        <input value={v} onChange={(e) => setV(e.target.value.slice(0, 10))} placeholder="Zip or postal code" autoComplete="postal-code" className="flex-1 bg-black/40 border border-line rounded px-3 py-2 text-sm" />
+        <button className="btn btn-primary !px-4" disabled={busy || !v.trim()} onClick={() => void save(v)}>Save</button>
+      </div>
+      {saved && <button className="text-xs underline text-muted-fg mt-2" disabled={busy} onClick={() => void save(null)}>Remove my postal code</button>}
+    </Card>
   );
 }

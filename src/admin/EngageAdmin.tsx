@@ -5,6 +5,7 @@ import { toast } from "../components/ui";
 import { DayBars } from "./charts";
 import { Kpi, Section, fail, input, when } from "./kit";
 import { TOURS } from "../game/data";
+import { CITIES } from "../game/cities";
 import { STAGE_THEMES } from "../game/cosmetics";
 import { BLANK_EVENT, parseEvent, type TourEvent } from "../lib/tourEvent";
 import { TIERS } from "../lib/social";
@@ -57,6 +58,7 @@ export function EngagementTab() {
         <p className="text-[11px] text-muted-fg mt-3">Mo's walkthrough: {f.tutorial_done} finished, {f.tutorial_skip} skipped. Step reached: {Object.entries(d.tutorial_steps).sort().map(([s, n]) => `${s}: ${n}`).join(" · ") || "—"}</p>
       </Section>
       <LevelFunnel />
+      <PlayerAreas />
       <Section title="Every day" sub="Players who opened the game, new players, shows played and errors.">
         <div className="grid md:grid-cols-2 gap-6">
           <DayBars label="Active players" data={d.daily.map((x) => ({ day: x.day, value: x.active }))} />
@@ -107,6 +109,24 @@ function LevelFunnel() {
             })}
           </tbody>
         </table>
+      )}
+    </Section>
+  );
+}
+
+/** Where players are (optional postal codes), by nearest tour city and state/province. Counts only. */
+function PlayerAreas() {
+  const [d, setD] = useState<{ total: number; by_city: { city: string; players: number }[]; by_area: { area: string; players: number }[] } | null>(null);
+  useEffect(() => { void supabase!.rpc("admin_location_counts").then(({ data, error }) => { if (!error) setD(data as never); }); }, []);
+  if (!d) return null;
+  const name = (id: string) => CITIES.find((c) => c.id === id)?.name ?? id;
+  return (
+    <Section title="Where players are" sub={`From optional zip / postal codes (${d.total} players shared one). Handy for artist pitches and local presales.`}>
+      {d.total === 0 ? <p className="text-xs text-muted-fg">No postal codes yet.</p> : (
+        <div className="grid md:grid-cols-2 gap-6 text-sm">
+          <ul className="space-y-1">{d.by_city.map((r) => <li key={r.city} className="flex justify-between"><span>{name(r.city)}</span><span className="tabular-nums text-muted-fg">{r.players}</span></li>)}</ul>
+          <ul className="space-y-1">{d.by_area.map((r) => <li key={r.area} className="flex justify-between"><span>{r.area}</span><span className="tabular-nums text-muted-fg">{r.players}</span></li>)}</ul>
+        </div>
       )}
     </Section>
   );

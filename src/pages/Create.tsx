@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { nearestCity, parsePostal, savePostal, usePostal } from "../lib/postal";
 import { CITIES, DEFAULT_HOMETOWN } from "../game/cities";
 import { cloudConfigured, useCloud } from "../lib/cloud";
 import { BASE_STATS, GENRES, PERSONAS } from "../game/data";
@@ -20,6 +21,13 @@ export default function Create() {
   const [genre, setGenre] = useState<GenreId>("pop");
   const [persona, setPersona] = useState<PersonaId>("underdog");
   const [home, setHome] = useState<string>("");
+  const [zip, setZip] = useState<string>(usePostal.getState().postal ?? "");
+  const place = zip.trim() ? parsePostal(zip) : null;
+  const onZip = (v: string) => {
+    setZip(v);
+    const p = parsePostal(v);
+    if (p) setHome(nearestCity(p, true).id);
+  };
   const [theme, setTheme] = useState<{ seed: number; title: string } | null>(null);
   const [gens, setGens] = useState<Generation[]>([]);
   const [more, setMore] = useState(false);
@@ -31,7 +39,9 @@ export default function Create() {
 
   const submit = () => {
     if (name.trim().length < 2) return toast({ ok: false, message: "Give your artist a name (2+ characters)." });
+    if (zip.trim() && !place) return toast({ ok: false, message: "Check your zip / postal code, or leave it blank." });
     const go = () => {
+      if (place) void savePostal(place.postal);
       createCareer({ name, genre, persona, themeSeed: theme?.seed, legacy, hometown: home || DEFAULT_HOMETOWN[genre] });
       sfx("levelup");
       // New players go straight to their first stage; Mo takes it from there.
@@ -69,6 +79,10 @@ export default function Create() {
         </Card>
 
         <Card className="mb-4">
+          <div className="font-pixel text-[9px] text-muted-fg mb-2">YOUR ZIP / POSTAL CODE <span className="normal-case">(optional)</span></div>
+          <input value={zip} onChange={(e) => onZip(e.target.value.slice(0, 10))} placeholder="e.g. 10010, M5V 2T6 or SW1A 1AA" autoComplete="postal-code" inputMode="text"
+            className="w-full px-3 py-3 rounded bg-black/50 border border-line outline-none focus:border-pink mb-1" />
+          <p className="text-[11px] text-muted-fg mb-4">{place ? `📍 Near ${nearestCity(place).name}.` : "We use it to suggest your hometown and show real shows and presales near you."} Skip it if you like. You can change or remove it in Account.</p>
           <div className="font-pixel text-[9px] text-muted-fg mb-3">HOMETOWN</div>
           <select value={home || DEFAULT_HOMETOWN[genre]} onChange={(e) => setHome(e.target.value)} className="w-full px-3 py-3 rounded bg-black/50 border border-line outline-none focus:border-pink">
             {CITIES.filter((x) => x.region === "core").map((x) => <option key={x.id} value={x.id}>{x.name}{(x.taste[genre] ?? 1) > 1 ? ` ❤️ loves ${GENRES[genre].name}` : ""}</option>)}
